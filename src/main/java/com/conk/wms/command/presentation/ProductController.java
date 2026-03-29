@@ -2,6 +2,9 @@ package com.conk.wms.command.presentation;
 
 import com.conk.wms.command.application.ChangeProductStatusService;
 import com.conk.wms.command.application.dto.ChangeProductStatusCommand;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -23,7 +26,7 @@ public class ProductController {
     @PatchMapping("/{sku}/status")
     public ResponseEntity<Void> changeStatus(@PathVariable String sku,
                                              @RequestBody ChangeStatusRequest request) {
-        changeProductStatusService.changeStatus(new ChangeProductStatusCommand(sku, request.status()));
+        changeProductStatusService.changeStatus(new ChangeProductStatusCommand(sku, request.getStatus()));
         return ResponseEntity.ok().build();
     }
 
@@ -32,5 +35,10 @@ public class ProductController {
         return ResponseEntity.badRequest().body(ex.getMessage());
     }
 
-    record ChangeStatusRequest(String status) {}
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    public static class ChangeStatusRequest {
+        private String status;
+    }
 }
