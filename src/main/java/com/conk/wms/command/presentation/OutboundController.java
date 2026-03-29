@@ -2,6 +2,9 @@ package com.conk.wms.command.presentation;
 
 import com.conk.wms.command.application.ConfirmOutboundService;
 import com.conk.wms.command.application.dto.ConfirmOutboundCommand;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -23,7 +26,7 @@ public class OutboundController {
     @PatchMapping("/{orderId}/confirm")
     public ResponseEntity<Void> confirm(@PathVariable String orderId,
                                         @RequestBody ConfirmRequest request) {
-        confirmOutboundService.confirm(new ConfirmOutboundCommand(orderId, request.managerId()));
+        confirmOutboundService.confirm(new ConfirmOutboundCommand(orderId, request.getManagerId()));
         return ResponseEntity.ok().build();
     }
 
@@ -37,5 +40,10 @@ public class OutboundController {
         return ResponseEntity.badRequest().body(ex.getMessage());
     }
 
-    record ConfirmRequest(String managerId) {}
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    public static class ConfirmRequest {
+        private String managerId;
+    }
 }
