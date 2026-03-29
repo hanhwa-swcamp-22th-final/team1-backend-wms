@@ -1,0 +1,6 @@
+spring:
+  datasource:
+    url: jdbc:mariadb://playdata4.iptime.org:7001/wms_db
+    username: conk_dev
+    password: conk_dev
+    driver-class-name: org.mariadb.jdbc.Driver
