@@ -2,6 +2,8 @@ package com.conk.wms.common.exception;
 
 import org.springframework.http.HttpStatus;
 
+// 공통 비즈니스 에러 코드 모음.
+// 현재는 ASN 흐름부터 적용했고, 이후 다른 서비스도 같은 패턴으로 확장할 수 있다.
 public enum ErrorCode {
 
     TENANT_CODE_REQUIRED(HttpStatus.BAD_REQUEST, "COMMON-001", "X-Tenant-Code 헤더가 필요합니다."),
@@ -17,7 +19,8 @@ public enum ErrorCode {
     ASN_INVALID_BOX_QUANTITY(HttpStatus.BAD_REQUEST, "ASN-009", "박스 수는 1 이상이어야 합니다."),
     ASN_WAREHOUSE_NOT_FOUND(HttpStatus.BAD_REQUEST, "ASN-010", "존재하지 않는 창고입니다."),
     ASN_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, "ASN-011", "이미 존재하는 ASN 번호입니다."),
-    ASN_DUPLICATE_SKU(HttpStatus.BAD_REQUEST, "ASN-012", "중복된 SKU 입니다.");
+    ASN_DUPLICATE_SKU(HttpStatus.BAD_REQUEST, "ASN-012", "중복된 SKU 입니다."),
+    ASN_NOT_FOUND(HttpStatus.NOT_FOUND, "ASN-013", "ASN 정보를 찾을 수 없습니다.");
 
     private final HttpStatus status;
     private final String code;

@@ -15,4 +15,6 @@ public interface AsnRepository extends JpaRepository<Asn, Long> {
     boolean existsByAsnId(String asnId);
 
     Optional<Asn> findByAsnId(String asnId);
+
+    Optional<Asn> findByAsnIdAndSellerId(String asnId, String sellerId);
 }

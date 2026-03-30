@@ -81,6 +81,21 @@ class AsnRepositoryTest {
         assertEquals("ASN-001", result.get(1).getAsnId());
     }
 
+    @Test
+    @DisplayName("ASN 번호와 셀러 ID로 ASN 상세 대상을 조회할 수 있다")
+    void findByAsnIdAndSellerId_success() {
+        asnRepository.save(createAsn("ASN-001", "WH-001", "SELLER-001", LocalDate.of(2026, 3, 29), "REGISTERED"));
+        asnRepository.save(createAsn("ASN-001-OTHER", "WH-001", "SELLER-002", LocalDate.of(2026, 3, 29), "REGISTERED"));
+
+        em.flush();
+        em.clear();
+
+        Asn result = asnRepository.findByAsnIdAndSellerId("ASN-001", "SELLER-001").orElseThrow();
+
+        assertEquals("ASN-001", result.getAsnId());
+        assertEquals("SELLER-001", result.getSellerId());
+    }
+
     private Asn createAsn(String asnId, String warehouseId, String sellerId, LocalDate expectedDate, String status) {
         LocalDateTime now = LocalDateTime.of(2026, 3, 29, 9, 0);
         return createAsn(asnId, warehouseId, sellerId, expectedDate, status, now);
