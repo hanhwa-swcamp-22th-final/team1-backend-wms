@@ -154,6 +154,38 @@ class RegisterAsnIntegrationTest {
     }
 
     @Test
+    @DisplayName("ASN 상세 조회 시 기본 정보와 품목 상세가 함께 반환된다")
+    void getAsnDetail_success() throws Exception {
+        asnRepository.save(new Asn(
+                "ASN-20260329-001",
+                "WH-001",
+                "SELLER-001",
+                LocalDate.of(2026, 3, 30),
+                "REGISTERED",
+                "온도 민감 상품 포함",
+                5,
+                LocalDateTime.of(2026, 3, 29, 10, 0),
+                LocalDateTime.of(2026, 3, 29, 10, 0),
+                "SELLER-001",
+                "SELLER-001"
+        ));
+        asnItemRepository.save(new AsnItem("ASN-20260329-001", "SKU-001", 100, "루미에르 앰플 30ml", 3));
+        asnItemRepository.save(new AsnItem("ASN-20260329-001", "SKU-002", 50, "리페어 마스크팩 10입", 2));
+
+        mockMvc.perform(get("/wms/asns/ASN-20260329-001")
+                        .header("X-Tenant-Code", "SELLER-001"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.id").value("ASN-20260329-001"))
+                .andExpect(jsonPath("$.data.warehouse").value("서울 창고"))
+                .andExpect(jsonPath("$.data.skuCount").value(2))
+                .andExpect(jsonPath("$.data.totalQuantity").value(150))
+                .andExpect(jsonPath("$.data.detail.totalCartons").value(5))
+                .andExpect(jsonPath("$.data.detail.items.length()").value(2))
+                .andExpect(jsonPath("$.data.detail.items[0].sku").value("SKU-001"));
+    }
+
+    @Test
     @DisplayName("존재하지 않는 창고면 400을 반환하고 DB에 저장되지 않는다")
     void registerAsn_whenWarehouseNotFound_thenReturn400() throws Exception {
         Map<String, Object> body = Map.of(
