@@ -2,6 +2,9 @@ package com.conk.wms.command.presentation;
 
 import com.conk.wms.command.application.DeductInventoryService;
 import com.conk.wms.command.application.dto.DeductInventoryCommand;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,7 +24,11 @@ public class InventoryController {
 
     @PostMapping("/adjustments")
     public ResponseEntity<Void> deduct(@RequestBody DeductRequest request) {
-        deductInventoryService.deduct(new DeductInventoryCommand(request.locationId(), request.sku(), request.amount()));
+        deductInventoryService.deduct(new DeductInventoryCommand(
+                request.getLocationId(),
+                request.getSku(),
+                request.getAmount()
+        ));
         return ResponseEntity.ok().build();
     }
 
@@ -30,5 +37,12 @@ public class InventoryController {
         return ResponseEntity.badRequest().body(ex.getMessage());
     }
 
-    record DeductRequest(String locationId, String sku, int amount) {}
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    public static class DeductRequest {
+        private String locationId;
+        private String sku;
+        private int amount;
+    }
 }

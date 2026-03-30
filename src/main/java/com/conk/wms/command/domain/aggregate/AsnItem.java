@@ -8,30 +8,42 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "asn_items")
+@Table(name = "asn_item")
 public class AsnItem {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(name = "asn_id", nullable = false)
     private String asnId;
 
-    @Column(nullable = false)
-    private String sku;
+    @Column(name = "sku_id", nullable = false)
+    private String skuId;
 
-    @Column(nullable = false)
+    @Column(name = "quantity", nullable = false)
     private int quantity;
+
+    @Column(name = "product_name_snapshot")
+    private String productNameSnapshot;
+
+    @Column(name = "box_quantity", nullable = false)
+    private int boxQuantity;
 
     protected AsnItem() {}
 
-    public AsnItem(String asnId, String sku, int quantity) {
+    public AsnItem(String asnId, String skuId, int quantity, String productNameSnapshot, int boxQuantity) {
         this.asnId = asnId;
-        this.sku = sku;
+        this.skuId = skuId;
         this.quantity = quantity;
+        this.productNameSnapshot = productNameSnapshot;
+        this.boxQuantity = boxQuantity;
     }
 
-    public String getSku() { return sku; }
+    public Long getId() { return id; }
+    public String getAsnId() { return asnId; }
+    public String getSkuId() { return skuId; }
     public int getQuantity() { return quantity; }
+    public String getProductNameSnapshot() { return productNameSnapshot; }
+    public int getBoxQuantity() { return boxQuantity; }
 }

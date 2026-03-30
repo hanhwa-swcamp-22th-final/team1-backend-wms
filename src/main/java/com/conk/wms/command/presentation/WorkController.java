@@ -2,6 +2,9 @@ package com.conk.wms.command.presentation;
 
 import com.conk.wms.command.application.StartWorkService;
 import com.conk.wms.command.application.dto.StartWorkCommand;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -23,7 +26,7 @@ public class WorkController {
     @PatchMapping("/{workId}/start")
     public ResponseEntity<Void> start(@PathVariable String workId,
                                       @RequestBody StartRequest request) {
-        startWorkService.start(new StartWorkCommand(workId, request.workerId()));
+        startWorkService.start(new StartWorkCommand(workId, request.getWorkerId()));
         return ResponseEntity.ok().build();
     }
 
@@ -32,5 +35,10 @@ public class WorkController {
         return ResponseEntity.badRequest().body(ex.getMessage());
     }
 
-    record StartRequest(String workerId) {}
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    public static class StartRequest {
+        private String workerId;
+    }
 }
