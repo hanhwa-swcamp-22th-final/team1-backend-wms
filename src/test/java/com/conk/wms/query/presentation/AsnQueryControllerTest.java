@@ -4,7 +4,9 @@ import com.conk.wms.common.exception.BusinessException;
 import com.conk.wms.common.exception.ErrorCode;
 import com.conk.wms.common.presentation.GlobalExceptionHandler;
 import com.conk.wms.query.application.GetAsnDetailService;
+import com.conk.wms.query.application.GetAsnKpiService;
 import com.conk.wms.query.application.dto.AsnDetailResponse;
+import com.conk.wms.query.application.dto.AsnKpiResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,7 +25,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(AsnQueryController.class)
 @Import(GlobalExceptionHandler.class)
-// 공용 ASN query 컨트롤러 테스트는 상세 조회 경로와 응답 포맷이 맞는지만 본다.
+// 공용 ASN query 컨트롤러 테스트는 상세/KPI 경로와 응답 포맷이 맞는지만 본다.
 class AsnQueryControllerTest {
 
     @Autowired
@@ -32,9 +34,36 @@ class AsnQueryControllerTest {
     @MockitoBean
     private GetAsnDetailService getAsnDetailService;
 
+    @MockitoBean
+    private GetAsnKpiService getAsnKpiService;
+
+    @Test
+    @DisplayName("ASN KPI 조회 API 호출 시 200 OK와 상태별 집계를 반환한다")
+    void getAsnKpi_success() throws Exception {
+        // 집계 로직 자체는 service 테스트에서 검증하고, 여기서는 HTTP 경로와 응답 JSON 모양만 본다.
+        when(getAsnKpiService.getAsnKpi(eq("SELLER-001")))
+                .thenReturn(AsnKpiResponse.builder()
+                        .total(4)
+                        .submitted(1)
+                        .received(2)
+                        .cancelled(1)
+                        .build());
+
+        mockMvc.perform(get("/wms/asns/kpi")
+                        .header("X-Tenant-Code", "SELLER-001"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("ok"))
+                .andExpect(jsonPath("$.data.total").value(4))
+                .andExpect(jsonPath("$.data.submitted").value(1))
+                .andExpect(jsonPath("$.data.received").value(2))
+                .andExpect(jsonPath("$.data.cancelled").value(1));
+    }
+
     @Test
     @DisplayName("ASN 상세 조회 API 호출 시 200 OK와 상세 응답을 반환한다")
     void getAsnDetail_success() throws Exception {
+        // 컨트롤러는 service가 만든 상세 응답을 정상적으로 감싸서 내려주는지만 확인한다.
         when(getAsnDetailService.getAsnDetail(eq("SELLER-001"), eq("ASN-20260329-001")))
                 .thenReturn(AsnDetailResponse.builder()
                         .id("ASN-20260329-001")

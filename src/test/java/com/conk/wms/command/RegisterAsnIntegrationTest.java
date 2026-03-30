@@ -186,6 +186,72 @@ class RegisterAsnIntegrationTest {
     }
 
     @Test
+    @DisplayName("ASN KPI 조회 시 본인 ASN 상태별 건수가 반환된다")
+    void getAsnKpi_success() throws Exception {
+        asnRepository.save(new Asn(
+                "ASN-20260329-001",
+                "WH-001",
+                "SELLER-001",
+                LocalDate.of(2026, 3, 30),
+                "REGISTERED",
+                "제출됨 데이터",
+                1,
+                LocalDateTime.of(2026, 3, 29, 10, 0),
+                LocalDateTime.of(2026, 3, 29, 10, 0),
+                "SELLER-001",
+                "SELLER-001"
+        ));
+        asnRepository.save(new Asn(
+                "ASN-20260329-002",
+                "WH-001",
+                "SELLER-001",
+                LocalDate.of(2026, 3, 30),
+                "ARRIVED",
+                "입고완료 데이터",
+                1,
+                LocalDateTime.of(2026, 3, 29, 11, 0),
+                LocalDateTime.of(2026, 3, 29, 11, 0),
+                "SELLER-001",
+                "SELLER-001"
+        ));
+        asnRepository.save(new Asn(
+                "ASN-20260329-003",
+                "WH-001",
+                "SELLER-001",
+                LocalDate.of(2026, 3, 30),
+                "CANCELED",
+                "취소 데이터",
+                1,
+                LocalDateTime.of(2026, 3, 29, 12, 0),
+                LocalDateTime.of(2026, 3, 29, 12, 0),
+                "SELLER-001",
+                "SELLER-001"
+        ));
+        asnRepository.save(new Asn(
+                "ASN-20260329-004",
+                "WH-001",
+                "SELLER-002",
+                LocalDate.of(2026, 3, 30),
+                "REGISTERED",
+                "다른 셀러 데이터",
+                1,
+                LocalDateTime.of(2026, 3, 29, 13, 0),
+                LocalDateTime.of(2026, 3, 29, 13, 0),
+                "SELLER-002",
+                "SELLER-002"
+        ));
+
+        mockMvc.perform(get("/wms/asns/kpi")
+                        .header("X-Tenant-Code", "SELLER-001"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.total").value(3))
+                .andExpect(jsonPath("$.data.submitted").value(1))
+                .andExpect(jsonPath("$.data.received").value(1))
+                .andExpect(jsonPath("$.data.cancelled").value(1));
+    }
+
+    @Test
     @DisplayName("존재하지 않는 창고면 400을 반환하고 DB에 저장되지 않는다")
     void registerAsn_whenWarehouseNotFound_thenReturn400() throws Exception {
         Map<String, Object> body = Map.of(
