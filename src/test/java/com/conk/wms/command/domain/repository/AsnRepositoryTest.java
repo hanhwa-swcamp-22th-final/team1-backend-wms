@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -25,9 +26,9 @@ class AsnRepositoryTest {
     @Test
     @DisplayName("창고 코드와 상태로 ASN 을 조회할 수 있다")
     void findAllByWarehouseIdAndStatus_success() {
-        asnRepository.save(new Asn("ASN-001", "WH-001", "SELLER-001", LocalDate.of(2026, 3, 29), "REGISTERED"));
-        asnRepository.save(new Asn("ASN-002", "WH-001", "SELLER-001", LocalDate.of(2026, 3, 30), "ARRIVED"));
-        asnRepository.save(new Asn("ASN-003", "WH-002", "SELLER-002", LocalDate.of(2026, 3, 31), "REGISTERED"));
+        asnRepository.save(createAsn("ASN-001", "WH-001", "SELLER-001", LocalDate.of(2026, 3, 29), "REGISTERED"));
+        asnRepository.save(createAsn("ASN-002", "WH-001", "SELLER-001", LocalDate.of(2026, 3, 30), "ARRIVED"));
+        asnRepository.save(createAsn("ASN-003", "WH-002", "SELLER-002", LocalDate.of(2026, 3, 31), "REGISTERED"));
 
         em.flush();
         em.clear();
@@ -41,7 +42,7 @@ class AsnRepositoryTest {
     @Test
     @DisplayName("조건에 맞는 ASN 이 없으면 빈 목록을 반환한다")
     void findAllByWarehouseIdAndStatus_whenNoMatch_thenReturnEmpty() {
-        asnRepository.save(new Asn("ASN-001", "WH-001", "SELLER-001", LocalDate.of(2026, 3, 29), "ARRIVED"));
+        asnRepository.save(createAsn("ASN-001", "WH-001", "SELLER-001", LocalDate.of(2026, 3, 29), "ARRIVED"));
 
         em.flush();
         em.clear();
@@ -49,5 +50,71 @@ class AsnRepositoryTest {
         List<Asn> result = asnRepository.findAllByWarehouseIdAndStatus("WH-001", "REGISTERED");
 
         assertTrue(result.isEmpty());
+    }
+
+    @Test
+    @DisplayName("셀러 ID로 ASN 목록을 최근 생성일 순으로 조회할 수 있다")
+    void findAllBySellerIdOrderByCreatedAtDesc_success() {
+        asnRepository.save(createAsn(
+                "ASN-001", "WH-001", "SELLER-001",
+                LocalDate.of(2026, 3, 29), "REGISTERED",
+                LocalDateTime.of(2026, 3, 29, 9, 0)
+        ));
+        asnRepository.save(createAsn(
+                "ASN-002", "WH-002", "SELLER-001",
+                LocalDate.of(2026, 3, 30), "REGISTERED",
+                LocalDateTime.of(2026, 3, 29, 10, 0)
+        ));
+        asnRepository.save(createAsn(
+                "ASN-003", "WH-003", "SELLER-002",
+                LocalDate.of(2026, 3, 31), "REGISTERED",
+                LocalDateTime.of(2026, 3, 29, 11, 0)
+        ));
+
+        em.flush();
+        em.clear();
+
+        List<Asn> result = asnRepository.findAllBySellerIdOrderByCreatedAtDesc("SELLER-001");
+
+        assertEquals(2, result.size());
+        assertEquals("ASN-002", result.get(0).getAsnId());
+        assertEquals("ASN-001", result.get(1).getAsnId());
+    }
+
+    @Test
+    @DisplayName("ASN 번호와 셀러 ID로 ASN 상세 대상을 조회할 수 있다")
+    void findByAsnIdAndSellerId_success() {
+        asnRepository.save(createAsn("ASN-001", "WH-001", "SELLER-001", LocalDate.of(2026, 3, 29), "REGISTERED"));
+        asnRepository.save(createAsn("ASN-001-OTHER", "WH-001", "SELLER-002", LocalDate.of(2026, 3, 29), "REGISTERED"));
+
+        em.flush();
+        em.clear();
+
+        Asn result = asnRepository.findByAsnIdAndSellerId("ASN-001", "SELLER-001").orElseThrow();
+
+        assertEquals("ASN-001", result.getAsnId());
+        assertEquals("SELLER-001", result.getSellerId());
+    }
+
+    private Asn createAsn(String asnId, String warehouseId, String sellerId, LocalDate expectedDate, String status) {
+        LocalDateTime now = LocalDateTime.of(2026, 3, 29, 9, 0);
+        return createAsn(asnId, warehouseId, sellerId, expectedDate, status, now);
+    }
+
+    private Asn createAsn(String asnId, String warehouseId, String sellerId, LocalDate expectedDate,
+                          String status, LocalDateTime createdAt) {
+        return new Asn(
+                asnId,
+                warehouseId,
+                sellerId,
+                expectedDate,
+                status,
+                "메모",
+                5,
+                createdAt,
+                createdAt,
+                sellerId,
+                sellerId
+        );
     }
 }

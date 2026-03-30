@@ -27,4 +27,6 @@ public class Warehouse {
     }
 
     public String getWarehouseId() { return warehouseId; }
+    public String getName() { return name; }
+    public String getTenantId() { return tenantId; }
 }
