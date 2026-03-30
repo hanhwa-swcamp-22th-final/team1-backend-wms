@@ -4,6 +4,8 @@ import com.conk.wms.common.exception.BusinessException;
 import com.conk.wms.common.exception.ErrorCode;
 import com.conk.wms.common.presentation.GlobalExceptionHandler;
 import com.conk.wms.command.application.RegisterAsnService;
+import com.conk.wms.query.application.GetSellerAsnListService;
+import com.conk.wms.query.application.dto.SellerAsnListItemResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,14 +20,18 @@ import java.util.List;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(AsnController.class)
 @Import(GlobalExceptionHandler.class)
+// 컨트롤러 테스트는 HTTP 경로/상태코드/응답 포맷이 맞는지만 확인한다.
 class AsnControllerTest {
 
     @Autowired
@@ -36,6 +42,38 @@ class AsnControllerTest {
 
     @MockitoBean
     private RegisterAsnService registerAsnService;
+
+    @MockitoBean
+    private GetSellerAsnListService getSellerAsnListService;
+
+    @Test
+    @DisplayName("Seller ASN 목록 조회 API 호출 시 200 OK와 목록을 반환한다")
+    void getSellerAsns_success() throws Exception {
+        when(getSellerAsnListService.getSellerAsns(eq("SELLER-001"))).thenReturn(List.of(
+                SellerAsnListItemResponse.builder()
+                        .id("ASN-20260329-001")
+                        .asnNo("ASN-20260329-001")
+                        .warehouseName("NJ Warehouse")
+                        .expectedDate("2026-03-30")
+                        .createdAt("2026-03-29")
+                        .skuCount(2)
+                        .totalQuantity(150)
+                        .status("SUBMITTED")
+                        .referenceNo("REF-29-001")
+                        .note("온도 민감 상품 포함")
+                        .build()
+        ));
+
+        mockMvc.perform(get("/wms/seller/asns")
+                        .header("X-Tenant-Code", "SELLER-001"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("ok"))
+                .andExpect(jsonPath("$.data[0].id").value("ASN-20260329-001"))
+                .andExpect(jsonPath("$.data[0].asnNo").value("ASN-20260329-001"))
+                .andExpect(jsonPath("$.data[0].warehouseName").value("NJ Warehouse"))
+                .andExpect(jsonPath("$.data[0].status").value("SUBMITTED"));
+    }
 
     @Test
     @DisplayName("Seller ASN 등록 API 호출 시 201 Created를 반환한다")
