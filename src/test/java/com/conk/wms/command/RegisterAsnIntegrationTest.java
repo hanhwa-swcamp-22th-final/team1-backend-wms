@@ -18,11 +18,13 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -30,6 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
+// 통합 테스트는 HTTP -> 서비스 -> DB 저장까지 한 번에 확인한다.
 class RegisterAsnIntegrationTest {
 
     @Autowired
@@ -100,6 +103,54 @@ class RegisterAsnIntegrationTest {
         assertThat(savedItems.get(0).getProductNameSnapshot()).isEqualTo("루미에르 앰플 30ml");
         assertThat(savedItems.get(0).getQuantity()).isEqualTo(100);
         assertThat(savedItems.get(0).getBoxQuantity()).isEqualTo(5);
+    }
+
+    @Test
+    @DisplayName("셀러 ASN 목록 조회 시 본인 ASN 목록과 집계 정보가 반환된다")
+    void getSellerAsns_success() throws Exception {
+        asnRepository.save(new Asn(
+                "ASN-20260329-001",
+                "WH-001",
+                "SELLER-001",
+                LocalDate.of(2026, 3, 30),
+                "REGISTERED",
+                "온도 민감 상품 포함",
+                5,
+                LocalDateTime.of(2026, 3, 29, 10, 0),
+                LocalDateTime.of(2026, 3, 29, 10, 0),
+                "SELLER-001",
+                "SELLER-001"
+        ));
+        asnRepository.save(new Asn(
+                "ASN-20260328-001",
+                "WH-001",
+                "SELLER-002",
+                LocalDate.of(2026, 3, 31),
+                "REGISTERED",
+                "다른 셀러 데이터",
+                1,
+                LocalDateTime.of(2026, 3, 28, 10, 0),
+                LocalDateTime.of(2026, 3, 28, 10, 0),
+                "SELLER-002",
+                "SELLER-002"
+        ));
+        asnItemRepository.save(new AsnItem("ASN-20260329-001", "SKU-001", 100, "루미에르 앰플 30ml", 3));
+        asnItemRepository.save(new AsnItem("ASN-20260329-001", "SKU-002", 50, "리페어 마스크팩 10입", 2));
+        asnItemRepository.save(new AsnItem("ASN-20260328-001", "SKU-003", 20, "다른 셀러 상품", 1));
+
+        mockMvc.perform(get("/wms/seller/asns")
+                        .header("X-Tenant-Code", "SELLER-001"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.length()").value(1))
+                .andExpect(jsonPath("$.data[0].id").value("ASN-20260329-001"))
+                .andExpect(jsonPath("$.data[0].asnNo").value("ASN-20260329-001"))
+                .andExpect(jsonPath("$.data[0].warehouseName").value("서울 창고"))
+                .andExpect(jsonPath("$.data[0].skuCount").value(2))
+                .andExpect(jsonPath("$.data[0].totalQuantity").value(150))
+                .andExpect(jsonPath("$.data[0].status").value("SUBMITTED"))
+                .andExpect(jsonPath("$.data[0].referenceNo").value("REF-29-001"))
+                .andExpect(jsonPath("$.data[0].note").value("온도 민감 상품 포함"));
     }
 
     @Test

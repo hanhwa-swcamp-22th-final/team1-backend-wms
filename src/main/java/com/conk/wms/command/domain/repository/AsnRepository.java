@@ -10,6 +10,8 @@ public interface AsnRepository extends JpaRepository<Asn, Long> {
 
     List<Asn> findAllByWarehouseIdAndStatus(String warehouseId, String status);
 
+    List<Asn> findAllBySellerIdOrderByCreatedAtDesc(String sellerId);
+
     boolean existsByAsnId(String asnId);
 
     Optional<Asn> findByAsnId(String asnId);

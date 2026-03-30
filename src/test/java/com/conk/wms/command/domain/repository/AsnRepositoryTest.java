@@ -52,8 +52,42 @@ class AsnRepositoryTest {
         assertTrue(result.isEmpty());
     }
 
+    @Test
+    @DisplayName("셀러 ID로 ASN 목록을 최근 생성일 순으로 조회할 수 있다")
+    void findAllBySellerIdOrderByCreatedAtDesc_success() {
+        asnRepository.save(createAsn(
+                "ASN-001", "WH-001", "SELLER-001",
+                LocalDate.of(2026, 3, 29), "REGISTERED",
+                LocalDateTime.of(2026, 3, 29, 9, 0)
+        ));
+        asnRepository.save(createAsn(
+                "ASN-002", "WH-002", "SELLER-001",
+                LocalDate.of(2026, 3, 30), "REGISTERED",
+                LocalDateTime.of(2026, 3, 29, 10, 0)
+        ));
+        asnRepository.save(createAsn(
+                "ASN-003", "WH-003", "SELLER-002",
+                LocalDate.of(2026, 3, 31), "REGISTERED",
+                LocalDateTime.of(2026, 3, 29, 11, 0)
+        ));
+
+        em.flush();
+        em.clear();
+
+        List<Asn> result = asnRepository.findAllBySellerIdOrderByCreatedAtDesc("SELLER-001");
+
+        assertEquals(2, result.size());
+        assertEquals("ASN-002", result.get(0).getAsnId());
+        assertEquals("ASN-001", result.get(1).getAsnId());
+    }
+
     private Asn createAsn(String asnId, String warehouseId, String sellerId, LocalDate expectedDate, String status) {
         LocalDateTime now = LocalDateTime.of(2026, 3, 29, 9, 0);
+        return createAsn(asnId, warehouseId, sellerId, expectedDate, status, now);
+    }
+
+    private Asn createAsn(String asnId, String warehouseId, String sellerId, LocalDate expectedDate,
+                          String status, LocalDateTime createdAt) {
         return new Asn(
                 asnId,
                 warehouseId,
@@ -62,8 +96,8 @@ class AsnRepositoryTest {
                 status,
                 "메모",
                 5,
-                now,
-                now,
+                createdAt,
+                createdAt,
                 sellerId,
                 sellerId
         );
