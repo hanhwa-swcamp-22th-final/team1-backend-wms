@@ -31,7 +31,10 @@ public class GetAsnDetailService {
         this.warehouseRepository = warehouseRepository;
     }
 
+    // seller 기준 ASN 상세 1건을 조회한다.
+    // 지금은 asn 헤더, 품목, 창고명을 조합해서 화면이 바로 쓰는 상세 응답으로 가공한다.
     public AsnDetailResponse getAsnDetail(String sellerId, String asnId) {
+        // 다른 seller ASN을 직접 조회하지 못하게 asnId와 sellerId를 함께 조건으로 건다.
         Asn asn = asnRepository.findByAsnIdAndSellerId(asnId, sellerId)
                 .orElseThrow(() -> new BusinessException(
                         ErrorCode.ASN_NOT_FOUND,
@@ -39,10 +42,12 @@ public class GetAsnDetailService {
                 ));
 
         List<AsnItem> items = asnItemRepository.findAllByAsnId(asnId);
+        // ASN에는 warehouseId만 저장되어 있으므로, 상세 화면용 창고명은 별도 조회해서 채운다.
         String warehouseName = warehouseRepository.findById(asn.getWarehouseId())
                 .map(Warehouse::getName)
                 .orElse(asn.getWarehouseId());
 
+        // 상세 상단 카드와 품목 표에서 바로 쓰는 집계값을 미리 계산한다.
         int totalQuantity = items.stream()
                 .mapToInt(AsnItem::getQuantity)
                 .sum();
@@ -82,6 +87,8 @@ public class GetAsnDetailService {
                 .registeredDate(asn.getCreatedAt().toLocalDate().toString())
                 .referenceNo(buildReferenceNo(asn.getAsnId()))
                 .note(asn.getSellerMemo())
+                // seller 상세 모달이 기본 정보(asn)와 detail 블록을 분리해 쓰므로,
+                // 여기서 프론트가 기대하는 detail 구조까지 함께 채워서 내려준다.
                 .detail(AsnDetailResponse.DetailResponse.builder()
                         .supplierName(asn.getSellerId())
                         // 현재 ERD에 운송/서류 저장 컬럼이 없어, 상세 모달이 깨지지 않도록 안전한 기본값을 넣는다.
@@ -99,6 +106,7 @@ public class GetAsnDetailService {
                 .build();
     }
 
+    // DB 운영 상태를 seller 화면에서 쓰는 상태 배지 값으로 맞춘다.
     private String toSellerStatus(String status) {
         if (status == null || status.isBlank()) {
             return "SUBMITTED";
@@ -111,6 +119,7 @@ public class GetAsnDetailService {
         };
     }
 
+    // referenceNo 원본 컬럼이 아직 없어 ASN 번호 기반의 임시 가공값을 내려준다.
     private String buildReferenceNo(String asnId) {
         if (asnId == null || asnId.isBlank()) {
             return "REF-PENDING";

@@ -44,6 +44,7 @@ class GetAsnDetailServiceTest {
     @Test
     @DisplayName("ASN 상세 조회 시 기본 정보와 품목 상세가 함께 반환된다")
     void getAsnDetail_success() {
+        // 상세는 asn 헤더 + asn_item + warehouse를 함께 조합해야 하므로 세 저장소 mock을 모두 준비한다.
         Asn asn = new Asn(
                 "ASN-20260329-001",
                 "WH-001",
@@ -93,6 +94,7 @@ class GetAsnDetailServiceTest {
     @Test
     @DisplayName("다른 셀러의 ASN 이거나 존재하지 않으면 예외가 발생한다")
     void getAsnDetail_whenAsnNotFound_thenThrow() {
+        // seller 범위 밖 데이터 접근을 막는 것도 상세 조회의 핵심 규칙이라 Optional.empty() 케이스를 둔다.
         when(asnRepository.findByAsnIdAndSellerId("ASN-20260329-001", "SELLER-001"))
                 .thenReturn(Optional.empty());
 
