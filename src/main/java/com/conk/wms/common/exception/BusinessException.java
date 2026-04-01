@@ -1,5 +1,7 @@
 package com.conk.wms.common.exception;
 
+// 서비스 계층에서 던지는 공통 비즈니스 예외.
+// ErrorCode를 함께 보관해 HTTP status / code / message를 전역 핸들러에서 일관되게 만들 수 있다.
 public class BusinessException extends RuntimeException {
 
     private final ErrorCode errorCode;
