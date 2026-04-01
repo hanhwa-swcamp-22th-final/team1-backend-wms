@@ -20,7 +20,8 @@ public enum ErrorCode {
     ASN_WAREHOUSE_NOT_FOUND(HttpStatus.BAD_REQUEST, "ASN-010", "존재하지 않는 창고입니다."),
     ASN_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, "ASN-011", "이미 존재하는 ASN 번호입니다."),
     ASN_DUPLICATE_SKU(HttpStatus.BAD_REQUEST, "ASN-012", "중복된 SKU 입니다."),
-    ASN_NOT_FOUND(HttpStatus.NOT_FOUND, "ASN-013", "ASN 정보를 찾을 수 없습니다.");
+    ASN_NOT_FOUND(HttpStatus.NOT_FOUND, "ASN-013", "ASN 정보를 찾을 수 없습니다."),
+    ASN_ARRIVAL_NOT_ALLOWED(HttpStatus.CONFLICT, "ASN-014", "현재 상태에서는 도착 확인을 할 수 없습니다.");
 
     private final HttpStatus status;
     private final String code;
