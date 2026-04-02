@@ -131,4 +131,94 @@ class AsnInspectionIntegrationTest {
         assertThat(rows).allMatch(InspectionPutaway::isCompleted);
         assertThat(rows).extracting(InspectionPutaway::getTenantId).containsOnly("CONK");
     }
+
+    @Test
+    @DisplayName("검수/적재 저장 실패: ARRIVED 전 ASN이면 409를 반환하고 inspection row를 만들지 않는다")
+    void saveInspection_whenAsnNotArrived_thenReturn409AndKeepDatabase() throws Exception {
+        asnRepository.save(new Asn(
+                "ASN-REGISTERED-001",
+                "WH-001",
+                "SELLER-001",
+                LocalDate.of(2026, 4, 2),
+                "REGISTERED",
+                "도착 전 ASN",
+                3,
+                LocalDateTime.of(2026, 4, 1, 9, 0),
+                LocalDateTime.of(2026, 4, 1, 9, 0),
+                "SELLER-001",
+                "SELLER-001"
+        ));
+        asnItemRepository.save(new AsnItem("ASN-REGISTERED-001", "SKU-001", 100, "상품A", 3));
+
+        mockMvc.perform(patch("/wms/asns/ASN-REGISTERED-001/inspection")
+                        .header("X-Tenant-Code", "CONK")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "items", List.of(
+                                        Map.of(
+                                                "skuId", "SKU-001",
+                                                "locationId", "LOC-A-01-01",
+                                                "inspectedQuantity", 100,
+                                                "defectiveQuantity", 0,
+                                                "defectReason", "",
+                                                "putawayQuantity", 100
+                                        )
+                                )
+                        ))))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("ASN-015"));
+
+        Asn savedAsn = asnRepository.findByAsnId("ASN-REGISTERED-001").orElseThrow();
+        List<InspectionPutaway> rows = inspectionPutawayRepository.findAllByAsnId("ASN-REGISTERED-001");
+        assertThat(savedAsn.getStatus()).isEqualTo("REGISTERED");
+        assertThat(rows).isEmpty();
+    }
+
+    @Test
+    @DisplayName("검수/적재 저장 실패: ASN에 없는 SKU면 400을 반환하고 inspection row를 만들지 않는다")
+    void saveInspection_whenSkuNotFound_thenReturn400AndKeepDatabase() throws Exception {
+        mockMvc.perform(patch("/wms/asns/ASN-001/inspection")
+                        .header("X-Tenant-Code", "CONK")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "items", List.of(
+                                        Map.of(
+                                                "skuId", "SKU-404",
+                                                "locationId", "LOC-A-01-01",
+                                                "inspectedQuantity", 10,
+                                                "defectiveQuantity", 0,
+                                                "defectReason", "",
+                                                "putawayQuantity", 10
+                                        )
+                                )
+                        ))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("ASN-017"));
+
+        Asn savedAsn = asnRepository.findByAsnId("ASN-001").orElseThrow();
+        List<InspectionPutaway> rows = inspectionPutawayRepository.findAllByAsnId("ASN-001");
+        assertThat(savedAsn.getStatus()).isEqualTo("ARRIVED");
+        assertThat(rows).isEmpty();
+    }
+
+    @Test
+    @DisplayName("검수/적재 완료 실패: 저장된 inspection row가 없으면 400을 반환하고 상태를 유지한다")
+    void completeInspection_whenNoSavedRows_thenReturn400AndKeepDatabase() throws Exception {
+        Asn asn = asnRepository.findByAsnId("ASN-001").orElseThrow();
+        asn.beginInspectionPutaway("CONK");
+        asnRepository.save(asn);
+
+        mockMvc.perform(patch("/wms/asns/ASN-001/inspection/complete")
+                        .header("X-Tenant-Code", "CONK"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("ASN-021"));
+
+        Asn savedAsn = asnRepository.findByAsnId("ASN-001").orElseThrow();
+        List<InspectionPutaway> rows = inspectionPutawayRepository.findAllByAsnId("ASN-001");
+        assertThat(savedAsn.getStatus()).isEqualTo("INSPECTING_PUTAWAY");
+        assertThat(rows).isEmpty();
+    }
 }
