@@ -1,6 +1,7 @@
 package com.conk.wms.command.controller;
 
 import com.conk.wms.command.domain.aggregate.Asn;
+import com.conk.wms.command.service.AssignAsnPutawayService;
 import com.conk.wms.command.service.CompleteAsnInspectionService;
 import com.conk.wms.command.service.ConfirmAsnArrivalService;
 import com.conk.wms.command.service.SaveAsnInspectionService;
@@ -44,6 +45,9 @@ class AsnManagementControllerTest {
 
     @MockitoBean
     private ConfirmAsnArrivalService confirmAsnArrivalService;
+
+    @MockitoBean
+    private AssignAsnPutawayService assignAsnPutawayService;
 
     @MockitoBean
     private SaveAsnInspectionService saveAsnInspectionService;
@@ -211,6 +215,59 @@ class AsnManagementControllerTest {
                 .andExpect(jsonPath("$.data.asnId").value("ASN-001"))
                 .andExpect(jsonPath("$.data.status").value("INSPECTING_PUTAWAY"))
                 .andExpect(jsonPath("$.data.savedItemCount").value(1));
+    }
+
+    @Test
+    @DisplayName("Bin 배정 저장 성공 시 200과 저장 건수를 반환한다")
+    void assignPutaway_success() throws Exception {
+        when(assignAsnPutawayService.assign(any())).thenReturn(2);
+
+        mockMvc.perform(patch("/wms/asns/ASN-001/putaway")
+                        .header("X-Tenant-Code", "CONK")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "items", List.of(
+                                        Map.of("skuId", "SKU-001", "locationId", "LOC-A-01-01"),
+                                        Map.of("skuId", "SKU-002", "locationId", "LOC-A-01-02")
+                                )
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("putaway assigned"))
+                .andExpect(jsonPath("$.data.asnId").value("ASN-001"))
+                .andExpect(jsonPath("$.data.assignedItemCount").value(2));
+    }
+
+    @Test
+    @DisplayName("Bin 배정 저장 시 tenant 헤더가 없으면 400을 반환한다")
+    void assignPutaway_whenTenantHeaderMissing_thenReturn400() throws Exception {
+        mockMvc.perform(patch("/wms/asns/ASN-001/putaway")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "items", List.of(Map.of("skuId", "SKU-001", "locationId", "LOC-A-01-01"))
+                        ))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("COMMON-001"));
+
+        verifyNoInteractions(assignAsnPutawayService);
+    }
+
+    @Test
+    @DisplayName("Bin 배정 저장 시 서비스 예외가 발생하면 400을 반환한다")
+    void assignPutaway_whenServiceThrows_thenReturn400() throws Exception {
+        doThrow(new BusinessException(ErrorCode.ASN_LOCATION_ALREADY_OCCUPIED))
+                .when(assignAsnPutawayService).assign(any());
+
+        mockMvc.perform(patch("/wms/asns/ASN-001/putaway")
+                        .header("X-Tenant-Code", "CONK")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "items", List.of(Map.of("skuId", "SKU-001", "locationId", "LOC-A-01-01"))
+                        ))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("ASN-028"));
     }
 
     @Test

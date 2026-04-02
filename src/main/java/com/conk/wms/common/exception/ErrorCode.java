@@ -28,7 +28,15 @@ public enum ErrorCode {
     ASN_INSPECTION_INVALID_QUANTITY(HttpStatus.BAD_REQUEST, "ASN-018", "검수/적재 수량은 0 이상이어야 합니다."),
     ASN_PUTAWAY_LOCATION_REQUIRED(HttpStatus.BAD_REQUEST, "ASN-019", "적재 수량이 있으면 locationId는 필수입니다."),
     ASN_INSPECTION_COMPLETE_INVALID(HttpStatus.BAD_REQUEST, "ASN-020", "검수/적재 완료 조건이 맞지 않습니다."),
-    ASN_INSPECTION_RESULT_REQUIRED(HttpStatus.BAD_REQUEST, "ASN-021", "검수/적재 데이터가 없습니다.");
+    ASN_INSPECTION_RESULT_REQUIRED(HttpStatus.BAD_REQUEST, "ASN-021", "검수/적재 데이터가 없습니다."),
+    ASN_BIN_MATCH_SKU_REQUIRED(HttpStatus.BAD_REQUEST, "ASN-022", "추천 Bin 조회를 위한 SKU는 필수입니다."),
+    ASN_PUTAWAY_ASSIGN_NOT_ALLOWED(HttpStatus.CONFLICT, "ASN-023", "현재 상태에서는 Bin 배정을 진행할 수 없습니다."),
+    ASN_PUTAWAY_ITEMS_REQUIRED(HttpStatus.BAD_REQUEST, "ASN-024", "Bin 배정 품목은 1개 이상이어야 합니다."),
+    ASN_LOCATION_NOT_FOUND(HttpStatus.BAD_REQUEST, "ASN-025", "존재하지 않는 location 입니다."),
+    ASN_LOCATION_WAREHOUSE_MISMATCH(HttpStatus.BAD_REQUEST, "ASN-026", "ASN과 다른 창고의 location 입니다."),
+    ASN_LOCATION_INACTIVE(HttpStatus.BAD_REQUEST, "ASN-027", "비활성 location 입니다."),
+    ASN_LOCATION_ALREADY_OCCUPIED(HttpStatus.BAD_REQUEST, "ASN-028", "다른 SKU가 사용 중인 location 입니다."),
+    ASN_LOCATION_CAPACITY_EXCEEDED(HttpStatus.BAD_REQUEST, "ASN-029", "location 수용 가능 수량을 초과했습니다.");
 
     private final HttpStatus status;
     private final String code;

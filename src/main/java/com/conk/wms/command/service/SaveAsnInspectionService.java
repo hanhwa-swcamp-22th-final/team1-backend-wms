@@ -57,7 +57,11 @@ public class SaveAsnInspectionService {
                         ErrorCode.ASN_DUPLICATE_SKU.getMessage() + ": " + item.getSkuId()
                 );
             }
-            validateItem(item, asnItemBySkuId);
+            // Bin 미배정 화면에서 locationId를 먼저 저장해둔 경우, inspection 요청에서는 다시 안 보내도 된다.
+            String existingLocationId = inspectionPutawayRepository.findByAsnIdAndSkuId(command.getAsnId(), item.getSkuId())
+                    .map(InspectionPutaway::getLocationId)
+                    .orElse(null);
+            validateItem(item, asnItemBySkuId, existingLocationId);
         }
 
         asn.beginInspectionPutaway(command.getTenantCode());
@@ -67,8 +71,12 @@ public class SaveAsnInspectionService {
                     .findByAsnIdAndSkuId(command.getAsnId(), item.getSkuId())
                     .orElseGet(() -> new InspectionPutaway(command.getAsnId(), item.getSkuId(), command.getTenantCode()));
 
+            // inspection 단계에서 locationId를 비워 보내도, 앞 단계에서 선저장된 bin 배정값을 그대로 이어서 사용한다.
+            String resolvedLocationId = item.getLocationId() != null && !item.getLocationId().isBlank()
+                    ? item.getLocationId()
+                    : inspectionPutaway.getLocationId();
             inspectionPutaway.saveProgress(
-                    item.getLocationId(),
+                    resolvedLocationId,
                     item.getInspectedQuantity(),
                     item.getDefectiveQuantity(),
                     item.getDefectReason(),
@@ -86,7 +94,8 @@ public class SaveAsnInspectionService {
         }
     }
 
-    private void validateItem(SaveAsnInspectionCommand.ItemCommand item, Map<String, AsnItem> asnItemBySkuId) {
+    private void validateItem(SaveAsnInspectionCommand.ItemCommand item, Map<String, AsnItem> asnItemBySkuId,
+                              String existingLocationId) {
         if (item.getSkuId() == null || item.getSkuId().isBlank() || !asnItemBySkuId.containsKey(item.getSkuId())) {
             throw new BusinessException(
                     ErrorCode.ASN_INSPECTION_SKU_NOT_FOUND,
@@ -103,7 +112,10 @@ public class SaveAsnInspectionService {
             throw new BusinessException(ErrorCode.ASN_INSPECTION_INVALID_QUANTITY);
         }
 
-        if (item.getPutawayQuantity() > 0 && (item.getLocationId() == null || item.getLocationId().isBlank())) {
+        String resolvedLocationId = item.getLocationId() != null && !item.getLocationId().isBlank()
+                ? item.getLocationId()
+                : existingLocationId;
+        if (item.getPutawayQuantity() > 0 && (resolvedLocationId == null || resolvedLocationId.isBlank())) {
             throw new BusinessException(ErrorCode.ASN_PUTAWAY_LOCATION_REQUIRED);
         }
     }

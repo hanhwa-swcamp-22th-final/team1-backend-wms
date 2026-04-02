@@ -160,6 +160,39 @@ class SaveAsnInspectionServiceTest {
         verify(inspectionPutawayRepository, times(0)).save(any());
     }
 
+    @Test
+    @DisplayName("검수/적재 저장 성공: 사전 배정된 locationId가 있으면 요청에 없어도 그대로 사용한다")
+    void save_whenLocationPreAssigned_thenReuseAssignedLocation() {
+        Asn asn = createAsn("ARRIVED");
+        InspectionPutaway existingRow = new InspectionPutaway("ASN-001", "SKU-001", "CONK");
+        existingRow.assignLocation("LOC-A-01-09");
+
+        when(asnRepository.findByAsnId("ASN-001")).thenReturn(Optional.of(asn));
+        when(asnItemRepository.findAllByAsnId("ASN-001")).thenReturn(List.of(
+                new AsnItem("ASN-001", "SKU-001", 100, "상품A", 3)
+        ));
+        when(inspectionPutawayRepository.findByAsnIdAndSkuId("ASN-001", "SKU-001"))
+                .thenReturn(Optional.of(existingRow));
+        when(asnRepository.save(any(Asn.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        saveAsnInspectionService.save(new SaveAsnInspectionCommand(
+                "ASN-001",
+                "CONK",
+                List.of(new SaveAsnInspectionCommand.ItemCommand(
+                        "SKU-001",
+                        null,
+                        100,
+                        0,
+                        null,
+                        100
+                ))
+        ));
+
+        ArgumentCaptor<InspectionPutaway> rowCaptor = ArgumentCaptor.forClass(InspectionPutaway.class);
+        verify(inspectionPutawayRepository).save(rowCaptor.capture());
+        assertEquals("LOC-A-01-09", rowCaptor.getValue().getLocationId());
+    }
+
     private Asn createAsn(String status) {
         LocalDateTime now = LocalDateTime.of(2026, 4, 1, 9, 0);
         return new Asn(

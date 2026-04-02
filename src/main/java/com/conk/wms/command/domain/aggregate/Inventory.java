@@ -47,7 +47,23 @@ public class Inventory {
         this.quantity -= amount;
     }
 
+    public String getLocationId() {
+        return locationId;
+    }
+
+    public String getSku() {
+        return sku;
+    }
+
+    public String getTenantId() {
+        return tenantId;
+    }
+
     public int getQuantity() {
         return quantity;
+    }
+
+    public String getType() {
+        return type;
     }
 }
