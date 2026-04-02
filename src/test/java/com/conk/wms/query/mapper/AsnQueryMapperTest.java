@@ -2,7 +2,9 @@ package com.conk.wms.query.mapper;
 
 import com.conk.wms.command.domain.aggregate.Asn;
 import com.conk.wms.command.domain.aggregate.AsnItem;
+import com.conk.wms.command.domain.aggregate.InspectionPutaway;
 import com.conk.wms.query.controller.dto.response.AsnDetailResponse;
+import com.conk.wms.query.controller.dto.response.AsnInspectionResponse;
 import com.conk.wms.query.controller.dto.response.AsnKpiResponse;
 import com.conk.wms.query.controller.dto.response.SellerAsnListItemResponse;
 import org.junit.jupiter.api.DisplayName;
@@ -83,6 +85,30 @@ class AsnQueryMapperTest {
         assertEquals(1, result.getSubmitted());
         assertEquals(2, result.getReceived());
         assertEquals(1, result.getCancelled());
+    }
+
+    @Test
+    @DisplayName("ASN 검수/적재 응답으로 변환할 때 원본 품목과 저장된 inspection 결과를 합친다")
+    void toAsnInspectionResponse_success() {
+        Asn asn = createAsn("ASN-001", "INSPECTING_PUTAWAY");
+        List<AsnItem> items = List.of(
+                new AsnItem("ASN-001", "SKU-001", 100, "상품A", 3),
+                new AsnItem("ASN-001", "SKU-002", 50, "상품B", 2)
+        );
+        InspectionPutaway row = new InspectionPutaway("ASN-001", "SKU-001", "CONK");
+        row.saveProgress("LOC-A-01-01", 100, 3, "박스 파손", 97);
+
+        AsnInspectionResponse result = asnQueryMapper.toAsnInspectionResponse(asn, items, List.of(row));
+
+        assertEquals("ASN-001", result.getAsnId());
+        assertEquals("INSPECTING_PUTAWAY", result.getStatus());
+        assertEquals(2, result.getItems().size());
+        assertEquals("SKU-001", result.getItems().get(0).getSkuId());
+        assertEquals(100, result.getItems().get(0).getInspectedQuantity());
+        assertEquals(97, result.getItems().get(0).getPutawayQuantity());
+        assertEquals("LOC-A-01-01", result.getItems().get(0).getLocationId());
+        assertEquals(0, result.getItems().get(1).getInspectedQuantity());
+        assertEquals(0, result.getItems().get(1).getPutawayQuantity());
     }
 
     private Asn createAsn(String asnId, String status) {

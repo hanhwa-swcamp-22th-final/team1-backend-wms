@@ -2,12 +2,17 @@ package com.conk.wms.query.mapper;
 
 import com.conk.wms.command.domain.aggregate.Asn;
 import com.conk.wms.command.domain.aggregate.AsnItem;
+import com.conk.wms.command.domain.aggregate.InspectionPutaway;
 import com.conk.wms.query.controller.dto.response.AsnDetailResponse;
+import com.conk.wms.query.controller.dto.response.AsnInspectionResponse;
 import com.conk.wms.query.controller.dto.response.AsnKpiResponse;
 import com.conk.wms.query.controller.dto.response.SellerAsnListItemResponse;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Component
 // ASN query 응답 가공을 한 곳에 모아두는 mapper.
@@ -118,6 +123,39 @@ public class AsnQueryMapper {
                 .submitted(submitted)
                 .received(received)
                 .cancelled(cancelled)
+                .build();
+    }
+
+    // 검수/적재 화면용 응답으로 ASN 품목과 inspection_putaway 저장값을 합친다.
+    public AsnInspectionResponse toAsnInspectionResponse(Asn asn, List<AsnItem> items,
+                                                         List<InspectionPutaway> inspectionRows) {
+        Map<String, InspectionPutaway> rowBySkuId = inspectionRows.stream()
+                .collect(Collectors.toMap(InspectionPutaway::getSkuId, Function.identity()));
+
+        List<AsnInspectionResponse.ItemResponse> itemResponses = items.stream()
+                .map(item -> {
+                    InspectionPutaway row = rowBySkuId.get(item.getSkuId());
+                    return AsnInspectionResponse.ItemResponse.builder()
+                            .skuId(item.getSkuId())
+                            .productName(item.getProductNameSnapshot())
+                            .plannedQuantity(item.getQuantity())
+                            .boxQuantity(item.getBoxQuantity())
+                            .inspectedQuantity(row != null ? row.getInspectedQuantity() : 0)
+                            .defectiveQuantity(row != null ? row.getDefectiveQuantity() : 0)
+                            .defectReason(row != null ? row.getDefectReason() : null)
+                            .locationId(row != null ? row.getLocationId() : null)
+                            .putawayQuantity(row != null ? row.getPutawayQuantity() : 0)
+                            .completed(row != null && row.isCompleted())
+                            .startedAt(row != null ? row.getStartedAt() : null)
+                            .completedAt(row != null ? row.getCompletedAt() : null)
+                            .build();
+                })
+                .toList();
+
+        return AsnInspectionResponse.builder()
+                .asnId(asn.getAsnId())
+                .status(asn.getStatus())
+                .items(itemResponses)
                 .build();
     }
 

@@ -120,4 +120,27 @@ public class Asn {
         this.updatedAt = confirmedAt;
         this.updatedBy = updatedBy;
     }
+
+    // 도착 확인 후 실제 검수/적재 작업이 시작되면 ASN을 작업중 상태로 올린다.
+    // 이미 작업 중이면 상태는 유지하고 수정 정보만 갱신한다.
+    public void beginInspectionPutaway(String updatedBy) {
+        LocalDateTime changedAt = LocalDateTime.now();
+        if ("ARRIVED".equals(this.status)) {
+            this.status = "INSPECTING_PUTAWAY";
+            this.updatedAt = changedAt;
+            this.updatedBy = updatedBy;
+            return;
+        }
+
+        if ("INSPECTING_PUTAWAY".equals(this.status)) {
+            this.updatedAt = changedAt;
+            this.updatedBy = updatedBy;
+            return;
+        }
+
+        throw new BusinessException(
+                ErrorCode.ASN_INSPECTION_NOT_ALLOWED,
+                ErrorCode.ASN_INSPECTION_NOT_ALLOWED.getMessage() + ": " + this.status
+        );
+    }
 }
