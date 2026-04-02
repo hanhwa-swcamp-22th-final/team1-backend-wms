@@ -4,10 +4,17 @@ import com.conk.wms.common.controller.ApiResponse;
 import com.conk.wms.common.exception.BusinessException;
 import com.conk.wms.common.exception.ErrorCode;
 import com.conk.wms.command.controller.dto.request.ConfirmAsnArrivalRequest;
+import com.conk.wms.command.controller.dto.request.SaveAsnInspectionRequest;
+import com.conk.wms.command.controller.dto.response.CompleteAsnInspectionResponse;
 import com.conk.wms.command.controller.dto.response.ConfirmAsnArrivalResponse;
+import com.conk.wms.command.controller.dto.response.SaveAsnInspectionResponse;
 import com.conk.wms.command.domain.aggregate.Asn;
+import com.conk.wms.command.dto.CompleteAsnInspectionCommand;
 import com.conk.wms.command.dto.ConfirmAsnArrivalCommand;
+import com.conk.wms.command.dto.SaveAsnInspectionCommand;
+import com.conk.wms.command.service.CompleteAsnInspectionService;
 import com.conk.wms.command.service.ConfirmAsnArrivalService;
+import com.conk.wms.command.service.SaveAsnInspectionService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,6 +23,8 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 // ASN 운영 액션 전용 컨트롤러.
 // seller 등록/조회 API와 분리해서, 이후 도착 확인·작업자 배정·검수 같은 창고 운영 액션을 이쪽에 모은다.
 @RestController
@@ -23,9 +32,15 @@ import org.springframework.web.bind.annotation.RestController;
 public class AsnManagementController {
 
     private final ConfirmAsnArrivalService confirmAsnArrivalService;
+    private final SaveAsnInspectionService saveAsnInspectionService;
+    private final CompleteAsnInspectionService completeAsnInspectionService;
 
-    public AsnManagementController(ConfirmAsnArrivalService confirmAsnArrivalService) {
+    public AsnManagementController(ConfirmAsnArrivalService confirmAsnArrivalService,
+                                   SaveAsnInspectionService saveAsnInspectionService,
+                                   CompleteAsnInspectionService completeAsnInspectionService) {
         this.confirmAsnArrivalService = confirmAsnArrivalService;
+        this.saveAsnInspectionService = saveAsnInspectionService;
+        this.completeAsnInspectionService = completeAsnInspectionService;
     }
 
     // 아직 인증이 없어 manager 식별값도 임시로 tenant 헤더에서 꺼낸다.
@@ -49,6 +64,62 @@ public class AsnManagementController {
                 asn.getArrivedAt()
         );
         return ResponseEntity.ok(ApiResponse.success("arrival confirmed", response));
+    }
+
+    // 검수와 적재 위치/수량을 한 번에 저장한다.
+    // 첫 저장이면 ASN 상태를 INSPECTING_PUTAWAY로 올리고, 이후 저장은 같은 상태를 유지한다.
+    @PatchMapping("/{asnId}/inspection")
+    public ResponseEntity<ApiResponse<SaveAsnInspectionResponse>> saveInspection(
+            @PathVariable String asnId,
+            @RequestBody SaveAsnInspectionRequest request,
+            @RequestHeader(value = "X-Tenant-Code", required = false) String tenantCode
+    ) {
+        String resolvedTenantCode = resolveActorId(tenantCode);
+        List<SaveAsnInspectionRequest.ItemRequest> items = request != null && request.getItems() != null
+                ? request.getItems()
+                : List.of();
+        Asn asn = saveAsnInspectionService.save(new SaveAsnInspectionCommand(
+                asnId,
+                resolvedTenantCode,
+                items.stream()
+                        .map(item -> new SaveAsnInspectionCommand.ItemCommand(
+                                item.getSkuId(),
+                                item.getLocationId(),
+                                item.getInspectedQuantity() != null ? item.getInspectedQuantity() : 0,
+                                item.getDefectiveQuantity() != null ? item.getDefectiveQuantity() : 0,
+                                item.getDefectReason(),
+                                item.getPutawayQuantity() != null ? item.getPutawayQuantity() : 0
+                        ))
+                        .toList()
+        ));
+
+        SaveAsnInspectionResponse response = new SaveAsnInspectionResponse(
+                asn.getAsnId(),
+                asn.getStatus(),
+                items.size()
+        );
+        return ResponseEntity.ok(ApiResponse.success("inspection saved", response));
+    }
+
+    // 검수/적재 입력이 모두 끝났는지 검증한 뒤 inspection_putaway row를 완료 상태로 확정한다.
+    // 재고 반영은 다음 단계라 ASN은 아직 STORED로 바꾸지 않는다.
+    @PatchMapping("/{asnId}/inspection/complete")
+    public ResponseEntity<ApiResponse<CompleteAsnInspectionResponse>> completeInspection(
+            @PathVariable String asnId,
+            @RequestHeader(value = "X-Tenant-Code", required = false) String tenantCode
+    ) {
+        String resolvedTenantCode = resolveActorId(tenantCode);
+        CompleteAsnInspectionService.CompleteResult result = completeAsnInspectionService.complete(
+                new CompleteAsnInspectionCommand(asnId, resolvedTenantCode)
+        );
+
+        CompleteAsnInspectionResponse response = new CompleteAsnInspectionResponse(
+                result.getAsn().getAsnId(),
+                result.getAsn().getStatus(),
+                result.getCompletedItemCount(),
+                result.getCompletedAt()
+        );
+        return ResponseEntity.ok(ApiResponse.success("inspection completed", response));
     }
 
     private String resolveActorId(String tenantCode) {

@@ -1,8 +1,9 @@
 package com.conk.wms.command.controller;
 
-import com.conk.wms.command.controller.dto.response.ConfirmAsnArrivalResponse;
 import com.conk.wms.command.domain.aggregate.Asn;
+import com.conk.wms.command.service.CompleteAsnInspectionService;
 import com.conk.wms.command.service.ConfirmAsnArrivalService;
+import com.conk.wms.command.service.SaveAsnInspectionService;
 import com.conk.wms.common.controller.GlobalExceptionHandler;
 import com.conk.wms.common.exception.BusinessException;
 import com.conk.wms.common.exception.ErrorCode;
@@ -18,6 +19,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -42,6 +44,12 @@ class AsnManagementControllerTest {
 
     @MockitoBean
     private ConfirmAsnArrivalService confirmAsnArrivalService;
+
+    @MockitoBean
+    private SaveAsnInspectionService saveAsnInspectionService;
+
+    @MockitoBean
+    private CompleteAsnInspectionService completeAsnInspectionService;
 
     @Test
     @DisplayName("도착 확인 성공 시 200과 변경된 ASN 상태를 반환한다")
@@ -161,5 +169,151 @@ class AsnManagementControllerTest {
                 .andExpect(status().isBadRequest());
 
         verifyNoInteractions(confirmAsnArrivalService);
+    }
+
+    @Test
+    @DisplayName("검수/적재 저장 성공 시 200과 작업중 상태를 반환한다")
+    void saveInspection_success() throws Exception {
+        LocalDateTime now = LocalDateTime.of(2026, 4, 2, 10, 30);
+        Asn asn = new Asn(
+                "ASN-001",
+                "WH-001",
+                "SELLER-001",
+                LocalDate.of(2026, 4, 2),
+                "INSPECTING_PUTAWAY",
+                "메모",
+                3,
+                now.minusDays(1),
+                now,
+                "SELLER-001",
+                "CONK",
+                now.minusHours(2),
+                null
+        );
+        when(saveAsnInspectionService.save(any())).thenReturn(asn);
+
+        mockMvc.perform(patch("/wms/asns/ASN-001/inspection")
+                        .header("X-Tenant-Code", "CONK")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "items", List.of(Map.of(
+                                        "skuId", "SKU-001",
+                                        "locationId", "LOC-A-01-01",
+                                        "inspectedQuantity", 100,
+                                        "defectiveQuantity", 3,
+                                        "defectReason", "박스 파손",
+                                        "putawayQuantity", 97
+                                ))
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("inspection saved"))
+                .andExpect(jsonPath("$.data.asnId").value("ASN-001"))
+                .andExpect(jsonPath("$.data.status").value("INSPECTING_PUTAWAY"))
+                .andExpect(jsonPath("$.data.savedItemCount").value(1));
+    }
+
+    @Test
+    @DisplayName("검수/적재 저장 시 tenant 헤더가 없으면 400을 반환한다")
+    void saveInspection_whenTenantHeaderMissing_thenReturn400() throws Exception {
+        mockMvc.perform(patch("/wms/asns/ASN-001/inspection")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "items", List.of(Map.of(
+                                        "skuId", "SKU-001",
+                                        "inspectedQuantity", 10,
+                                        "defectiveQuantity", 0,
+                                        "putawayQuantity", 10,
+                                        "locationId", "LOC-A-01-01"
+                                ))
+                        ))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("COMMON-001"));
+
+        verifyNoInteractions(saveAsnInspectionService);
+    }
+
+    @Test
+    @DisplayName("검수/적재 저장 시 서비스 예외가 발생하면 400을 반환한다")
+    void saveInspection_whenServiceThrows_thenReturn400() throws Exception {
+        doThrow(new BusinessException(ErrorCode.ASN_INSPECTION_ITEMS_REQUIRED))
+                .when(saveAsnInspectionService).save(any());
+
+        mockMvc.perform(patch("/wms/asns/ASN-001/inspection")
+                        .header("X-Tenant-Code", "CONK")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("items", List.of()))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("ASN-016"));
+    }
+
+    @Test
+    @DisplayName("검수/적재 저장 시 JSON 형식이 잘못되면 400을 반환한다")
+    void saveInspection_whenMalformedJson_thenReturn400() throws Exception {
+        mockMvc.perform(patch("/wms/asns/ASN-001/inspection")
+                        .header("X-Tenant-Code", "CONK")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"items\":"))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(saveAsnInspectionService);
+    }
+
+    @Test
+    @DisplayName("검수/적재 완료 성공 시 200과 완료된 item 수를 반환한다")
+    void completeInspection_success() throws Exception {
+        LocalDateTime now = LocalDateTime.of(2026, 4, 2, 11, 30);
+        Asn asn = new Asn(
+                "ASN-001",
+                "WH-001",
+                "SELLER-001",
+                LocalDate.of(2026, 4, 2),
+                "INSPECTING_PUTAWAY",
+                "메모",
+                3,
+                now.minusDays(1),
+                now,
+                "SELLER-001",
+                "CONK",
+                now.minusHours(4),
+                null
+        );
+        when(completeAsnInspectionService.complete(any()))
+                .thenReturn(new CompleteAsnInspectionService.CompleteResult(asn, 2, now));
+
+        mockMvc.perform(patch("/wms/asns/ASN-001/inspection/complete")
+                        .header("X-Tenant-Code", "CONK"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("inspection completed"))
+                .andExpect(jsonPath("$.data.asnId").value("ASN-001"))
+                .andExpect(jsonPath("$.data.status").value("INSPECTING_PUTAWAY"))
+                .andExpect(jsonPath("$.data.completedItemCount").value(2));
+    }
+
+    @Test
+    @DisplayName("검수/적재 완료 시 tenant 헤더가 없으면 400을 반환한다")
+    void completeInspection_whenTenantHeaderMissing_thenReturn400() throws Exception {
+        mockMvc.perform(patch("/wms/asns/ASN-001/inspection/complete"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("COMMON-001"));
+
+        verifyNoInteractions(completeAsnInspectionService);
+    }
+
+    @Test
+    @DisplayName("검수/적재 완료 시 서비스 예외가 발생하면 400을 반환한다")
+    void completeInspection_whenServiceThrows_thenReturn400() throws Exception {
+        doThrow(new BusinessException(ErrorCode.ASN_INSPECTION_COMPLETE_INVALID))
+                .when(completeAsnInspectionService).complete(any());
+
+        mockMvc.perform(patch("/wms/asns/ASN-001/inspection/complete")
+                        .header("X-Tenant-Code", "CONK"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("ASN-020"));
     }
 }
