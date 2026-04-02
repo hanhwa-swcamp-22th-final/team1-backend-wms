@@ -11,4 +11,10 @@ public interface InspectionPutawayRepository extends JpaRepository<InspectionPut
     List<InspectionPutaway> findAllByAsnId(String asnId);
 
     Optional<InspectionPutaway> findByAsnIdAndSkuId(String asnId, String skuId);
+
+    List<InspectionPutaway> findAllBySkuIdAndTenantIdAndCompletedTrueAndLocationIdIsNotNullOrderByCompletedAtDescUpdatedAtDesc(
+            String skuId, String tenantId
+    );
+
+    List<InspectionPutaway> findAllByLocationIdAndCompletedFalse(String locationId);
 }

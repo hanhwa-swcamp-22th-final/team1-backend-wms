@@ -102,6 +102,12 @@ public class InspectionPutaway {
         this.updatedAt = changedAt;
     }
 
+    public void assignLocation(String locationId) {
+        // Bin 배정 단계에서는 수량 정보 없이 locationId만 먼저 확정 저장한다.
+        this.locationId = locationId;
+        this.updatedAt = LocalDateTime.now();
+    }
+
     // 재고 반영 전 단계의 "검수/적재 입력 완료"만 표시한다.
     public void complete() {
         LocalDateTime changedAt = LocalDateTime.now();

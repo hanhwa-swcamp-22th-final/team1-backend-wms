@@ -3,15 +3,19 @@ package com.conk.wms.command.controller;
 import com.conk.wms.common.controller.ApiResponse;
 import com.conk.wms.common.exception.BusinessException;
 import com.conk.wms.common.exception.ErrorCode;
+import com.conk.wms.command.controller.dto.request.AssignAsnPutawayRequest;
 import com.conk.wms.command.controller.dto.request.ConfirmAsnArrivalRequest;
 import com.conk.wms.command.controller.dto.request.SaveAsnInspectionRequest;
+import com.conk.wms.command.controller.dto.response.AssignAsnPutawayResponse;
 import com.conk.wms.command.controller.dto.response.CompleteAsnInspectionResponse;
 import com.conk.wms.command.controller.dto.response.ConfirmAsnArrivalResponse;
 import com.conk.wms.command.controller.dto.response.SaveAsnInspectionResponse;
 import com.conk.wms.command.domain.aggregate.Asn;
+import com.conk.wms.command.dto.AssignAsnPutawayCommand;
 import com.conk.wms.command.dto.CompleteAsnInspectionCommand;
 import com.conk.wms.command.dto.ConfirmAsnArrivalCommand;
 import com.conk.wms.command.dto.SaveAsnInspectionCommand;
+import com.conk.wms.command.service.AssignAsnPutawayService;
 import com.conk.wms.command.service.CompleteAsnInspectionService;
 import com.conk.wms.command.service.ConfirmAsnArrivalService;
 import com.conk.wms.command.service.SaveAsnInspectionService;
@@ -32,13 +36,16 @@ import java.util.List;
 public class AsnManagementController {
 
     private final ConfirmAsnArrivalService confirmAsnArrivalService;
+    private final AssignAsnPutawayService assignAsnPutawayService;
     private final SaveAsnInspectionService saveAsnInspectionService;
     private final CompleteAsnInspectionService completeAsnInspectionService;
 
     public AsnManagementController(ConfirmAsnArrivalService confirmAsnArrivalService,
+                                   AssignAsnPutawayService assignAsnPutawayService,
                                    SaveAsnInspectionService saveAsnInspectionService,
                                    CompleteAsnInspectionService completeAsnInspectionService) {
         this.confirmAsnArrivalService = confirmAsnArrivalService;
+        this.assignAsnPutawayService = assignAsnPutawayService;
         this.saveAsnInspectionService = saveAsnInspectionService;
         this.completeAsnInspectionService = completeAsnInspectionService;
     }
@@ -64,6 +71,33 @@ public class AsnManagementController {
                 asn.getArrivedAt()
         );
         return ResponseEntity.ok(ApiResponse.success("arrival confirmed", response));
+    }
+
+    // Bin 미배정 ASN 화면에서 SKU별 적재 location만 먼저 확정 저장한다.
+    // 이 단계는 상태를 바꾸지 않고 inspection_putaway.locationId만 선저장한다.
+    @PatchMapping("/{asnId}/putaway")
+    public ResponseEntity<ApiResponse<AssignAsnPutawayResponse>> assignPutaway(
+            @PathVariable String asnId,
+            @RequestBody AssignAsnPutawayRequest request,
+            @RequestHeader(value = "X-Tenant-Code", required = false) String tenantCode
+    ) {
+        String resolvedTenantCode = resolveActorId(tenantCode);
+        List<AssignAsnPutawayRequest.ItemRequest> items = request != null && request.getItems() != null
+                ? request.getItems()
+                : List.of();
+        int assignedCount = assignAsnPutawayService.assign(new AssignAsnPutawayCommand(
+                asnId,
+                resolvedTenantCode,
+                items.stream()
+                        .map(item -> new AssignAsnPutawayCommand.ItemCommand(
+                                item.getSkuId(),
+                                item.getLocationId()
+                        ))
+                        .toList()
+        ));
+
+        AssignAsnPutawayResponse response = new AssignAsnPutawayResponse(asnId, assignedCount);
+        return ResponseEntity.ok(ApiResponse.success("putaway assigned", response));
     }
 
     // 검수와 적재 위치/수량을 한 번에 저장한다.

@@ -3,11 +3,16 @@ package com.conk.wms.query.controller;
 import com.conk.wms.common.controller.ApiResponse;
 import com.conk.wms.common.exception.BusinessException;
 import com.conk.wms.common.exception.ErrorCode;
+import com.conk.wms.query.controller.dto.response.AsnBinMatchesResponse;
 import com.conk.wms.query.controller.dto.response.AsnInspectionResponse;
+import com.conk.wms.query.controller.dto.response.AsnRecommendedBinsResponse;
+import com.conk.wms.query.service.GetAsnBinMatchesService;
 import com.conk.wms.query.service.GetAsnInspectionService;
+import com.conk.wms.query.service.GetAsnRecommendedBinsService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -18,10 +23,37 @@ import org.springframework.web.bind.annotation.RestController;
 // seller 상세/KPI와 분리해서, 창고 운영용 inspection 조회를 이쪽에 둔다.
 public class AsnManagementQueryController {
 
+    private final GetAsnBinMatchesService getAsnBinMatchesService;
+    private final GetAsnRecommendedBinsService getAsnRecommendedBinsService;
     private final GetAsnInspectionService getAsnInspectionService;
 
-    public AsnManagementQueryController(GetAsnInspectionService getAsnInspectionService) {
+    public AsnManagementQueryController(GetAsnBinMatchesService getAsnBinMatchesService,
+                                        GetAsnRecommendedBinsService getAsnRecommendedBinsService,
+                                        GetAsnInspectionService getAsnInspectionService) {
+        this.getAsnBinMatchesService = getAsnBinMatchesService;
+        this.getAsnRecommendedBinsService = getAsnRecommendedBinsService;
         this.getAsnInspectionService = getAsnInspectionService;
+    }
+
+    @GetMapping("/{asnId}/bin-matches")
+    public ResponseEntity<ApiResponse<AsnBinMatchesResponse>> getBinMatches(
+            @PathVariable String asnId,
+            @RequestHeader(value = "X-Tenant-Code", required = false) String tenantCode
+    ) {
+        validateTenantCode(tenantCode);
+        AsnBinMatchesResponse response = getAsnBinMatchesService.getBinMatches(asnId, tenantCode);
+        return ResponseEntity.ok(ApiResponse.success("ok", response));
+    }
+
+    @GetMapping("/{asnId}/recommended-bins")
+    public ResponseEntity<ApiResponse<AsnRecommendedBinsResponse>> getRecommendedBins(
+            @PathVariable String asnId,
+            @RequestHeader(value = "X-Tenant-Code", required = false) String tenantCode,
+            @RequestParam(value = "skuId", required = false) String skuId
+    ) {
+        validateTenantCode(tenantCode);
+        AsnRecommendedBinsResponse response = getAsnRecommendedBinsService.getRecommendedBins(asnId, tenantCode, skuId);
+        return ResponseEntity.ok(ApiResponse.success("ok", response));
     }
 
     @GetMapping("/{asnId}/inspection")
