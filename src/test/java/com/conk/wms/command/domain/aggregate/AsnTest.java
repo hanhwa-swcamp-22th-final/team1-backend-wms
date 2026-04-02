@@ -93,4 +93,80 @@ class AsnTest {
 
         assertEquals(ErrorCode.ASN_ARRIVAL_NOT_ALLOWED, exception.getErrorCode());
     }
+
+    @Test
+    @DisplayName("검수/적재 시작 성공: ARRIVED 상태를 INSPECTING_PUTAWAY로 변경한다")
+    void beginInspectionPutaway_success() {
+        LocalDateTime now = LocalDateTime.of(2026, 4, 2, 10, 0);
+        Asn asn = new Asn(
+                "ASN-001",
+                "WH-001",
+                "SELLER-001",
+                LocalDate.of(2026, 3, 29),
+                "ARRIVED",
+                "온도 민감 상품 포함",
+                5,
+                now.minusDays(1),
+                now.minusDays(1),
+                "SELLER-001",
+                "WH-MANAGER-001",
+                now,
+                null
+        );
+
+        asn.beginInspectionPutaway("WH-WORKER-001");
+
+        assertEquals("INSPECTING_PUTAWAY", asn.getStatus());
+        assertEquals("WH-WORKER-001", asn.getUpdatedBy());
+    }
+
+    @Test
+    @DisplayName("검수/적재 재저장 성공: 이미 작업중이면 상태를 유지하고 수정자만 갱신한다")
+    void beginInspectionPutaway_whenAlreadyInspecting_thenKeepStatus() {
+        LocalDateTime now = LocalDateTime.of(2026, 4, 2, 10, 0);
+        Asn asn = new Asn(
+                "ASN-001",
+                "WH-001",
+                "SELLER-001",
+                LocalDate.of(2026, 3, 29),
+                "INSPECTING_PUTAWAY",
+                "온도 민감 상품 포함",
+                5,
+                now.minusDays(1),
+                now.minusHours(1),
+                "SELLER-001",
+                "WH-MANAGER-001",
+                now.minusHours(3),
+                null
+        );
+
+        asn.beginInspectionPutaway("WH-WORKER-002");
+
+        assertEquals("INSPECTING_PUTAWAY", asn.getStatus());
+        assertEquals("WH-WORKER-002", asn.getUpdatedBy());
+    }
+
+    @Test
+    @DisplayName("검수/적재 시작 실패: ARRIVED/INSPECTING_PUTAWAY 가 아닌 상태면 예외가 발생한다")
+    void beginInspectionPutaway_whenStateNotAllowed_thenThrow() {
+        LocalDateTime now = LocalDateTime.of(2026, 4, 2, 10, 0);
+        Asn asn = new Asn(
+                "ASN-001",
+                "WH-001",
+                "SELLER-001",
+                LocalDate.of(2026, 3, 29),
+                "REGISTERED",
+                "온도 민감 상품 포함",
+                5,
+                now.minusDays(1),
+                now.minusDays(1),
+                "SELLER-001",
+                "SELLER-001"
+        );
+
+        BusinessException exception = assertThrows(BusinessException.class,
+                () -> asn.beginInspectionPutaway("WH-WORKER-001"));
+
+        assertEquals(ErrorCode.ASN_INSPECTION_NOT_ALLOWED, exception.getErrorCode());
+    }
 }
