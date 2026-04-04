@@ -169,4 +169,58 @@ class AsnTest {
 
         assertEquals(ErrorCode.ASN_INSPECTION_NOT_ALLOWED, exception.getErrorCode());
     }
+
+    @Test
+    @DisplayName("입고 확정 성공: INSPECTING_PUTAWAY 상태를 STORED로 변경하고 storedAt을 기록한다")
+    void completeStorage_success() {
+        LocalDateTime now = LocalDateTime.of(2026, 4, 2, 10, 0);
+        LocalDateTime storedAt = LocalDateTime.of(2026, 4, 2, 15, 0);
+        Asn asn = new Asn(
+                "ASN-001",
+                "WH-001",
+                "SELLER-001",
+                LocalDate.of(2026, 3, 29),
+                "INSPECTING_PUTAWAY",
+                "온도 민감 상품 포함",
+                5,
+                now.minusDays(1),
+                now.minusHours(1),
+                "SELLER-001",
+                "WH-WORKER-001",
+                now.minusHours(3),
+                null
+        );
+
+        asn.completeStorage(storedAt, "WH-MANAGER-001");
+
+        assertEquals("STORED", asn.getStatus());
+        assertEquals(storedAt, asn.getStoredAt());
+        assertEquals("WH-MANAGER-001", asn.getUpdatedBy());
+    }
+
+    @Test
+    @DisplayName("입고 확정 실패: INSPECTING_PUTAWAY 가 아닌 상태면 예외가 발생한다")
+    void completeStorage_whenStateNotAllowed_thenThrow() {
+        LocalDateTime now = LocalDateTime.of(2026, 4, 2, 10, 0);
+        Asn asn = new Asn(
+                "ASN-001",
+                "WH-001",
+                "SELLER-001",
+                LocalDate.of(2026, 3, 29),
+                "ARRIVED",
+                "온도 민감 상품 포함",
+                5,
+                now.minusDays(1),
+                now.minusHours(1),
+                "SELLER-001",
+                "WH-MANAGER-001",
+                now.minusHours(3),
+                null
+        );
+
+        BusinessException exception = assertThrows(BusinessException.class,
+                () -> asn.completeStorage(LocalDateTime.of(2026, 4, 2, 15, 0), "WH-MANAGER-001"));
+
+        assertEquals(ErrorCode.ASN_CONFIRM_NOT_ALLOWED, exception.getErrorCode());
+    }
 }

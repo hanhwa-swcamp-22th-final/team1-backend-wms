@@ -4,6 +4,7 @@ import com.conk.wms.command.domain.aggregate.Asn;
 import com.conk.wms.command.service.AssignAsnPutawayService;
 import com.conk.wms.command.service.CompleteAsnInspectionService;
 import com.conk.wms.command.service.ConfirmAsnArrivalService;
+import com.conk.wms.command.service.ConfirmAsnInventoryService;
 import com.conk.wms.command.service.SaveAsnInspectionService;
 import com.conk.wms.common.controller.GlobalExceptionHandler;
 import com.conk.wms.common.exception.BusinessException;
@@ -54,6 +55,9 @@ class AsnManagementControllerTest {
 
     @MockitoBean
     private CompleteAsnInspectionService completeAsnInspectionService;
+
+    @MockitoBean
+    private ConfirmAsnInventoryService confirmAsnInventoryService;
 
     @Test
     @DisplayName("도착 확인 성공 시 200과 변경된 ASN 상태를 반환한다")
@@ -372,5 +376,61 @@ class AsnManagementControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.code").value("ASN-020"));
+    }
+
+    @Test
+    @DisplayName("입고 확정 성공 시 200과 STORED 상태를 반환한다")
+    void confirmInventory_success() throws Exception {
+        LocalDateTime now = LocalDateTime.of(2026, 4, 2, 15, 0);
+        Asn asn = new Asn(
+                "ASN-001",
+                "WH-001",
+                "SELLER-001",
+                LocalDate.of(2026, 4, 2),
+                "STORED",
+                "메모",
+                3,
+                now.minusDays(1),
+                now,
+                "SELLER-001",
+                "CONK",
+                now.minusHours(4),
+                now
+        );
+        when(confirmAsnInventoryService.confirm(any()))
+                .thenReturn(new ConfirmAsnInventoryService.ConfirmResult(asn, 2));
+
+        mockMvc.perform(patch("/wms/asns/ASN-001/confirm")
+                        .header("X-Tenant-Code", "CONK"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("inventory confirmed"))
+                .andExpect(jsonPath("$.data.asnId").value("ASN-001"))
+                .andExpect(jsonPath("$.data.status").value("STORED"))
+                .andExpect(jsonPath("$.data.reflectedInventoryCount").value(2));
+    }
+
+    @Test
+    @DisplayName("입고 확정 시 tenant 헤더가 없으면 400을 반환한다")
+    void confirmInventory_whenTenantHeaderMissing_thenReturn400() throws Exception {
+        mockMvc.perform(patch("/wms/asns/ASN-001/confirm"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("COMMON-001"));
+
+        verifyNoInteractions(confirmAsnInventoryService);
+    }
+
+    @Test
+    @DisplayName("입고 확정 시 서비스 예외가 발생하면 적절한 에러 응답을 반환한다")
+    void confirmInventory_whenServiceThrows_thenReturn409() throws Exception {
+        doThrow(new BusinessException(ErrorCode.ASN_CONFIRM_NOT_ALLOWED))
+                .when(confirmAsnInventoryService).confirm(any());
+
+        mockMvc.perform(patch("/wms/asns/ASN-001/confirm")
+                        .header("X-Tenant-Code", "CONK"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("ASN-030"));
     }
 }
