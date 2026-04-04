@@ -44,7 +44,7 @@ public class PutawayLocationSupport {
         AssignmentContext context = buildContext(warehouseId, tenantCode);
 
         // 같은 SKU가 이미 실제 재고로 존재하면, 그 location을 자동 배정 1순위로 본다.
-        List<Inventory> sameSkuInventories = inventoryRepository.findAllBySkuAndTenantId(skuId, tenantCode).stream()
+        List<Inventory> sameSkuInventories = inventoryRepository.findAllByIdSkuAndIdTenantId(skuId, tenantCode).stream()
                 .filter(inventory -> inventory.getQuantity() > 0)
                 .sorted(Comparator.comparingInt(Inventory::getQuantity).reversed())
                 .toList();
@@ -134,7 +134,7 @@ public class PutawayLocationSupport {
         // location 마스터는 "창고 구조"를, inventory는 "현재 적재 상태"를 나타낸다.
         // 두 데이터를 합쳐야만 "이 location에 지금 이 SKU를 넣을 수 있는가?"를 판단할 수 있다.
         List<Location> locations = locationRepository.findAllByWarehouseIdAndActiveTrueOrderByZoneIdAscRackIdAscBinIdAsc(warehouseId);
-        List<Inventory> inventories = inventoryRepository.findAllByTenantId(tenantCode);
+        List<Inventory> inventories = inventoryRepository.findAllByIdTenantId(tenantCode);
 
         Map<String, Integer> usedQuantityByLocationId = new HashMap<>();
         Map<String, Set<String>> skuSetByLocationId = new HashMap<>();

@@ -1,43 +1,34 @@
 package com.conk.wms.command.domain.aggregate;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+import java.time.LocalDateTime;
+
 @Entity
-@Table(name = "inventories")
+@Table(name = "inventory")
 public class Inventory {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(nullable = false)
-    private String locationId;
-
-    @Column(nullable = false)
-    private String sku;
-
-    @Column(nullable = false)
-    private String tenantId;
+    @EmbeddedId
+    private InventoryId id;
 
     @Column(nullable = false)
     private int quantity;
 
-    @Column(name = "inventory_type", nullable = false)
-    private String type;
+    @Column
+    private LocalDateTime receivedAt;
 
-    protected Inventory() {}
+    @Column
+    private LocalDateTime adjustedAt;
+
+    protected Inventory() {
+    }
 
     public Inventory(String locationId, String sku, String tenantId, int quantity, String type) {
-        this.locationId = locationId;
-        this.sku = sku;
-        this.tenantId = tenantId;
+        this.id = new InventoryId(locationId, sku, tenantId, type);
         this.quantity = quantity;
-        this.type = type;
     }
 
     public void deduct(int amount) {
@@ -45,18 +36,19 @@ public class Inventory {
             throw new IllegalArgumentException("재고가 부족합니다. 현재 재고: " + quantity);
         }
         this.quantity -= amount;
+        this.adjustedAt = LocalDateTime.now();
     }
 
     public String getLocationId() {
-        return locationId;
+        return id.getLocationId();
     }
 
     public String getSku() {
-        return sku;
+        return id.getSku();
     }
 
     public String getTenantId() {
-        return tenantId;
+        return id.getTenantId();
     }
 
     public int getQuantity() {
@@ -64,6 +56,18 @@ public class Inventory {
     }
 
     public String getType() {
-        return type;
+        return id.getInventoryType();
+    }
+
+    public InventoryId getId() {
+        return id;
+    }
+
+    public LocalDateTime getReceivedAt() {
+        return receivedAt;
+    }
+
+    public LocalDateTime getAdjustedAt() {
+        return adjustedAt;
     }
 }

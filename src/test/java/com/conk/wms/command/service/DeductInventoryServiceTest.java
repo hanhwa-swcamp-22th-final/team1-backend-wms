@@ -30,7 +30,8 @@ class DeductInventoryServiceTest {
     void deduct_success() {
         // given
         Inventory mockInventory = new Inventory("LOC-001", "SKU-001", "TENANT-001", 100, "AVAILABLE");
-        when(inventoryRepository.findByLocationIdAndSku("LOC-001", "SKU-001")).thenReturn(Optional.of(mockInventory));
+        when(inventoryRepository.findByIdLocationIdAndIdSkuAndIdInventoryType("LOC-001", "SKU-001", "AVAILABLE"))
+                .thenReturn(Optional.of(mockInventory));
 
         // when
         deductInventoryService.deduct(new DeductInventoryCommand("LOC-001", "SKU-001", 30));
@@ -44,7 +45,8 @@ class DeductInventoryServiceTest {
     @DisplayName("재고 차감 실패: 존재하지 않는 로케이션+SKU면 예외가 발생한다")
     void deduct_whenInventoryNotFound_thenThrow() {
         // given
-        when(inventoryRepository.findByLocationIdAndSku("LOC-999", "SKU-001")).thenReturn(Optional.empty());
+        when(inventoryRepository.findByIdLocationIdAndIdSkuAndIdInventoryType("LOC-999", "SKU-001", "AVAILABLE"))
+                .thenReturn(Optional.empty());
 
         // when & then
         assertThrows(IllegalArgumentException.class, () ->
@@ -57,7 +59,8 @@ class DeductInventoryServiceTest {
     void deduct_whenQuantityInsufficient_thenThrow() {
         // given
         Inventory mockInventory = new Inventory("LOC-001", "SKU-001", "TENANT-001", 20, "AVAILABLE");
-        when(inventoryRepository.findByLocationIdAndSku("LOC-001", "SKU-001")).thenReturn(Optional.of(mockInventory));
+        when(inventoryRepository.findByIdLocationIdAndIdSkuAndIdInventoryType("LOC-001", "SKU-001", "AVAILABLE"))
+                .thenReturn(Optional.of(mockInventory));
 
         // when & then
         assertThrows(IllegalArgumentException.class, () ->
