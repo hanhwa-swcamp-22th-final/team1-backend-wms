@@ -17,18 +17,30 @@ public class Inventory {
     @Column(nullable = false)
     private int quantity;
 
-    @Column
+    @Column(name = "received_at")
     private LocalDateTime receivedAt;
 
-    @Column
+    @Column(name = "adjusted_at")
     private LocalDateTime adjustedAt;
 
     protected Inventory() {
     }
 
     public Inventory(String locationId, String sku, String tenantId, int quantity, String type) {
+        this(locationId, sku, tenantId, quantity, type, null, null);
+    }
+
+    public Inventory(String locationId, String sku, String tenantId, int quantity, String type,
+                     LocalDateTime receivedAt, LocalDateTime adjustedAt) {
         this.id = new InventoryId(locationId, sku, tenantId, type);
         this.quantity = quantity;
+        this.receivedAt = receivedAt;
+        this.adjustedAt = adjustedAt;
+    }
+
+    public static Inventory createAvailable(String locationId, String sku, String tenantId,
+                                            int quantity, LocalDateTime receivedAt) {
+        return new Inventory(locationId, sku, tenantId, quantity, "AVAILABLE", receivedAt, receivedAt);
     }
 
     public void deduct(int amount) {
@@ -37,6 +49,18 @@ public class Inventory {
         }
         this.quantity -= amount;
         this.adjustedAt = LocalDateTime.now();
+    }
+
+    public void increase(int amount) {
+        increase(amount, LocalDateTime.now());
+    }
+
+    public void increase(int amount, LocalDateTime adjustedAt) {
+        this.quantity += amount;
+        this.adjustedAt = adjustedAt;
+        if (this.receivedAt == null) {
+            this.receivedAt = adjustedAt;
+        }
     }
 
     public String getLocationId() {
