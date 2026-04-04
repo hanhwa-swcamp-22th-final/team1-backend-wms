@@ -9,13 +9,13 @@ import java.util.Objects;
 @Embeddable
 public class InventoryId implements Serializable {
 
-    @Column(nullable = false)
+    @Column(name = "location_id", nullable = false)
     private String locationId;
 
-    @Column(nullable = false)
+    @Column(name = "sku", nullable = false)
     private String sku;
 
-    @Column(nullable = false)
+    @Column(name = "tenant_id", nullable = false)
     private String tenantId;
 
     @Column(name = "inventory_type", nullable = false)
