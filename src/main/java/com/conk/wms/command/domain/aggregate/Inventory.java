@@ -1,43 +1,45 @@
 package com.conk.wms.command.domain.aggregate;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+import java.time.LocalDateTime;
+
 @Entity
-@Table(name = "inventories")
+@Table(name = "inventory")
 public class Inventory {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(nullable = false)
-    private String locationId;
-
-    @Column(nullable = false)
-    private String sku;
-
-    @Column(nullable = false)
-    private String tenantId;
+    @EmbeddedId
+    private InventoryId id;
 
     @Column(nullable = false)
     private int quantity;
 
-    @Column(name = "inventory_type", nullable = false)
-    private String type;
+    @Column(name = "received_at")
+    private LocalDateTime receivedAt;
+
+    @Column(name = "adjusted_at")
+    private LocalDateTime adjustedAt;
 
     protected Inventory() {}
 
     public Inventory(String locationId, String sku, String tenantId, int quantity, String type) {
-        this.locationId = locationId;
-        this.sku = sku;
-        this.tenantId = tenantId;
+        this(locationId, sku, tenantId, quantity, type, LocalDateTime.now(), null);
+    }
+
+    public Inventory(String locationId, String sku, String tenantId, int quantity, String type,
+                     LocalDateTime receivedAt, LocalDateTime adjustedAt) {
+        this.id = new InventoryId(locationId, sku, tenantId, type);
         this.quantity = quantity;
-        this.type = type;
+        this.receivedAt = receivedAt;
+        this.adjustedAt = adjustedAt;
+    }
+
+    public static Inventory createAvailable(String locationId, String sku, String tenantId,
+                                            int quantity, LocalDateTime receivedAt) {
+        return new Inventory(locationId, sku, tenantId, quantity, "AVAILABLE", receivedAt, receivedAt);
     }
 
     public void deduct(int amount) {
@@ -45,25 +47,44 @@ public class Inventory {
             throw new IllegalArgumentException("재고가 부족합니다. 현재 재고: " + quantity);
         }
         this.quantity -= amount;
+        this.adjustedAt = LocalDateTime.now();
+    }
+
+    public void increase(int amount, LocalDateTime adjustedAt) {
+        this.quantity += amount;
+        this.adjustedAt = adjustedAt;
+        this.receivedAt = this.receivedAt != null ? this.receivedAt : adjustedAt;
+    }
+
+    public InventoryId getId() {
+        return id;
     }
 
     public String getLocationId() {
-        return locationId;
+        return id.getLocationId();
     }
 
     public String getSku() {
-        return sku;
+        return id.getSku();
     }
 
     public String getTenantId() {
-        return tenantId;
+        return id.getTenantId();
+    }
+
+    public String getType() {
+        return id.getInventoryType();
     }
 
     public int getQuantity() {
         return quantity;
     }
 
-    public String getType() {
-        return type;
+    public LocalDateTime getReceivedAt() {
+        return receivedAt;
+    }
+
+    public LocalDateTime getAdjustedAt() {
+        return adjustedAt;
     }
 }

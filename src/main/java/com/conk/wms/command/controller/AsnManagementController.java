@@ -9,15 +9,18 @@ import com.conk.wms.command.controller.dto.request.SaveAsnInspectionRequest;
 import com.conk.wms.command.controller.dto.response.AssignAsnPutawayResponse;
 import com.conk.wms.command.controller.dto.response.CompleteAsnInspectionResponse;
 import com.conk.wms.command.controller.dto.response.ConfirmAsnArrivalResponse;
+import com.conk.wms.command.controller.dto.response.ConfirmAsnInventoryResponse;
 import com.conk.wms.command.controller.dto.response.SaveAsnInspectionResponse;
 import com.conk.wms.command.domain.aggregate.Asn;
 import com.conk.wms.command.dto.AssignAsnPutawayCommand;
 import com.conk.wms.command.dto.CompleteAsnInspectionCommand;
 import com.conk.wms.command.dto.ConfirmAsnArrivalCommand;
+import com.conk.wms.command.dto.ConfirmAsnInventoryCommand;
 import com.conk.wms.command.dto.SaveAsnInspectionCommand;
 import com.conk.wms.command.service.AssignAsnPutawayService;
 import com.conk.wms.command.service.CompleteAsnInspectionService;
 import com.conk.wms.command.service.ConfirmAsnArrivalService;
+import com.conk.wms.command.service.ConfirmAsnInventoryService;
 import com.conk.wms.command.service.SaveAsnInspectionService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -39,15 +42,18 @@ public class AsnManagementController {
     private final AssignAsnPutawayService assignAsnPutawayService;
     private final SaveAsnInspectionService saveAsnInspectionService;
     private final CompleteAsnInspectionService completeAsnInspectionService;
+    private final ConfirmAsnInventoryService confirmAsnInventoryService;
 
     public AsnManagementController(ConfirmAsnArrivalService confirmAsnArrivalService,
                                    AssignAsnPutawayService assignAsnPutawayService,
                                    SaveAsnInspectionService saveAsnInspectionService,
-                                   CompleteAsnInspectionService completeAsnInspectionService) {
+                                   CompleteAsnInspectionService completeAsnInspectionService,
+                                   ConfirmAsnInventoryService confirmAsnInventoryService) {
         this.confirmAsnArrivalService = confirmAsnArrivalService;
         this.assignAsnPutawayService = assignAsnPutawayService;
         this.saveAsnInspectionService = saveAsnInspectionService;
         this.completeAsnInspectionService = completeAsnInspectionService;
+        this.confirmAsnInventoryService = confirmAsnInventoryService;
     }
 
     // 아직 인증이 없어 manager 식별값도 임시로 tenant 헤더에서 꺼낸다.
@@ -154,6 +160,26 @@ public class AsnManagementController {
                 result.getCompletedAt()
         );
         return ResponseEntity.ok(ApiResponse.success("inspection completed", response));
+    }
+
+    // 검수/적재 완료 후 정상 적재 수량을 inventory에 반영하고 ASN을 STORED로 마감한다.
+    @PatchMapping("/{asnId}/confirm")
+    public ResponseEntity<ApiResponse<ConfirmAsnInventoryResponse>> confirmInventory(
+            @PathVariable String asnId,
+            @RequestHeader(value = "X-Tenant-Code", required = false) String tenantCode
+    ) {
+        String resolvedTenantCode = resolveActorId(tenantCode);
+        ConfirmAsnInventoryService.ConfirmResult result = confirmAsnInventoryService.confirm(
+                new ConfirmAsnInventoryCommand(asnId, resolvedTenantCode)
+        );
+
+        ConfirmAsnInventoryResponse response = new ConfirmAsnInventoryResponse(
+                result.getAsn().getAsnId(),
+                result.getAsn().getStatus(),
+                result.getAsn().getStoredAt(),
+                result.getReflectedInventoryCount()
+        );
+        return ResponseEntity.ok(ApiResponse.success("inventory confirmed", response));
     }
 
     private String resolveActorId(String tenantCode) {
