@@ -9,19 +9,20 @@ import java.util.Objects;
 @Embeddable
 public class InventoryId implements Serializable {
 
-    @Column(name = "location_id", nullable = false)
+    @Column(nullable = false)
     private String locationId;
 
-    @Column(name = "sku", nullable = false)
+    @Column(nullable = false)
     private String sku;
 
-    @Column(name = "tenant_id", nullable = false)
+    @Column(nullable = false)
     private String tenantId;
 
     @Column(name = "inventory_type", nullable = false)
     private String inventoryType;
 
-    protected InventoryId() {}
+    protected InventoryId() {
+    }
 
     public InventoryId(String locationId, String sku, String tenantId, String inventoryType) {
         this.locationId = locationId;

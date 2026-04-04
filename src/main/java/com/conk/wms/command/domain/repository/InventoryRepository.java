@@ -14,6 +14,11 @@ public interface InventoryRepository extends JpaRepository<Inventory, InventoryI
     @Query("SELECT i FROM Inventory i WHERE i.id.tenantId = :tenantId AND i.quantity < :threshold")
     List<Inventory> findLowStockByTenantId(@Param("tenantId") String tenantId, @Param("threshold") int threshold);
 
+    List<Inventory> findAllByIdTenantId(String tenantId);
+
+    List<Inventory> findAllByIdSkuAndIdTenantId(String sku, String tenantId);
+
+    Optional<Inventory> findByIdLocationIdAndIdSkuAndIdInventoryType(String locationId, String sku, String inventoryType);
     @Query("SELECT i FROM Inventory i WHERE i.id.tenantId = :tenantId")
     List<Inventory> findAllByTenantId(@Param("tenantId") String tenantId);
 
