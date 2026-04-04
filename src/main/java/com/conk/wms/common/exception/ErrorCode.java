@@ -43,6 +43,9 @@ public enum ErrorCode {
     OUTBOUND_STOCK_INSUFFICIENT(HttpStatus.CONFLICT, "OUTBOUND-003", "출고 가능한 재고가 부족합니다."),
     OUTBOUND_ORDER_IDS_REQUIRED(HttpStatus.BAD_REQUEST, "OUTBOUND-004", "출고 지시할 주문은 1건 이상이어야 합니다."),
     OUTBOUND_ALREADY_DISPATCHED(HttpStatus.CONFLICT, "OUTBOUND-005", "이미 출고 지시된 주문입니다.");
+    ASN_CONFIRM_NOT_ALLOWED(HttpStatus.CONFLICT, "ASN-030", "현재 상태에서는 입고 확정을 진행할 수 없습니다."),
+    ASN_CONFIRM_RESULT_REQUIRED(HttpStatus.BAD_REQUEST, "ASN-031", "입고 확정을 위한 검수/적재 데이터가 없습니다."),
+    ASN_CONFIRM_INCOMPLETE(HttpStatus.BAD_REQUEST, "ASN-032", "완료되지 않은 검수/적재 데이터가 있습니다.");
 
     private final HttpStatus status;
     private final String code;

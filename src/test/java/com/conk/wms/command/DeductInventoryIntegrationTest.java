@@ -50,9 +50,7 @@ class DeductInventoryIntegrationTest {
                 .andExpect(status().isOk());
 
         // then
-        Inventory updated = inventoryRepository
-                .findByIdLocationIdAndIdSkuAndIdInventoryType("LOC-001", "SKU-001", "AVAILABLE")
-                .orElseThrow();
+        Inventory updated = inventoryRepository.findAvailableByLocationIdAndSku("LOC-001", "SKU-001").orElseThrow();
         assertThat(updated.getQuantity()).isEqualTo(70);
     }
 

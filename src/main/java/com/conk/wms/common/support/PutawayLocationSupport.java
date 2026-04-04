@@ -44,7 +44,8 @@ public class PutawayLocationSupport {
         AssignmentContext context = buildContext(warehouseId, tenantCode);
 
         // 같은 SKU가 이미 실제 재고로 존재하면, 그 location을 자동 배정 1순위로 본다.
-        List<Inventory> sameSkuInventories = inventoryRepository.findAllByIdSkuAndIdTenantId(skuId, tenantCode).stream()
+        List<Inventory> sameSkuInventories = inventoryRepository.findAllBySkuAndTenantId(skuId, tenantCode).stream()
+                .filter(inventory -> "AVAILABLE".equals(inventory.getType()))
                 .filter(inventory -> inventory.getQuantity() > 0)
                 .sorted(Comparator.comparingInt(Inventory::getQuantity).reversed())
                 .toList();

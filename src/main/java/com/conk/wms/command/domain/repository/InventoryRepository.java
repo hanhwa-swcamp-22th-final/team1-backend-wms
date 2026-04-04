@@ -19,4 +19,23 @@ public interface InventoryRepository extends JpaRepository<Inventory, InventoryI
     List<Inventory> findAllByIdSkuAndIdTenantId(String sku, String tenantId);
 
     Optional<Inventory> findByIdLocationIdAndIdSkuAndIdInventoryType(String locationId, String sku, String inventoryType);
+    @Query("SELECT i FROM Inventory i WHERE i.id.tenantId = :tenantId")
+    List<Inventory> findAllByTenantId(@Param("tenantId") String tenantId);
+
+    @Query("SELECT i FROM Inventory i WHERE i.id.sku = :sku AND i.id.tenantId = :tenantId")
+    List<Inventory> findAllBySkuAndTenantId(@Param("sku") String sku, @Param("tenantId") String tenantId);
+
+    @Query("""
+            SELECT i FROM Inventory i
+            WHERE i.id.locationId = :locationId
+              AND i.id.sku = :sku
+              AND i.id.inventoryType = :inventoryType
+            """)
+    Optional<Inventory> findByLocationIdAndSkuAndType(@Param("locationId") String locationId,
+                                                      @Param("sku") String sku,
+                                                      @Param("inventoryType") String inventoryType);
+
+    default Optional<Inventory> findAvailableByLocationIdAndSku(String locationId, String sku) {
+        return findByLocationIdAndSkuAndType(locationId, sku, "AVAILABLE");
+    }
 }

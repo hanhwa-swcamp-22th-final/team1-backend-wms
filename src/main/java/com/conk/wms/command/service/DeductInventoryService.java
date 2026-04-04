@@ -17,11 +17,7 @@ public class DeductInventoryService {
 
     @Transactional
     public void deduct(DeductInventoryCommand command) {
-        Inventory inventory = inventoryRepository.findByIdLocationIdAndIdSkuAndIdInventoryType(
-                        command.getLocationId(),
-                        command.getSku(),
-                        "AVAILABLE"
-                )
+        Inventory inventory = inventoryRepository.findAvailableByLocationIdAndSku(command.getLocationId(), command.getSku())
                 .orElseThrow(() -> new IllegalArgumentException("재고를 찾을 수 없습니다: " + command.getLocationId() + "/" + command.getSku()));
 
         inventory.deduct(command.getAmount());

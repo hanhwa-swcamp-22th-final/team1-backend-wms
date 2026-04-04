@@ -143,4 +143,20 @@ public class Asn {
                 ErrorCode.ASN_INSPECTION_NOT_ALLOWED.getMessage() + ": " + this.status
         );
     }
+
+    // 검수/적재와 재고 반영까지 끝나면 ASN을 최종 보관 완료 상태로 마감한다.
+    public void completeStorage(LocalDateTime storedAt, String updatedBy) {
+        if (!"INSPECTING_PUTAWAY".equals(this.status)) {
+            throw new BusinessException(
+                    ErrorCode.ASN_CONFIRM_NOT_ALLOWED,
+                    ErrorCode.ASN_CONFIRM_NOT_ALLOWED.getMessage() + ": " + this.status
+            );
+        }
+
+        LocalDateTime confirmedAt = storedAt != null ? storedAt : LocalDateTime.now();
+        this.status = "STORED";
+        this.storedAt = confirmedAt;
+        this.updatedAt = confirmedAt;
+        this.updatedBy = updatedBy;
+    }
 }
