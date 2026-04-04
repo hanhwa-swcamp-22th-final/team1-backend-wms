@@ -2,6 +2,7 @@ package com.conk.wms.query.service;
 
 import com.conk.wms.command.domain.aggregate.Inventory;
 import com.conk.wms.command.domain.repository.InventoryRepository;
+import com.conk.wms.command.domain.repository.OutboundPendingRepository;
 import com.conk.wms.query.client.OrderServiceClient;
 import com.conk.wms.query.client.dto.OrderItemDto;
 import com.conk.wms.query.client.dto.OrderSummaryDto;
@@ -27,6 +28,9 @@ class GetPendingOrdersServiceTest {
 
     @Mock
     private InventoryRepository inventoryRepository;
+
+    @Mock
+    private OutboundPendingRepository outboundPendingRepository;
 
     @InjectMocks
     private GetPendingOrdersService getPendingOrdersService;
@@ -86,6 +90,8 @@ class GetPendingOrdersServiceTest {
                 .thenReturn(List.of(new Inventory("LOC-A-01-02", "SKU-002", "CONK", 5, "AVAILABLE")));
         when(inventoryRepository.findAllByIdSkuAndIdTenantId("SKU-003", "CONK"))
                 .thenReturn(List.of(new Inventory("LOC-A-01-03", "SKU-003", "CONK", 2, "AVAILABLE")));
+        when(outboundPendingRepository.existsByIdOrderIdAndIdTenantId("ORD-001", "CONK")).thenReturn(false);
+        when(outboundPendingRepository.existsByIdOrderIdAndIdTenantId("ORD-002", "CONK")).thenReturn(false);
 
         List<PendingOrderResponse> responses = getPendingOrdersService.getPendingOrders("CONK");
 

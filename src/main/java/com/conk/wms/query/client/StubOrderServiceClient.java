@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Component
 // order-service 실제 명세가 확정되기 전까지 주문 유입 화면을 먼저 개발하기 위한 임시 stub.
@@ -59,5 +60,12 @@ public class StubOrderServiceClient implements OrderServiceClient {
                         ))
                         .build()
         );
+    }
+
+    @Override
+    public Optional<OrderSummaryDto> getPendingOrder(String tenantCode, String orderId) {
+        return getPendingOrders(tenantCode).stream()
+                .filter(order -> orderId.equals(order.getOrderId()))
+                .findFirst();
     }
 }

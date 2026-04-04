@@ -36,7 +36,13 @@ public enum ErrorCode {
     ASN_LOCATION_WAREHOUSE_MISMATCH(HttpStatus.BAD_REQUEST, "ASN-026", "ASN과 다른 창고의 location 입니다."),
     ASN_LOCATION_INACTIVE(HttpStatus.BAD_REQUEST, "ASN-027", "비활성 location 입니다."),
     ASN_LOCATION_ALREADY_OCCUPIED(HttpStatus.BAD_REQUEST, "ASN-028", "다른 SKU가 사용 중인 location 입니다."),
-    ASN_LOCATION_CAPACITY_EXCEEDED(HttpStatus.BAD_REQUEST, "ASN-029", "location 수용 가능 수량을 초과했습니다.");
+    ASN_LOCATION_CAPACITY_EXCEEDED(HttpStatus.BAD_REQUEST, "ASN-029", "location 수용 가능 수량을 초과했습니다."),
+
+    OUTBOUND_ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "OUTBOUND-001", "출고 대상 주문을 찾을 수 없습니다."),
+    OUTBOUND_DISPATCH_NOT_ALLOWED(HttpStatus.CONFLICT, "OUTBOUND-002", "현재 상태에서는 출고 지시를 진행할 수 없습니다."),
+    OUTBOUND_STOCK_INSUFFICIENT(HttpStatus.CONFLICT, "OUTBOUND-003", "출고 가능한 재고가 부족합니다."),
+    OUTBOUND_ORDER_IDS_REQUIRED(HttpStatus.BAD_REQUEST, "OUTBOUND-004", "출고 지시할 주문은 1건 이상이어야 합니다."),
+    OUTBOUND_ALREADY_DISPATCHED(HttpStatus.CONFLICT, "OUTBOUND-005", "이미 출고 지시된 주문입니다.");
 
     private final HttpStatus status;
     private final String code;

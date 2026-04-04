@@ -2,6 +2,7 @@ package com.conk.wms.query.service;
 
 import com.conk.wms.command.domain.aggregate.Inventory;
 import com.conk.wms.command.domain.repository.InventoryRepository;
+import com.conk.wms.command.domain.repository.OutboundPendingRepository;
 import com.conk.wms.query.client.OrderServiceClient;
 import com.conk.wms.query.client.dto.OrderItemDto;
 import com.conk.wms.query.client.dto.OrderSummaryDto;
@@ -21,16 +22,20 @@ public class GetPendingOrdersService {
 
     private final OrderServiceClient orderServiceClient;
     private final InventoryRepository inventoryRepository;
+    private final OutboundPendingRepository outboundPendingRepository;
 
     public GetPendingOrdersService(OrderServiceClient orderServiceClient,
-                                   InventoryRepository inventoryRepository) {
+                                   InventoryRepository inventoryRepository,
+                                   OutboundPendingRepository outboundPendingRepository) {
         this.orderServiceClient = orderServiceClient;
         this.inventoryRepository = inventoryRepository;
+        this.outboundPendingRepository = outboundPendingRepository;
     }
 
     public List<PendingOrderResponse> getPendingOrders(String tenantCode) {
         return orderServiceClient.getPendingOrders(tenantCode).stream()
                 .filter(this::isPendingTarget)
+                .filter(order -> !outboundPendingRepository.existsByIdOrderIdAndIdTenantId(order.getOrderId(), tenantCode))
                 .sorted(Comparator.comparing(OrderSummaryDto::getOrderedAt).reversed())
                 .map(order -> PendingOrderResponse.builder()
                         .id(order.getOrderId())
