@@ -1,5 +1,8 @@
 package com.conk.wms.command.dto;
 
+/**
+ * CompleteAsnInspectionCommand 서비스 계층으로 전달되는 내부 명령 DTO다.
+ */
 public class CompleteAsnInspectionCommand {
 
     private final String asnId;

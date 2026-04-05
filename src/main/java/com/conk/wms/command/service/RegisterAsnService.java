@@ -17,6 +17,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * 셀러 ASN 등록 요청을 실제 ASN/ASN_ITEM 엔티티로 생성하는 서비스다.
+ */
 @Service
 // Seller ASN 등록 유스케이스의 핵심 흐름:
 // 1) 입력 검증 -> 2) 창고/중복 검사 -> 3) ASN 헤더 저장 -> 4) ASN 품목 저장
@@ -33,6 +36,10 @@ public class RegisterAsnService {
         this.warehouseRepository = warehouseRepository;
     }
 
+    /**
+     * 셀러가 보낸 ASN 등록 정보를 헤더와 품목으로 분리 저장한다.
+     * 저장 전에 창고 존재 여부, ASN 중복 여부, SKU 중복 여부를 한 번에 점검한다.
+     */
     @Transactional
     public void register(RegisterAsnCommand command) {
         validateCommand(command);

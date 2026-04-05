@@ -14,6 +14,9 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * 출고 지시 이후 작업 배정을 처리하는 command API 컨트롤러다.
+ */
 @RestController
 @RequestMapping("/wms/manager/tasks")
 public class TaskManagementController {

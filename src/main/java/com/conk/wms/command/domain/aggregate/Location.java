@@ -5,6 +5,9 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+/**
+ * 창고 내 실제 보관 위치와 BIN 정보를 표현하는 엔티티다.
+ */
 @Entity
 @Table(name = "locations")
 public class Location {

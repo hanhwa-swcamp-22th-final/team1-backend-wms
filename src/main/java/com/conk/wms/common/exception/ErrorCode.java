@@ -2,6 +2,9 @@ package com.conk.wms.common.exception;
 
 import org.springframework.http.HttpStatus;
 
+/**
+ * 서비스 전반에서 사용하는 비즈니스 에러 코드와 메시지를 모아둔 enum이다.
+ */
 // 공통 비즈니스 에러 코드 모음.
 // 현재는 ASN 흐름부터 적용했고, 이후 다른 서비스도 같은 패턴으로 확장할 수 있다.
 public enum ErrorCode {

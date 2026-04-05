@@ -5,6 +5,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * DispatchPendingOrderRequest 요청 본문을 바인딩하기 위한 DTO다.
+ */
 @Getter
 @Setter
 @NoArgsConstructor

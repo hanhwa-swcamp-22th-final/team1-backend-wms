@@ -4,6 +4,9 @@ import lombok.Getter;
 
 import java.time.LocalDateTime;
 
+/**
+ * ConfirmAsnInventoryResponse 응답 본문을 표현하기 위한 DTO다.
+ */
 @Getter
 public class ConfirmAsnInventoryResponse {
 

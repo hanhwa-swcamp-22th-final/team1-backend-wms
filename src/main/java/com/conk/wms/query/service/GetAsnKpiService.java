@@ -9,6 +9,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/**
+ * ASN 관련 KPI 요약값을 조회하는 서비스다.
+ */
 @Service
 @Transactional(readOnly = true)
 // ASN KPI 조회 전용 query service.

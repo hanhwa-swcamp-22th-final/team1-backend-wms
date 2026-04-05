@@ -21,6 +21,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+/**
+ * 셀러가 ASN을 등록할 때 사용하는 command API 컨트롤러다.
+ * 입고 요청 생성 흐름의 시작점을 담당한다.
+ */
 // Seller ASN 등록/목록 조회 전용 진입점.
 // 상세/관리자용 ASN 조회는 이후 별도 API로 분리해서 확장할 예정이라,
 // 현재는 seller 화면에서 실제로 쓰는 `/wms/seller/asns`만 먼저 담당한다.

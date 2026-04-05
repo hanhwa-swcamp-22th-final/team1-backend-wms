@@ -26,6 +26,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+/**
+ * 작업 배정과 work_detail을 집계해 피킹 리스트 목록과 상세를 만드는 서비스다.
+ */
 @Service
 public class GetPickingListsService {
 
@@ -46,6 +49,9 @@ public class GetPickingListsService {
         this.orderServiceClient = orderServiceClient;
     }
 
+    /**
+     * 작업 배정 헤더와 상세를 집계해 피킹 리스트 목록 요약값으로 변환한다.
+     */
     public List<PickingListResponse> getPickingLists(String tenantCode) {
         return workAssignmentRepository.findAllByIdTenantId(tenantCode).stream()
                 .sorted(Comparator.comparing(WorkAssignment::getAssignedAt).reversed())
@@ -54,6 +60,10 @@ public class GetPickingListsService {
                 .toList();
     }
 
+    /**
+     * 특정 workId의 상세 항목을 조회해 피킹 리스트 상세 화면 DTO로 조합한다.
+     * work_detail, location, 주문 상품명을 함께 묶어 작업자가 읽기 쉬운 형태로 반환한다.
+     */
     public PickingListDetailResponse getPickingList(String tenantCode, String workId) {
         WorkAssignment assignment = workAssignmentRepository.findAllByIdWorkIdAndIdTenantId(workId, tenantCode).stream()
                 .findFirst()

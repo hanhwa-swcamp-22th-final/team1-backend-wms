@@ -10,6 +10,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * 재고 차감과 같은 inventory command API를 제공한다.
+ */
 @RestController
 @RequestMapping("/wms/inventories")
 public class InventoryController {

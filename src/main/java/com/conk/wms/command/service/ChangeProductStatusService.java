@@ -6,6 +6,9 @@ import com.conk.wms.command.domain.repository.ProductRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * 상품 상태 변경 로직을 처리하는 command 서비스다.
+ */
 @Service
 public class ChangeProductStatusService {
 

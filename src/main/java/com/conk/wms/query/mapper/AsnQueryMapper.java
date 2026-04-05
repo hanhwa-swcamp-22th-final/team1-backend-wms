@@ -14,6 +14,9 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+/**
+ * ASN 조회 전용 read model을 SQL로 조회하는 매퍼다.
+ */
 @Component
 // ASN query 응답 가공을 한 곳에 모아두는 mapper.
 // 서비스는 조회/조합에 집중하고, 화면용 shape 변환 책임은 이 클래스로 분리한다.

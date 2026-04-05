@@ -7,6 +7,10 @@ import jakarta.persistence.Table;
 
 import java.time.LocalDateTime;
 
+/**
+ * location, sku, tenant, type 기준 재고 수량을 표현하는 엔티티다.
+ * 입고 반영과 출고 할당 모두 이 엔티티를 기준으로 움직인다.
+ */
 @Entity
 @Table(name = "inventory")
 public class Inventory {

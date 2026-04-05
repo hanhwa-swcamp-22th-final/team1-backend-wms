@@ -17,6 +17,10 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * 창고 관리자 기준 출고 지시 command API를 제공한다.
+ * 주문을 출고 대상으로 확정하고 재고를 할당하는 흐름의 진입점이다.
+ */
 @RestController
 @RequestMapping("/wms/manager/pending-orders")
 public class OutboundManagementController {

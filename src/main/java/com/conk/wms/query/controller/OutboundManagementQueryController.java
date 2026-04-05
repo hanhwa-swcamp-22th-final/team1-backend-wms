@@ -13,6 +13,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+/**
+ * 출고 지시 대기 주문 조회 API를 제공하는 컨트롤러다.
+ */
 @RestController
 @RequestMapping("/wms/manager")
 // 출고 지시 화면에서 쓰는 조회 컨트롤러.

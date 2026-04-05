@@ -14,6 +14,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.function.Predicate;
 
+/**
+ * ASN 품목에 대해 추천 BIN 후보를 계산해 반환하는 서비스다.
+ */
 @Service
 @Transactional(readOnly = true)
 public class GetAsnRecommendedBinsService {

@@ -15,6 +15,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+/**
+ * 피킹 리스트 목록과 상세 조회 API를 제공하는 컨트롤러다.
+ */
 @RestController
 @RequestMapping("/wms/manager")
 public class TaskManagementQueryController {

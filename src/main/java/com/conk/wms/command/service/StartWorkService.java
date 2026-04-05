@@ -6,6 +6,9 @@ import com.conk.wms.command.domain.repository.WorkRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * 작업자 기준으로 작업 시작과 진행 처리를 담당하는 서비스다.
+ */
 @Service
 public class StartWorkService {
 

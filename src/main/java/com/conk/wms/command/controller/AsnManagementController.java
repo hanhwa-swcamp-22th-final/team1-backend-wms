@@ -32,6 +32,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+/**
+ * 창고 관리자 기준 ASN command API를 모아둔 컨트롤러다.
+ * 도착 확인, 검수/적재, BIN 배정, 입고 확정 같은 입고 실행 명령을 처리한다.
+ */
 // ASN 운영 액션 전용 컨트롤러.
 // seller 등록/조회 API와 분리해서, 이후 도착 확인·작업자 배정·검수 같은 창고 운영 액션을 이쪽에 모은다.
 @RestController

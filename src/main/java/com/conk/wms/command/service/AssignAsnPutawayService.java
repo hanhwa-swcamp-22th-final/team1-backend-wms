@@ -24,6 +24,9 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+/**
+ * ASN별 BIN 배정 결과를 저장하는 command 서비스다.
+ */
 @Service
 @Transactional
 public class AssignAsnPutawayService {
@@ -45,6 +48,10 @@ public class AssignAsnPutawayService {
         this.putawayLocationSupport = putawayLocationSupport;
     }
 
+    /**
+     * ASN 품목별로 최종 선택된 BIN(locationId)을 inspection_putaway에 선저장한다.
+     * 이후 inspection 저장 단계는 이 locationId를 그대로 재사용한다.
+     */
     public int assign(AssignAsnPutawayCommand command) {
         validateItems(command.getItems());
 

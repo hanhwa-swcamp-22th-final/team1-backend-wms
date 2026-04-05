@@ -16,6 +16,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * 완료된 검수/적재 결과를 inventory에 반영하고 ASN를 STORED로 마감하는 서비스다.
+ */
 @Service
 @Transactional
 // 입고 확정 시점에 완료된 inspection_putaway 결과를 실제 가용 재고에 반영한다.
@@ -36,6 +39,10 @@ public class ConfirmAsnInventoryService {
         this.inventoryRepository = inventoryRepository;
     }
 
+    /**
+     * 완료된 검수/적재 결과를 AVAILABLE 재고로 반영하고 ASN를 STORED로 마감한다.
+     * 현재 범위에서는 정상 적재 수량만 반영하고 불량/격리 재고는 후속 단계로 남긴다.
+     */
     public ConfirmResult confirm(ConfirmAsnInventoryCommand command) {
         Asn asn = asnRepository.findByAsnId(command.getAsnId())
                 .orElseThrow(() -> new BusinessException(

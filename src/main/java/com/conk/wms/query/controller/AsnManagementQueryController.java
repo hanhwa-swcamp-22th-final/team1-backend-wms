@@ -17,6 +17,9 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * 창고 관리자 기준 ASN 조회 API를 제공하는 컨트롤러다.
+ */
 @RestController
 @RequestMapping("/wms/asns")
 // ASN 운영 화면에서 쓰는 조회 컨트롤러.

@@ -7,6 +7,9 @@ import jakarta.persistence.Table;
 
 import java.time.LocalDateTime;
 
+/**
+ * 출고 지시 후 특정 주문에 묶인 할당 재고를 표현하는 엔티티다.
+ */
 @Entity
 @Table(name = "allocated_inventory")
 public class AllocatedInventory {

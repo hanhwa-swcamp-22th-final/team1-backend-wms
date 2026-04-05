@@ -8,6 +8,9 @@ import lombok.Setter;
 
 import java.time.LocalDate;
 
+/**
+ * CreateSellerAsnRequest 요청 본문을 바인딩하기 위한 DTO다.
+ */
 @Getter
 @Setter
 @NoArgsConstructor

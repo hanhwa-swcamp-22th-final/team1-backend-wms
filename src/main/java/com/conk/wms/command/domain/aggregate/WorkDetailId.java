@@ -6,6 +6,9 @@ import jakarta.persistence.Embeddable;
 import java.io.Serializable;
 import java.util.Objects;
 
+/**
+ * work_detail 엔티티의 복합키를 표현한다.
+ */
 @Embeddable
 public class WorkDetailId implements Serializable {
 

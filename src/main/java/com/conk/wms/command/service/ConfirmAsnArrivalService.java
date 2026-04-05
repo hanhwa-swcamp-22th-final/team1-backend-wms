@@ -8,6 +8,9 @@ import com.conk.wms.command.dto.ConfirmAsnArrivalCommand;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * ASN 도착 확인을 처리하고 상태를 ARRIVED로 변경하는 서비스다.
+ */
 @Service
 @Transactional
 // 창고 운영자가 ASN 도착을 확인하는 command service.
@@ -20,6 +23,10 @@ public class ConfirmAsnArrivalService {
         this.asnRepository = asnRepository;
     }
 
+    /**
+     * ASN 도착 시간을 기록하고 상태를 ARRIVED로 변경한다.
+     * 이후 검수/적재 단계는 별도 서비스에서 이어진다.
+     */
     public Asn confirm(ConfirmAsnArrivalCommand command) {
         Asn asn = asnRepository.findByAsnId(command.getAsnId())
                 .orElseThrow(() -> new BusinessException(

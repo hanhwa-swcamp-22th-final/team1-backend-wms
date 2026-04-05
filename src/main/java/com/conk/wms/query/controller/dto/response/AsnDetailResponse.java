@@ -5,6 +5,9 @@ import lombok.Getter;
 
 import java.util.List;
 
+/**
+ * AsnDetailResponse 조회 응답 모델을 표현하는 DTO다.
+ */
 @Getter
 @Builder
 // 공용 ASN 상세 응답 DTO.

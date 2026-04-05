@@ -17,6 +17,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Comparator;
 import java.util.List;
 
+/**
+ * 대기 주문을 출고 대상으로 확정하고 AVAILABLE 재고를 ALLOCATED로 전환하는 서비스다.
+ */
 @Service
 public class DispatchPendingOrderService {
 
@@ -35,6 +38,10 @@ public class DispatchPendingOrderService {
         this.allocatedInventoryRepository = allocatedInventoryRepository;
     }
 
+    /**
+     * 주문 한 건을 출고 대상으로 확정하고 필요한 재고를 ALLOCATED 상태로 옮긴다.
+     * 재고가 충분하지 않으면 전체 주문 배정 자체를 실패시킨다.
+     */
     @Transactional
     public DispatchResult dispatch(String orderId, String tenantCode, String actorId) {
         OrderSummaryDto order = orderServiceClient.getPendingOrder(tenantCode, orderId)
@@ -53,6 +60,10 @@ public class DispatchPendingOrderService {
         return new DispatchResult(1, allocatedRowCount);
     }
 
+    /**
+     * 여러 주문을 순서대로 개별 출고 지시 로직에 태운다.
+     * 현재는 요청 옵션보다 실제 재고 할당 성공 여부에 집중한 1차 구현이다.
+     */
     @Transactional
     public DispatchResult dispatchBulk(List<String> orderIds, String tenantCode, String actorId) {
         if (orderIds == null || orderIds.isEmpty()) {
@@ -76,6 +87,10 @@ public class DispatchPendingOrderService {
         }
     }
 
+    /**
+     * SKU 한 줄에 대해 AVAILABLE 재고를 location 우선순위대로 차감하고,
+     * 같은 location/sku 조합의 ALLOCATED 재고와 할당 이력을 생성한다.
+     */
     private int allocateItem(OrderSummaryDto order, OrderItemDto item, String tenantCode, String actorId) {
         List<Inventory> availableInventories = inventoryRepository.findAllByIdSkuAndIdTenantId(item.getSkuId(), tenantCode).stream()
                 .filter(inventory -> "AVAILABLE".equals(inventory.getType()))
