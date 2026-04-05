@@ -1,9 +1,12 @@
 package com.conk.wms.command;
 
 import com.conk.wms.command.domain.aggregate.OutboundPending;
+import com.conk.wms.command.domain.aggregate.AllocatedInventory;
 import com.conk.wms.command.domain.aggregate.WorkAssignment;
 import com.conk.wms.command.domain.repository.OutboundPendingRepository;
+import com.conk.wms.command.domain.repository.AllocatedInventoryRepository;
 import com.conk.wms.command.domain.repository.WorkAssignmentRepository;
+import com.conk.wms.command.domain.repository.WorkDetailRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -38,7 +41,13 @@ class TaskAssignmentIntegrationTest {
     private OutboundPendingRepository outboundPendingRepository;
 
     @Autowired
+    private AllocatedInventoryRepository allocatedInventoryRepository;
+
+    @Autowired
     private WorkAssignmentRepository workAssignmentRepository;
+
+    @Autowired
+    private WorkDetailRepository workDetailRepository;
 
     @BeforeEach
     void setUp() {
@@ -47,6 +56,14 @@ class TaskAssignmentIntegrationTest {
                 "SKU-001",
                 "LOC-A-01-01",
                 "CONK",
+                "SYSTEM"
+        ));
+        allocatedInventoryRepository.save(new AllocatedInventory(
+                "ORD-001",
+                "SKU-001",
+                "LOC-A-01-01",
+                "CONK",
+                3,
                 "SYSTEM"
         ));
     }
@@ -74,6 +91,8 @@ class TaskAssignmentIntegrationTest {
         assertThat(assignments).hasSize(1);
         assertThat(assignments.get(0).getId().getAccountId()).isEqualTo("WORKER-001");
         assertThat(assignments.get(0).getAssignedByAccountId()).isEqualTo("MANAGER-001");
+        assertThat(workDetailRepository.findAllByIdWorkIdOrderByIdLocationIdAscIdSkuIdAsc("WORK-OUT-ORD-001"))
+                .hasSize(1);
     }
 
     @Test
@@ -103,5 +122,7 @@ class TaskAssignmentIntegrationTest {
         assertThat(assignments).hasSize(1);
         assertThat(assignments.get(0).getId().getAccountId()).isEqualTo("WORKER-NEW");
         assertThat(assignments.get(0).getAssignedByAccountId()).isEqualTo("MANAGER-002");
+        assertThat(workDetailRepository.findAllByIdWorkIdOrderByIdLocationIdAscIdSkuIdAsc("WORK-OUT-ORD-001"))
+                .hasSize(1);
     }
 }

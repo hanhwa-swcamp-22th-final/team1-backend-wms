@@ -1,8 +1,11 @@
 package com.conk.wms.command.service;
 
 import com.conk.wms.command.domain.aggregate.WorkAssignment;
+import com.conk.wms.command.domain.aggregate.WorkDetail;
+import com.conk.wms.command.domain.repository.AllocatedInventoryRepository;
 import com.conk.wms.command.domain.repository.OutboundPendingRepository;
 import com.conk.wms.command.domain.repository.WorkAssignmentRepository;
+import com.conk.wms.command.domain.repository.WorkDetailRepository;
 import com.conk.wms.common.exception.BusinessException;
 import com.conk.wms.common.exception.ErrorCode;
 import org.springframework.stereotype.Service;
@@ -14,12 +17,18 @@ public class AssignTaskService {
     private static final String WORK_ID_PREFIX = "WORK-OUT-";
 
     private final OutboundPendingRepository outboundPendingRepository;
+    private final AllocatedInventoryRepository allocatedInventoryRepository;
     private final WorkAssignmentRepository workAssignmentRepository;
+    private final WorkDetailRepository workDetailRepository;
 
     public AssignTaskService(OutboundPendingRepository outboundPendingRepository,
-                             WorkAssignmentRepository workAssignmentRepository) {
+                             AllocatedInventoryRepository allocatedInventoryRepository,
+                             WorkAssignmentRepository workAssignmentRepository,
+                             WorkDetailRepository workDetailRepository) {
         this.outboundPendingRepository = outboundPendingRepository;
+        this.allocatedInventoryRepository = allocatedInventoryRepository;
         this.workAssignmentRepository = workAssignmentRepository;
+        this.workDetailRepository = workDetailRepository;
     }
 
     @Transactional
@@ -38,10 +47,20 @@ public class AssignTaskService {
         boolean reassigned = !workAssignmentRepository.findAllByIdWorkIdAndIdTenantId(workId, tenantCode).isEmpty();
         if (reassigned) {
             workAssignmentRepository.deleteAllByIdWorkIdAndIdTenantId(workId, tenantCode);
+            workDetailRepository.deleteAllByIdWorkId(workId);
         }
 
         String actor = assignedByAccountId == null || assignedByAccountId.isBlank() ? "SYSTEM" : assignedByAccountId;
         workAssignmentRepository.save(new WorkAssignment(workId, tenantCode, workerId, actor));
+        allocatedInventoryRepository.findAllByIdOrderIdAndIdTenantId(orderId, tenantCode).forEach(allocated ->
+                workDetailRepository.save(new WorkDetail(
+                        workId,
+                        orderId,
+                        allocated.getId().getSkuId(),
+                        allocated.getId().getLocationId(),
+                        allocated.getQuantity(),
+                        actor
+                )));
 
         return new AssignResult(workId, orderId, workerId, reassigned);
     }

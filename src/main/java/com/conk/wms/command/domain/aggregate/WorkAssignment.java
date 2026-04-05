@@ -60,4 +60,12 @@ public class WorkAssignment {
     public Boolean getIsCompleted() {
         return isCompleted;
     }
+
+    public LocalDateTime getAssignedAt() {
+        return assignedAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
 }

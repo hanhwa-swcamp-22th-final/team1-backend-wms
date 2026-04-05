@@ -47,7 +47,8 @@ public enum ErrorCode {
     OUTBOUND_ORDER_IDS_REQUIRED(HttpStatus.BAD_REQUEST, "OUTBOUND-004", "출고 지시할 주문은 1건 이상이어야 합니다."),
     OUTBOUND_ALREADY_DISPATCHED(HttpStatus.CONFLICT, "OUTBOUND-005", "이미 출고 지시된 주문입니다."),
     OUTBOUND_ASSIGNMENT_SOURCE_NOT_FOUND(HttpStatus.NOT_FOUND, "OUTBOUND-006", "작업 배정 대상 주문을 찾을 수 없습니다."),
-    OUTBOUND_WORKER_REQUIRED(HttpStatus.BAD_REQUEST, "OUTBOUND-007", "작업자 계정은 필수입니다.");
+    OUTBOUND_WORKER_REQUIRED(HttpStatus.BAD_REQUEST, "OUTBOUND-007", "작업자 계정은 필수입니다."),
+    OUTBOUND_PICKING_LIST_NOT_FOUND(HttpStatus.NOT_FOUND, "OUTBOUND-008", "피킹 리스트를 찾을 수 없습니다.");
 
     private final HttpStatus status;
     private final String code;

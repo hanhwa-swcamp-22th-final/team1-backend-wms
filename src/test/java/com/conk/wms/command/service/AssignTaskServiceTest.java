@@ -1,8 +1,11 @@
 package com.conk.wms.command.service;
 
 import com.conk.wms.command.domain.aggregate.WorkAssignment;
+import com.conk.wms.command.domain.aggregate.AllocatedInventory;
 import com.conk.wms.command.domain.repository.OutboundPendingRepository;
+import com.conk.wms.command.domain.repository.AllocatedInventoryRepository;
 import com.conk.wms.command.domain.repository.WorkAssignmentRepository;
+import com.conk.wms.command.domain.repository.WorkDetailRepository;
 import com.conk.wms.common.exception.BusinessException;
 import com.conk.wms.common.exception.ErrorCode;
 import org.junit.jupiter.api.DisplayName;
@@ -31,7 +34,13 @@ class AssignTaskServiceTest {
     private OutboundPendingRepository outboundPendingRepository;
 
     @Mock
+    private AllocatedInventoryRepository allocatedInventoryRepository;
+
+    @Mock
     private WorkAssignmentRepository workAssignmentRepository;
+
+    @Mock
+    private WorkDetailRepository workDetailRepository;
 
     @InjectMocks
     private AssignTaskService assignTaskService;
@@ -42,6 +51,15 @@ class AssignTaskServiceTest {
         when(outboundPendingRepository.existsByIdOrderIdAndIdTenantId("ORD-001", "CONK")).thenReturn(true);
         when(workAssignmentRepository.findAllByIdWorkIdAndIdTenantId("WORK-OUT-ORD-001", "CONK"))
                 .thenReturn(List.of());
+        when(allocatedInventoryRepository.findAllByIdOrderIdAndIdTenantId("ORD-001", "CONK"))
+                .thenReturn(List.of(new AllocatedInventory(
+                        "ORD-001",
+                        "SKU-001",
+                        "LOC-A-01-01",
+                        "CONK",
+                        3,
+                        "SYSTEM"
+                )));
 
         AssignTaskService.AssignResult result = assignTaskService.assign(
                 "ORD-001",
@@ -63,6 +81,7 @@ class AssignTaskServiceTest {
         assertEquals("WORKER-001", saved.getId().getAccountId());
         assertEquals("MANAGER-001", saved.getAssignedByAccountId());
         assertEquals(Boolean.FALSE, saved.getIsCompleted());
+        verify(workDetailRepository).save(any());
     }
 
     @Test
@@ -71,6 +90,15 @@ class AssignTaskServiceTest {
         when(outboundPendingRepository.existsByIdOrderIdAndIdTenantId("ORD-001", "CONK")).thenReturn(true);
         when(workAssignmentRepository.findAllByIdWorkIdAndIdTenantId("WORK-OUT-ORD-001", "CONK"))
                 .thenReturn(List.of(new WorkAssignment("WORK-OUT-ORD-001", "CONK", "WORKER-OLD", "MANAGER-001")));
+        when(allocatedInventoryRepository.findAllByIdOrderIdAndIdTenantId("ORD-001", "CONK"))
+                .thenReturn(List.of(new AllocatedInventory(
+                        "ORD-001",
+                        "SKU-001",
+                        "LOC-A-01-01",
+                        "CONK",
+                        3,
+                        "SYSTEM"
+                )));
 
         AssignTaskService.AssignResult result = assignTaskService.assign(
                 "ORD-001",
@@ -80,6 +108,7 @@ class AssignTaskServiceTest {
         );
 
         verify(workAssignmentRepository).deleteAllByIdWorkIdAndIdTenantId("WORK-OUT-ORD-001", "CONK");
+        verify(workDetailRepository).deleteAllByIdWorkId("WORK-OUT-ORD-001");
         verify(workAssignmentRepository).save(any(WorkAssignment.class));
         assertTrue(result.isReassigned());
     }

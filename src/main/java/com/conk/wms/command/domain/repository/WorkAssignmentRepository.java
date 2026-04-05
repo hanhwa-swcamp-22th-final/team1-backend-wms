@@ -10,5 +10,7 @@ public interface WorkAssignmentRepository extends JpaRepository<WorkAssignment, 
 
     List<WorkAssignment> findAllByIdWorkIdAndIdTenantId(String workId, String tenantId);
 
+    List<WorkAssignment> findAllByIdTenantId(String tenantId);
+
     void deleteAllByIdWorkIdAndIdTenantId(String workId, String tenantId);
 }
