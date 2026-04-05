@@ -13,5 +13,14 @@ public interface WorkDetailRepository extends JpaRepository<WorkDetail, WorkDeta
 
     List<WorkDetail> findAllByIdWorkIdOrderByIdLocationIdAscIdSkuIdAsc(String workId);
 
+    List<WorkDetail> findAllByIdWorkIdAndIdOrderIdOrderByIdLocationIdAscIdSkuIdAsc(String workId, String orderId);
+
+    java.util.Optional<WorkDetail> findByIdWorkIdAndIdOrderIdAndIdSkuIdAndIdLocationId(
+            String workId,
+            String orderId,
+            String skuId,
+            String locationId
+    );
+
     void deleteAllByIdWorkId(String workId);
 }
