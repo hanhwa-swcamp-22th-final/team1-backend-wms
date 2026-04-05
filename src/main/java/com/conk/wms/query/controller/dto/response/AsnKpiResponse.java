@@ -3,6 +3,9 @@ package com.conk.wms.query.controller.dto.response;
 import lombok.Builder;
 import lombok.Getter;
 
+/**
+ * AsnKpiResponse 조회 응답 모델을 표현하는 DTO다.
+ */
 @Getter
 @Builder
 // ASN 목록 화면 상단 KPI 응답 DTO.

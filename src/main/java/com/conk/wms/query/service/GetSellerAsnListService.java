@@ -16,6 +16,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+/**
+ * 셀러 기준 ASN 목록 조회를 담당하는 서비스다.
+ */
 @Service
 @Transactional(readOnly = true)
 // Seller ASN 목록 조회 전용 query service.

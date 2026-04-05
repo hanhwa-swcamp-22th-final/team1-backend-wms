@@ -6,6 +6,9 @@ import lombok.Getter;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * AsnInspectionResponse 조회 응답 모델을 표현하는 DTO다.
+ */
 @Getter
 @Builder
 // 검수/적재 작업 화면에서 사용하는 ASN inspection 응답.

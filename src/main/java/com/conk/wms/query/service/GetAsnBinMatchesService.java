@@ -18,6 +18,9 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+/**
+ * ASN 품목별 기존 BIN 자동 매칭 여부를 계산하는 조회 서비스다.
+ */
 @Service
 @Transactional(readOnly = true)
 public class GetAsnBinMatchesService {

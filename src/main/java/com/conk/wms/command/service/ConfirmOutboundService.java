@@ -6,6 +6,9 @@ import com.conk.wms.command.domain.repository.OutboundRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * 최종 출고 확정 처리를 담당하는 command 서비스다.
+ */
 @Service
 public class ConfirmOutboundService {
 

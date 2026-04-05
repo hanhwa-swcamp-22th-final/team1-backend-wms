@@ -11,6 +11,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * 작업자가 실제 작업을 시작하거나 진행 상태를 바꿀 때 사용하는 command API다.
+ */
 @RestController
 @RequestMapping("/wms/tasks")
 public class WorkController {

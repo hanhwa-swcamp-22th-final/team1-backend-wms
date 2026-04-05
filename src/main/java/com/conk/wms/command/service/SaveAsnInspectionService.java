@@ -19,6 +19,9 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+/**
+ * 검수 수량, 불량 수량, 적재 수량을 inspection_putaway에 저장하는 서비스다.
+ */
 @Service
 @Transactional
 // 검수/적재 저장 서비스.
@@ -36,6 +39,10 @@ public class SaveAsnInspectionService {
         this.inspectionPutawayRepository = inspectionPutawayRepository;
     }
 
+    /**
+     * 검수/적재 입력값을 SKU 단위 inspection_putaway row로 upsert한다.
+     * BIN 배정이 앞 단계에서 끝났다면 locationId는 기존 값을 그대로 이어서 사용한다.
+     */
     public Asn save(SaveAsnInspectionCommand command) {
         validateItems(command.getItems());
 

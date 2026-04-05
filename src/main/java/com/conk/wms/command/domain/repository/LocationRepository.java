@@ -5,6 +5,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 
+/**
+ * Location 엔티티를 조회하고 저장하는 JPA 리포지토리다.
+ */
 public interface LocationRepository extends JpaRepository<Location, String> {
 
     List<Location> findAllByWarehouseIdAndActiveTrueOrderByZoneIdAscRackIdAscBinIdAsc(String warehouseId);

@@ -11,6 +11,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * 출고 완료 등 출고 실행 결과를 변경하는 command API를 제공한다.
+ */
 @RestController
 @RequestMapping("/wms/outbounds")
 public class OutboundController {

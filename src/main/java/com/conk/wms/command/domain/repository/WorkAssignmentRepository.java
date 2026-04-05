@@ -6,6 +6,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 
+/**
+ * WorkAssignment 엔티티를 조회하고 저장하는 JPA 리포지토리다.
+ */
 public interface WorkAssignmentRepository extends JpaRepository<WorkAssignment, WorkAssignmentId> {
 
     List<WorkAssignment> findAllByIdWorkIdAndIdTenantId(String workId, String tenantId);

@@ -2,6 +2,9 @@ package com.conk.wms.common.controller;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 
+/**
+ * 모든 API 응답을 일관된 형식으로 감싸기 위한 공통 응답 래퍼다.
+ */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 // WMS API 공통 응답 래퍼.
 // success 응답은 data 중심, failure 응답은 code/message 중심으로 통일한다.

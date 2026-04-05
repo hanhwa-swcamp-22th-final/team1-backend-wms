@@ -12,6 +12,10 @@ import jakarta.persistence.Table;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+/**
+ * 입고 요청(ASN) 헤더 정보를 담는 핵심 엔티티다.
+ * 입고 상태 전이의 기준이 되는 aggregate root 역할을 한다.
+ */
 @Entity
 @Table(name = "asn")
 public class Asn {

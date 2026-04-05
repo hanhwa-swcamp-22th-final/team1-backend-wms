@@ -7,6 +7,9 @@ import jakarta.persistence.Table;
 
 import java.time.LocalDateTime;
 
+/**
+ * 작업자가 실제로 처리해야 하는 SKU/location 단위 작업 상세를 표현한다.
+ */
 @Entity
 @Table(name = "work_detail")
 public class WorkDetail {

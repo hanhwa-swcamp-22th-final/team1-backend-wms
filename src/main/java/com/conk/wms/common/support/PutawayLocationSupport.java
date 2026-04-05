@@ -18,6 +18,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * BIN 자동 매칭, 추천, 점유 계산을 공통으로 처리하는 지원 클래스다.
+ */
 @Component
 // Bin 자동 배정/추천에 필요한 공통 계산을 한 곳에 모아둔다.
 // 서비스마다 같은 판단 로직을 중복하지 않도록, "어떤 location이 현재 적재 가능한지"를 여기서 계산한다.

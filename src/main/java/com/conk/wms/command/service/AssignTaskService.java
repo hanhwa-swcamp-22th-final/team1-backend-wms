@@ -11,6 +11,9 @@ import com.conk.wms.common.exception.ErrorCode;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * 출고 지시된 주문을 작업자에게 배정하고 work_detail을 생성하는 서비스다.
+ */
 @Service
 public class AssignTaskService {
 
@@ -31,6 +34,10 @@ public class AssignTaskService {
         this.workDetailRepository = workDetailRepository;
     }
 
+    /**
+     * 출고 지시가 끝난 주문을 작업자에게 배정하고 작업 헤더/상세를 함께 만든다.
+     * 이미 배정된 주문이면 기존 row를 지우고 같은 주문 기준으로 재배정한다.
+     */
     @Transactional
     public AssignResult assign(String orderId, String tenantCode, String workerId, String assignedByAccountId) {
         if (workerId == null || workerId.isBlank()) {

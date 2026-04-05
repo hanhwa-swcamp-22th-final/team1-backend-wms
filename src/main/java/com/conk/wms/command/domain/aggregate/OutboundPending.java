@@ -7,6 +7,9 @@ import jakarta.persistence.Table;
 
 import java.time.LocalDateTime;
 
+/**
+ * 출고 지시는 되었지만 아직 작업이나 출고 확정이 끝나지 않은 주문 라인을 표현한다.
+ */
 @Entity
 @Table(name = "outbound_pending")
 public class OutboundPending {

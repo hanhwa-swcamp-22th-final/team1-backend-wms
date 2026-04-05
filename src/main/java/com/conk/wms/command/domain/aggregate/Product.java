@@ -7,6 +7,9 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+/**
+ * WMS가 참조하는 상품 마스터 엔티티다.
+ */
 @Entity
 @Table(name = "products")
 public class Product {

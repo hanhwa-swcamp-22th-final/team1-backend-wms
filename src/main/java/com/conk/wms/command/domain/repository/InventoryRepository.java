@@ -9,6 +9,9 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Inventory 엔티티를 조회하고 저장하는 JPA 리포지토리다.
+ */
 public interface InventoryRepository extends JpaRepository<Inventory, InventoryId> {
 
     @Query("SELECT i FROM Inventory i WHERE i.id.tenantId = :tenantId AND i.quantity < :threshold")

@@ -11,6 +11,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * 상품 상태 변경 등 product command API를 처리한다.
+ */
 @RestController
 @RequestMapping("/wms/products")
 public class ProductController {

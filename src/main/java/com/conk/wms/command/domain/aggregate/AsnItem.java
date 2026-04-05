@@ -7,6 +7,9 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+/**
+ * ASN에 포함된 개별 입고 품목 정보를 표현하는 엔티티다.
+ */
 @Entity
 @Table(name = "asn_item")
 public class AsnItem {

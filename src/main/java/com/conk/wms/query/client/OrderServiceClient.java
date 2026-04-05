@@ -5,6 +5,9 @@ import com.conk.wms.query.client.dto.OrderSummaryDto;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * order-service 연동을 추상화한 조회 포트다.
+ */
 public interface OrderServiceClient {
 
     List<OrderSummaryDto> getPendingOrders(String tenantCode);

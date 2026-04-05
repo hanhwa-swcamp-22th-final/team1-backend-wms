@@ -6,6 +6,9 @@ import com.conk.wms.command.domain.repository.InventoryRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * 재고 차감 요청을 받아 AVAILABLE 재고를 줄이는 command 서비스다.
+ */
 @Service
 public class DeductInventoryService {
 

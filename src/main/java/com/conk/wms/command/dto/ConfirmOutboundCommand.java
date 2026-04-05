@@ -1,5 +1,8 @@
 package com.conk.wms.command.dto;
 
+/**
+ * ConfirmOutboundCommand 서비스 계층으로 전달되는 내부 명령 DTO다.
+ */
 public class ConfirmOutboundCommand {
 
     private final String orderId;

@@ -7,6 +7,9 @@ import jakarta.persistence.Table;
 
 import java.time.LocalDateTime;
 
+/**
+ * 하나의 출고 작업이 누구에게 배정되었는지 기록하는 작업 헤더 엔티티다.
+ */
 @Entity
 @Table(name = "work_assignment")
 public class WorkAssignment {

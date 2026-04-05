@@ -6,6 +6,9 @@ import lombok.Getter;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * order-service에서 내려온 주문 헤더와 품목 묶음을 표현하는 DTO다.
+ */
 @Getter
 @Builder
 public class OrderSummaryDto {

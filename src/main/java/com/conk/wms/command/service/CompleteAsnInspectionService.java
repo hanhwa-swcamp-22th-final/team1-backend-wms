@@ -18,6 +18,9 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+/**
+ * 검수/적재 완료 조건을 확인하고 ASN를 다음 상태로 넘기는 서비스다.
+ */
 @Service
 @Transactional
 // 검수/적재 완료 처리 서비스.
@@ -35,6 +38,10 @@ public class CompleteAsnInspectionService {
         this.inspectionPutawayRepository = inspectionPutawayRepository;
     }
 
+    /**
+     * ASN 품목별 검수 합계와 적재 위치를 최종 점검한 뒤 inspection row를 완료 처리한다.
+     * 실제 재고 증가 반영은 입고 확정 단계에서 따로 수행한다.
+     */
     public CompleteResult complete(CompleteAsnInspectionCommand command) {
         Asn asn = asnRepository.findByAsnId(command.getAsnId())
                 .orElseThrow(() -> new BusinessException(

@@ -15,6 +15,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/**
+ * 검수/적재 화면에 필요한 inspection 데이터를 조회하는 서비스다.
+ */
 @Service
 @Transactional(readOnly = true)
 // ASN 검수/적재 화면 조회 전용 query service.

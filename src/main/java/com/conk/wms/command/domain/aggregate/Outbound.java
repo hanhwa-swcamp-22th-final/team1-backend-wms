@@ -7,6 +7,10 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+/**
+ * 최종 출고 결과를 표현하는 엔티티다.
+ * 송장과 출고 확정 흐름에서 사용될 기반 모델이다.
+ */
 @Entity
 @Table(name = "outbounds")
 public class Outbound {

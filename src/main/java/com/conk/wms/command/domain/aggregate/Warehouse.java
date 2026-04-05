@@ -5,6 +5,9 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+/**
+ * 창고 기본 정보를 표현하는 마스터 엔티티다.
+ */
 @Entity
 @Table(name = "warehouses")
 public class Warehouse {

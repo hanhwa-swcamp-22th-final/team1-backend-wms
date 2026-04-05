@@ -13,6 +13,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.List;
 
+/**
+ * order-service 주문 원본을 출고 지시 대기 목록 형태로 가공하는 서비스다.
+ */
 @Service
 // 주문 유입 1차는 order-service 주문을 읽어 출고 지시 대기 목록 화면에 맞게 가공하는 데 집중한다.
 // 실제 outbound_pending 적재는 location이 확정되는 출고 지시 단계에서 붙이는 것을 전제로 한다.
@@ -32,6 +35,10 @@ public class GetPendingOrdersService {
         this.outboundPendingRepository = outboundPendingRepository;
     }
 
+    /**
+     * order-service 주문 원본을 프론트의 출고 지시 대기 목록 형태로 가공한다.
+     * 취소/출고완료/이미 지시된 주문은 제외하고 재고 충분 여부를 같이 계산한다.
+     */
     public List<PendingOrderResponse> getPendingOrders(String tenantCode) {
         return orderServiceClient.getPendingOrders(tenantCode).stream()
                 .filter(this::isPendingTarget)

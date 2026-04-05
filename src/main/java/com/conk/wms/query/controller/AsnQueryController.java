@@ -14,6 +14,9 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * 셀러와 공용 ASN 조회 API를 제공하는 컨트롤러다.
+ */
 // 공용 ASN query 컨트롤러.
 // seller 전용 컬렉션 조회(`/wms/seller/asns`)와 달리,
 // 상세/KPI처럼 ASN 도메인 자체에 속한 조회는 `/wms/asns/*` 밑으로 모아둔다.

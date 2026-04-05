@@ -7,6 +7,10 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+/**
+ * 기존 work 테이블 기반 작업 엔티티다.
+ * 작업자 시작/완료 흐름과 연결되는 기존 작업 모델이다.
+ */
 @Entity
 @Table(name = "works")
 public class Work {

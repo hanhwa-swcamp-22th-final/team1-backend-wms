@@ -3,6 +3,9 @@ package com.conk.wms.command.dto;
 import java.time.LocalDate;
 import java.util.List;
 
+/**
+ * RegisterAsnCommand 서비스 계층으로 전달되는 내부 명령 DTO다.
+ */
 public class RegisterAsnCommand {
 
     private final String asnId;

@@ -15,6 +15,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/**
+ * ASN 상세 화면에 필요한 입고 상세 정보를 조합해 반환하는 서비스다.
+ */
 @Service
 @Transactional(readOnly = true)
 // ASN 상세 조회 전용 query service.

@@ -9,6 +9,9 @@ import jakarta.persistence.Table;
 
 import java.time.LocalDateTime;
 
+/**
+ * 검수 결과와 적재 위치를 함께 기록하는 입고 실행 엔티티다.
+ */
 @Entity
 @Table(name = "inspection_putaway")
 public class InspectionPutaway {
