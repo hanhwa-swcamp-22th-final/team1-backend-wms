@@ -43,7 +43,7 @@ public class AssignTaskService {
             );
         }
 
-        String workId = buildWorkId(orderId);
+        String workId = buildWorkId(orderId, tenantCode);
         boolean reassigned = !workAssignmentRepository.findAllByIdWorkIdAndIdTenantId(workId, tenantCode).isEmpty();
         if (reassigned) {
             workAssignmentRepository.deleteAllByIdWorkIdAndIdTenantId(workId, tenantCode);
@@ -65,8 +65,12 @@ public class AssignTaskService {
         return new AssignResult(workId, orderId, workerId, reassigned);
     }
 
-    private String buildWorkId(String orderId) {
-        return WORK_ID_PREFIX + orderId;
+    private String buildWorkId(String orderId, String tenantCode) {
+        return WORK_ID_PREFIX + sanitizeForId(tenantCode) + "-" + orderId;
+    }
+
+    private String sanitizeForId(String value) {
+        return value == null ? "UNKNOWN" : value.replaceAll("[^A-Za-z0-9_-]", "_");
     }
 
     public static class AssignResult {

@@ -39,7 +39,7 @@ class TaskManagementQueryControllerTest {
     void getPickingLists_success() throws Exception {
         when(getPickingListsService.getPickingLists("CONK"))
                 .thenReturn(List.of(PickingListResponse.builder()
-                        .id("WORK-OUT-ORD-001")
+                        .id("WORK-OUT-CONK-ORD-001")
                         .assignedWorker("WORKER-001")
                         .orderCount(1)
                         .itemCount(4)
@@ -53,7 +53,7 @@ class TaskManagementQueryControllerTest {
                         .header("X-Tenant-Code", "CONK"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data[0].id").value("WORK-OUT-ORD-001"))
+                .andExpect(jsonPath("$.data[0].id").value("WORK-OUT-CONK-ORD-001"))
                 .andExpect(jsonPath("$.data[0].assignedWorker").value("WORKER-001"));
     }
 
@@ -84,9 +84,9 @@ class TaskManagementQueryControllerTest {
     @Test
     @DisplayName("피킹 리스트 상세 조회 성공 시 200과 상세를 반환한다")
     void getPickingList_success() throws Exception {
-        when(getPickingListsService.getPickingList("CONK", "WORK-OUT-ORD-001"))
+        when(getPickingListsService.getPickingList("CONK", "WORK-OUT-CONK-ORD-001"))
                 .thenReturn(PickingListDetailResponse.builder()
-                        .id("WORK-OUT-ORD-001")
+                        .id("WORK-OUT-CONK-ORD-001")
                         .assignedWorker("WORKER-001")
                         .orderCount(1)
                         .itemCount(4)
@@ -106,11 +106,11 @@ class TaskManagementQueryControllerTest {
                         ))
                         .build());
 
-        mockMvc.perform(get("/wms/manager/picking-lists/WORK-OUT-ORD-001")
+        mockMvc.perform(get("/wms/manager/picking-lists/WORK-OUT-CONK-ORD-001")
                         .header("X-Tenant-Code", "CONK"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.id").value("WORK-OUT-ORD-001"))
+                .andExpect(jsonPath("$.data.id").value("WORK-OUT-CONK-ORD-001"))
                 .andExpect(jsonPath("$.data.items[0].productName").value("상품A"));
     }
 }

@@ -67,24 +67,24 @@ class PickingListIntegrationTest {
                                 "assignedByAccountId", "MANAGER-001"
                         ))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.workId").value("WORK-OUT-ORD-001"));
+                .andExpect(jsonPath("$.data.workId").value("WORK-OUT-CONK-ORD-001"));
 
         mockMvc.perform(get("/wms/manager/picking-lists")
                         .header("X-Tenant-Code", "CONK"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data[0].id").value("WORK-OUT-ORD-001"))
+                .andExpect(jsonPath("$.data[0].id").value("WORK-OUT-CONK-ORD-001"))
                 .andExpect(jsonPath("$.data[0].assignedWorker").value("WORKER-001"))
                 .andExpect(jsonPath("$.data[0].orderCount").value(1))
                 .andExpect(jsonPath("$.data[0].itemCount").value(4))
                 .andExpect(jsonPath("$.data[0].totalBins").value(2))
                 .andExpect(jsonPath("$.data[0].status").value("WAITING"));
 
-        mockMvc.perform(get("/wms/manager/picking-lists/WORK-OUT-ORD-001")
+        mockMvc.perform(get("/wms/manager/picking-lists/WORK-OUT-CONK-ORD-001")
                         .header("X-Tenant-Code", "CONK"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.id").value("WORK-OUT-ORD-001"))
+                .andExpect(jsonPath("$.data.id").value("WORK-OUT-CONK-ORD-001"))
                 .andExpect(jsonPath("$.data.assignedWorker").value("WORKER-001"))
                 .andExpect(jsonPath("$.data.items[0].bin").value("A-01-01"))
                 .andExpect(jsonPath("$.data.items[0].productName").value("상품A"))

@@ -49,18 +49,18 @@ class GetPickingListsServiceTest {
     @Test
     @DisplayName("피킹 리스트 목록 조회 성공: 배정된 작업을 요약 정보로 반환한다")
     void getPickingLists_success() {
-        WorkAssignment assignment = new WorkAssignment("WORK-OUT-ORD-001", "CONK", "WORKER-001", "MANAGER-001");
-        WorkDetail first = new WorkDetail("WORK-OUT-ORD-001", "ORD-001", "SKU-001", "LOC-A-01-01", 3, "MANAGER-001");
-        WorkDetail second = new WorkDetail("WORK-OUT-ORD-001", "ORD-001", "SKU-002", "LOC-A-01-02", 1, "MANAGER-001");
+        WorkAssignment assignment = new WorkAssignment("WORK-OUT-CONK-ORD-001", "CONK", "WORKER-001", "MANAGER-001");
+        WorkDetail first = new WorkDetail("WORK-OUT-CONK-ORD-001", "ORD-001", "SKU-001", "LOC-A-01-01", 3, "MANAGER-001");
+        WorkDetail second = new WorkDetail("WORK-OUT-CONK-ORD-001", "ORD-001", "SKU-002", "LOC-A-01-02", 1, "MANAGER-001");
 
         when(workAssignmentRepository.findAllByIdTenantId("CONK")).thenReturn(List.of(assignment));
-        when(workDetailRepository.findAllByIdWorkIdOrderByIdLocationIdAscIdSkuIdAsc("WORK-OUT-ORD-001"))
+        when(workDetailRepository.findAllByIdWorkIdOrderByIdLocationIdAscIdSkuIdAsc("WORK-OUT-CONK-ORD-001"))
                 .thenReturn(List.of(first, second));
 
         List<PickingListResponse> response = getPickingListsService.getPickingLists("CONK");
 
         assertEquals(1, response.size());
-        assertEquals("WORK-OUT-ORD-001", response.get(0).getId());
+        assertEquals("WORK-OUT-CONK-ORD-001", response.get(0).getId());
         assertEquals("WORKER-001", response.get(0).getAssignedWorker());
         assertEquals(1, response.get(0).getOrderCount());
         assertEquals(4, response.get(0).getItemCount());
@@ -72,13 +72,13 @@ class GetPickingListsServiceTest {
     @Test
     @DisplayName("피킹 리스트 상세 조회 성공: work_detail과 location, 주문 상품명을 합쳐 반환한다")
     void getPickingList_success() {
-        WorkAssignment assignment = new WorkAssignment("WORK-OUT-ORD-001", "CONK", "WORKER-001", "MANAGER-001");
-        WorkDetail first = new WorkDetail("WORK-OUT-ORD-001", "ORD-001", "SKU-001", "LOC-A-01-01", 3, "MANAGER-001");
-        WorkDetail second = new WorkDetail("WORK-OUT-ORD-001", "ORD-001", "SKU-002", "LOC-A-01-02", 1, "MANAGER-001");
+        WorkAssignment assignment = new WorkAssignment("WORK-OUT-CONK-ORD-001", "CONK", "WORKER-001", "MANAGER-001");
+        WorkDetail first = new WorkDetail("WORK-OUT-CONK-ORD-001", "ORD-001", "SKU-001", "LOC-A-01-01", 3, "MANAGER-001");
+        WorkDetail second = new WorkDetail("WORK-OUT-CONK-ORD-001", "ORD-001", "SKU-002", "LOC-A-01-02", 1, "MANAGER-001");
 
-        when(workAssignmentRepository.findAllByIdWorkIdAndIdTenantId("WORK-OUT-ORD-001", "CONK"))
+        when(workAssignmentRepository.findAllByIdWorkIdAndIdTenantId("WORK-OUT-CONK-ORD-001", "CONK"))
                 .thenReturn(List.of(assignment));
-        when(workDetailRepository.findAllByIdWorkIdOrderByIdLocationIdAscIdSkuIdAsc("WORK-OUT-ORD-001"))
+        when(workDetailRepository.findAllByIdWorkIdOrderByIdLocationIdAscIdSkuIdAsc("WORK-OUT-CONK-ORD-001"))
                 .thenReturn(List.of(first, second));
         when(locationRepository.findById("LOC-A-01-01"))
                 .thenReturn(Optional.of(new Location("LOC-A-01-01", "A-01-01", "WH-001", "A", "01", 300, true)));
@@ -101,9 +101,9 @@ class GetPickingListsServiceTest {
                         ))
                         .build()));
 
-        PickingListDetailResponse response = getPickingListsService.getPickingList("CONK", "WORK-OUT-ORD-001");
+        PickingListDetailResponse response = getPickingListsService.getPickingList("CONK", "WORK-OUT-CONK-ORD-001");
 
-        assertEquals("WORK-OUT-ORD-001", response.getId());
+        assertEquals("WORK-OUT-CONK-ORD-001", response.getId());
         assertEquals("WORKER-001", response.getAssignedWorker());
         assertEquals(2, response.getItems().size());
         assertEquals("A-01-01", response.getItems().get(0).getBin());

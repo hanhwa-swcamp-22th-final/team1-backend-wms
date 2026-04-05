@@ -49,7 +49,7 @@ class AssignTaskServiceTest {
     @DisplayName("작업 배정 성공: 출고 지시된 주문에 work_assignment를 생성한다")
     void assign_success() {
         when(outboundPendingRepository.existsByIdOrderIdAndIdTenantId("ORD-001", "CONK")).thenReturn(true);
-        when(workAssignmentRepository.findAllByIdWorkIdAndIdTenantId("WORK-OUT-ORD-001", "CONK"))
+        when(workAssignmentRepository.findAllByIdWorkIdAndIdTenantId("WORK-OUT-CONK-ORD-001", "CONK"))
                 .thenReturn(List.of());
         when(allocatedInventoryRepository.findAllByIdOrderIdAndIdTenantId("ORD-001", "CONK"))
                 .thenReturn(List.of(new AllocatedInventory(
@@ -72,11 +72,11 @@ class AssignTaskServiceTest {
         verify(workAssignmentRepository).save(captor.capture());
 
         WorkAssignment saved = captor.getValue();
-        assertEquals("WORK-OUT-ORD-001", result.getWorkId());
+        assertEquals("WORK-OUT-CONK-ORD-001", result.getWorkId());
         assertEquals("ORD-001", result.getOrderId());
         assertEquals("WORKER-001", result.getWorkerId());
         assertFalse(result.isReassigned());
-        assertEquals("WORK-OUT-ORD-001", saved.getId().getWorkId());
+        assertEquals("WORK-OUT-CONK-ORD-001", saved.getId().getWorkId());
         assertEquals("CONK", saved.getId().getTenantId());
         assertEquals("WORKER-001", saved.getId().getAccountId());
         assertEquals("MANAGER-001", saved.getAssignedByAccountId());
@@ -88,8 +88,8 @@ class AssignTaskServiceTest {
     @DisplayName("작업 재배정 성공: 기존 work_assignment를 지우고 새 작업자로 덮어쓴다")
     void assign_whenAlreadyAssigned_thenReplaceAssignment() {
         when(outboundPendingRepository.existsByIdOrderIdAndIdTenantId("ORD-001", "CONK")).thenReturn(true);
-        when(workAssignmentRepository.findAllByIdWorkIdAndIdTenantId("WORK-OUT-ORD-001", "CONK"))
-                .thenReturn(List.of(new WorkAssignment("WORK-OUT-ORD-001", "CONK", "WORKER-OLD", "MANAGER-001")));
+        when(workAssignmentRepository.findAllByIdWorkIdAndIdTenantId("WORK-OUT-CONK-ORD-001", "CONK"))
+                .thenReturn(List.of(new WorkAssignment("WORK-OUT-CONK-ORD-001", "CONK", "WORKER-OLD", "MANAGER-001")));
         when(allocatedInventoryRepository.findAllByIdOrderIdAndIdTenantId("ORD-001", "CONK"))
                 .thenReturn(List.of(new AllocatedInventory(
                         "ORD-001",
@@ -107,8 +107,8 @@ class AssignTaskServiceTest {
                 "MANAGER-002"
         );
 
-        verify(workAssignmentRepository).deleteAllByIdWorkIdAndIdTenantId("WORK-OUT-ORD-001", "CONK");
-        verify(workDetailRepository).deleteAllByIdWorkId("WORK-OUT-ORD-001");
+        verify(workAssignmentRepository).deleteAllByIdWorkIdAndIdTenantId("WORK-OUT-CONK-ORD-001", "CONK");
+        verify(workDetailRepository).deleteAllByIdWorkId("WORK-OUT-CONK-ORD-001");
         verify(workAssignmentRepository).save(any(WorkAssignment.class));
         assertTrue(result.isReassigned());
     }

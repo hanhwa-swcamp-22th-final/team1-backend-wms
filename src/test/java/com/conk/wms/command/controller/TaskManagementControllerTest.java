@@ -41,7 +41,7 @@ class TaskManagementControllerTest {
     @DisplayName("작업 배정 성공 시 200과 작업 정보를 반환한다")
     void assign_success() throws Exception {
         when(assignTaskService.assign(any(), any(), any(), any()))
-                .thenReturn(new AssignTaskService.AssignResult("WORK-OUT-ORD-001", "ORD-001", "WORKER-001", false));
+                .thenReturn(new AssignTaskService.AssignResult("WORK-OUT-CONK-ORD-001", "ORD-001", "WORKER-001", false));
 
         mockMvc.perform(patch("/wms/manager/tasks/ORD-001")
                         .header("X-Tenant-Code", "CONK")
@@ -54,7 +54,7 @@ class TaskManagementControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value("task assigned"))
-                .andExpect(jsonPath("$.data.workId").value("WORK-OUT-ORD-001"))
+                .andExpect(jsonPath("$.data.workId").value("WORK-OUT-CONK-ORD-001"))
                 .andExpect(jsonPath("$.data.orderId").value("ORD-001"))
                 .andExpect(jsonPath("$.data.workerId").value("WORKER-001"))
                 .andExpect(jsonPath("$.data.reassigned").value(false));

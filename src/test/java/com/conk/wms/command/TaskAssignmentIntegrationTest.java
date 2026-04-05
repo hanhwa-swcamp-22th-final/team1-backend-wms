@@ -81,17 +81,17 @@ class TaskAssignmentIntegrationTest {
                         ))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.workId").value("WORK-OUT-ORD-001"))
+                .andExpect(jsonPath("$.data.workId").value("WORK-OUT-CONK-ORD-001"))
                 .andExpect(jsonPath("$.data.workerId").value("WORKER-001"));
 
         List<WorkAssignment> assignments = workAssignmentRepository.findAllByIdWorkIdAndIdTenantId(
-                "WORK-OUT-ORD-001", "CONK"
+                "WORK-OUT-CONK-ORD-001", "CONK"
         );
 
         assertThat(assignments).hasSize(1);
         assertThat(assignments.get(0).getId().getAccountId()).isEqualTo("WORKER-001");
         assertThat(assignments.get(0).getAssignedByAccountId()).isEqualTo("MANAGER-001");
-        assertThat(workDetailRepository.findAllByIdWorkIdOrderByIdLocationIdAscIdSkuIdAsc("WORK-OUT-ORD-001"))
+        assertThat(workDetailRepository.findAllByIdWorkIdOrderByIdLocationIdAscIdSkuIdAsc("WORK-OUT-CONK-ORD-001"))
                 .hasSize(1);
     }
 
@@ -99,7 +99,7 @@ class TaskAssignmentIntegrationTest {
     @DisplayName("작업 재배정 성공: 기존 배정을 새 작업자로 교체한다")
     void assign_whenReassigned_thenReplacePreviousWorker() throws Exception {
         workAssignmentRepository.save(new WorkAssignment(
-                "WORK-OUT-ORD-001",
+                "WORK-OUT-CONK-ORD-001",
                 "CONK",
                 "WORKER-OLD",
                 "MANAGER-001"
@@ -116,13 +116,13 @@ class TaskAssignmentIntegrationTest {
                 .andExpect(jsonPath("$.data.reassigned").value(true));
 
         List<WorkAssignment> assignments = workAssignmentRepository.findAllByIdWorkIdAndIdTenantId(
-                "WORK-OUT-ORD-001", "CONK"
+                "WORK-OUT-CONK-ORD-001", "CONK"
         );
 
         assertThat(assignments).hasSize(1);
         assertThat(assignments.get(0).getId().getAccountId()).isEqualTo("WORKER-NEW");
         assertThat(assignments.get(0).getAssignedByAccountId()).isEqualTo("MANAGER-002");
-        assertThat(workDetailRepository.findAllByIdWorkIdOrderByIdLocationIdAscIdSkuIdAsc("WORK-OUT-ORD-001"))
+        assertThat(workDetailRepository.findAllByIdWorkIdOrderByIdLocationIdAscIdSkuIdAsc("WORK-OUT-CONK-ORD-001"))
                 .hasSize(1);
     }
 }
