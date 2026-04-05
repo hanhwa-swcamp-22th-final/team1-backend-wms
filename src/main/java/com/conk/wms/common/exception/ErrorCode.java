@@ -51,7 +51,13 @@ public enum ErrorCode {
     OUTBOUND_ALREADY_DISPATCHED(HttpStatus.CONFLICT, "OUTBOUND-005", "이미 출고 지시된 주문입니다."),
     OUTBOUND_ASSIGNMENT_SOURCE_NOT_FOUND(HttpStatus.NOT_FOUND, "OUTBOUND-006", "작업 배정 대상 주문을 찾을 수 없습니다."),
     OUTBOUND_WORKER_REQUIRED(HttpStatus.BAD_REQUEST, "OUTBOUND-007", "작업자 계정은 필수입니다."),
-    OUTBOUND_PICKING_LIST_NOT_FOUND(HttpStatus.NOT_FOUND, "OUTBOUND-008", "피킹 리스트를 찾을 수 없습니다.");
+    OUTBOUND_PICKING_LIST_NOT_FOUND(HttpStatus.NOT_FOUND, "OUTBOUND-008", "피킹 리스트를 찾을 수 없습니다."),
+    OUTBOUND_WORKER_TASK_NOT_FOUND(HttpStatus.NOT_FOUND, "OUTBOUND-009", "작업자 작업을 찾을 수 없습니다."),
+    OUTBOUND_WORK_DETAIL_NOT_FOUND(HttpStatus.NOT_FOUND, "OUTBOUND-010", "작업 상세를 찾을 수 없습니다."),
+    OUTBOUND_WORK_STAGE_REQUIRED(HttpStatus.BAD_REQUEST, "OUTBOUND-011", "작업 단계는 필수입니다."),
+    OUTBOUND_WORK_STAGE_INVALID(HttpStatus.BAD_REQUEST, "OUTBOUND-012", "지원하지 않는 작업 단계입니다."),
+    OUTBOUND_WORK_QUANTITY_INVALID(HttpStatus.BAD_REQUEST, "OUTBOUND-013", "실제 처리 수량은 0 이상이어야 합니다."),
+    OUTBOUND_PACKING_NOT_READY(HttpStatus.CONFLICT, "OUTBOUND-014", "피킹이 완료되지 않아 패킹을 진행할 수 없습니다.");
 
     private final HttpStatus status;
     private final String code;

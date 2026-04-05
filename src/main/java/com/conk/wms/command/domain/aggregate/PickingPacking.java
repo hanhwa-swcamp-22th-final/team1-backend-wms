@@ -8,29 +8,20 @@ import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 
 /**
- * 작업자가 실제로 처리해야 하는 SKU/location 단위 작업 상세를 표현한다.
+ * 작업자가 실제로 피킹하고 패킹한 수량과 메모를 저장하는 실행 이력 엔티티다.
  */
 @Entity
-@Table(name = "work_detail")
-public class WorkDetail {
+@Table(name = "picking_packing")
+public class PickingPacking {
 
     @EmbeddedId
-    private WorkDetailId id;
+    private PickingPackingId id;
 
-    @Column(name = "asn_id")
-    private String asnId;
+    @Column(name = "picked_quantity")
+    private Integer pickedQuantity;
 
-    @Column(name = "status")
-    private String status;
-
-    @Column(name = "reference_type")
-    private String referenceType;
-
-    @Column(name = "quantity")
-    private Integer quantity;
-
-    @Column(name = "work_type")
-    private String workType;
+    @Column(name = "packed_quantity")
+    private Integer packedQuantity;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -53,32 +44,33 @@ public class WorkDetail {
     @Column(name = "issue_note")
     private String issueNote;
 
-    protected WorkDetail() {
+    @Column(name = "worker_account_id")
+    private String workerAccountId;
+
+    protected PickingPacking() {
     }
 
-    public WorkDetail(String workId, String orderId, String skuId, String locationId,
-                      int quantity, String actorId) {
-        this.id = new WorkDetailId(workId, orderId, skuId, locationId);
-        this.status = "WAITING";
-        this.referenceType = "ORDER";
-        this.quantity = quantity;
-        this.workType = "PICKING_PACKING";
+    public PickingPacking(String skuId, String locationId, String tenantId, String orderId, String actorId) {
+        this.id = new PickingPackingId(skuId, locationId, tenantId, orderId);
+        this.pickedQuantity = 0;
+        this.packedQuantity = 0;
         this.createdAt = LocalDateTime.now();
         this.updatedAt = this.createdAt;
         this.createdBy = actorId;
         this.updatedBy = actorId;
+        this.workerAccountId = actorId;
     }
 
-    public WorkDetailId getId() {
+    public PickingPackingId getId() {
         return id;
     }
 
-    public String getStatus() {
-        return status;
+    public Integer getPickedQuantity() {
+        return pickedQuantity;
     }
 
-    public Integer getQuantity() {
-        return quantity;
+    public Integer getPackedQuantity() {
+        return packedQuantity;
     }
 
     public LocalDateTime getStartedAt() {
@@ -89,31 +81,33 @@ public class WorkDetail {
         return completedAt;
     }
 
-    public String getIssueNote() {
-        return issueNote;
-    }
-
     public LocalDateTime getUpdatedAt() {
         return updatedAt;
     }
 
-    public void markPicked(String actorId, String issueNote, LocalDateTime pickedAt) {
+    public String getIssueNote() {
+        return issueNote;
+    }
+
+    public void recordPicking(int actualQuantity, String actorId, String issueNote, LocalDateTime pickedAt) {
         if (this.startedAt == null) {
             this.startedAt = pickedAt;
         }
-        this.status = "PICKED";
+        this.pickedQuantity = actualQuantity;
         this.updatedAt = pickedAt;
         this.updatedBy = actorId;
+        this.workerAccountId = actorId;
         this.issueNote = issueNote;
     }
 
-    public void markPacked(String actorId, String issueNote, LocalDateTime packedAt) {
+    public void recordPacking(int actualQuantity, String actorId, String issueNote, LocalDateTime packedAt) {
         if (this.startedAt == null) {
             this.startedAt = packedAt;
         }
-        this.status = "PACKED";
+        this.packedQuantity = actualQuantity;
         this.updatedAt = packedAt;
         this.updatedBy = actorId;
+        this.workerAccountId = actorId;
         this.issueNote = issueNote;
         this.completedAt = packedAt;
     }

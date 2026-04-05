@@ -71,4 +71,10 @@ public class WorkAssignment {
     public LocalDateTime getUpdatedAt() {
         return updatedAt;
     }
+
+    public void markCompleted(String actorId, LocalDateTime completedAt) {
+        this.isCompleted = Boolean.TRUE;
+        this.updatedAt = completedAt;
+        this.updatedBy = actorId;
+    }
 }
