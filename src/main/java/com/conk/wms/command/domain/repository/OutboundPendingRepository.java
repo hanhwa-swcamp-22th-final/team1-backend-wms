@@ -14,4 +14,6 @@ public interface OutboundPendingRepository extends JpaRepository<OutboundPending
     boolean existsByIdOrderIdAndIdTenantId(String orderId, String tenantId);
 
     List<OutboundPending> findAllByIdOrderIdAndIdTenantId(String orderId, String tenantId);
+
+    List<OutboundPending> findAllByIdTenantId(String tenantId);
 }
