@@ -6,7 +6,7 @@ import lombok.Getter;
 import java.util.List;
 
 /**
- * 작업자 화면에서 사용하는 출고 작업 묶음 응답 DTO다.
+ * 작업자 화면에서 사용하는 입고/출고 작업 묶음 응답 DTO다.
  */
 @Getter
 @Builder
@@ -34,6 +34,18 @@ public class WorkerTaskResponse {
         private String designatedBinCode;
         private String binCode;
         private String sku;
+        private Integer plannedQty;
+        private Integer inspectedQty;
+        private String inspectNote;
+        private String inspectExceptionType;
+        private String statusInspect;
+        private String statusInspectAt;
+        private String confirmedBinCode;
+        private Integer putQty;
+        private String putNote;
+        private String putExceptionType;
+        private String statusPut;
+        private String statusPutAt;
         private Integer orderedQty;
         private Integer pickedQty;
         private String pickReason;

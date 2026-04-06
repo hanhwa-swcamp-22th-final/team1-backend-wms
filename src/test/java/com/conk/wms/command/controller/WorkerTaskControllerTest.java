@@ -45,8 +45,10 @@ class WorkerTaskControllerTest {
                 "WORKER-001",
                 "PICKING",
                 "ORD-001",
+                null,
                 "SKU-001",
                 "LOC-A-01-01",
+                null,
                 2,
                 "수량 부족",
                 "2개만 피킹"
@@ -83,7 +85,7 @@ class WorkerTaskControllerTest {
     @DisplayName("작업자 패킹 저장 실패 시 비즈니스 예외 코드를 반환한다")
     void process_whenPackingNotReady_thenReturn409() throws Exception {
         doThrow(new BusinessException(ErrorCode.OUTBOUND_PACKING_NOT_READY))
-                .when(processWorkerTaskService).process(any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
+                .when(processWorkerTaskService).process(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
 
         mockMvc.perform(patch("/wms/worker/tasks/WORK-OUT-CONK-ORD-001")
                         .header("X-Tenant-Code", "CONK")

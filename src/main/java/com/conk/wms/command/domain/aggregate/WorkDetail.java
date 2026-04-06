@@ -14,6 +14,12 @@ import java.time.LocalDateTime;
 @Table(name = "work_detail")
 public class WorkDetail {
 
+    private static final String OUTBOUND_REFERENCE_TYPE = "ORDER";
+    private static final String OUTBOUND_WORK_TYPE = "PICKING_PACKING";
+    private static final String INBOUND_REFERENCE_TYPE = "ASN";
+    private static final String INBOUND_WORK_TYPE = "INSPECTION_LOADING";
+    private static final String INBOUND_ORDER_REF_PREFIX = "ASN::";
+
     @EmbeddedId
     private WorkDetailId id;
 
@@ -58,27 +64,65 @@ public class WorkDetail {
 
     public WorkDetail(String workId, String orderId, String skuId, String locationId,
                       int quantity, String actorId) {
+        this(workId, orderId, null, skuId, locationId, quantity,
+                OUTBOUND_REFERENCE_TYPE, OUTBOUND_WORK_TYPE, actorId);
+    }
+
+    private WorkDetail(String workId, String orderId, String asnId, String skuId, String locationId,
+                       int quantity, String referenceType, String workType, String actorId) {
         this.id = new WorkDetailId(workId, orderId, skuId, locationId);
+        this.asnId = asnId;
         this.status = "WAITING";
-        this.referenceType = "ORDER";
+        this.referenceType = referenceType;
         this.quantity = quantity;
-        this.workType = "PICKING_PACKING";
+        this.workType = workType;
         this.createdAt = LocalDateTime.now();
         this.updatedAt = this.createdAt;
         this.createdBy = actorId;
         this.updatedBy = actorId;
     }
 
+    public static WorkDetail forInspectionLoading(String workId, String asnId, String skuId,
+                                                  String locationId, int quantity, String actorId) {
+        return new WorkDetail(
+                workId,
+                INBOUND_ORDER_REF_PREFIX + asnId,
+                asnId,
+                skuId,
+                locationId,
+                quantity,
+                INBOUND_REFERENCE_TYPE,
+                INBOUND_WORK_TYPE,
+                actorId
+        );
+    }
+
     public WorkDetailId getId() {
         return id;
+    }
+
+    public String getAsnId() {
+        return asnId;
     }
 
     public String getStatus() {
         return status;
     }
 
+    public String getReferenceType() {
+        return referenceType;
+    }
+
     public Integer getQuantity() {
         return quantity;
+    }
+
+    public String getWorkType() {
+        return workType;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
     }
 
     public LocalDateTime getStartedAt() {
@@ -95,6 +139,10 @@ public class WorkDetail {
 
     public LocalDateTime getUpdatedAt() {
         return updatedAt;
+    }
+
+    public String getUpdatedBy() {
+        return updatedBy;
     }
 
     public void markPicked(String actorId, String issueNote, LocalDateTime pickedAt) {
@@ -116,5 +164,26 @@ public class WorkDetail {
         this.updatedBy = actorId;
         this.issueNote = issueNote;
         this.completedAt = packedAt;
+    }
+
+    public void markInspected(String actorId, String issueNote, LocalDateTime inspectedAt) {
+        if (this.startedAt == null) {
+            this.startedAt = inspectedAt;
+        }
+        this.status = "INSPECTED";
+        this.updatedAt = inspectedAt;
+        this.updatedBy = actorId;
+        this.issueNote = issueNote;
+    }
+
+    public void markPutaway(String actorId, String issueNote, LocalDateTime putawayAt) {
+        if (this.startedAt == null) {
+            this.startedAt = putawayAt;
+        }
+        this.status = "PUTAWAY_COMPLETED";
+        this.updatedAt = putawayAt;
+        this.updatedBy = actorId;
+        this.issueNote = issueNote;
+        this.completedAt = putawayAt;
     }
 }

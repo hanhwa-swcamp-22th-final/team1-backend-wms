@@ -1,14 +1,18 @@
 package com.conk.wms.command.service;
 
 import com.conk.wms.command.controller.dto.response.ProcessWorkerTaskResponse;
+import com.conk.wms.command.domain.aggregate.InspectionPutaway;
 import com.conk.wms.command.domain.aggregate.PickingPacking;
 import com.conk.wms.command.domain.aggregate.WorkAssignment;
 import com.conk.wms.command.domain.aggregate.WorkDetail;
+import com.conk.wms.command.domain.repository.InspectionPutawayRepository;
+import com.conk.wms.command.domain.repository.LocationRepository;
 import com.conk.wms.command.domain.repository.PickingPackingRepository;
 import com.conk.wms.command.domain.repository.WorkAssignmentRepository;
 import com.conk.wms.command.domain.repository.WorkDetailRepository;
 import com.conk.wms.common.exception.BusinessException;
 import com.conk.wms.common.exception.ErrorCode;
+import com.conk.wms.common.support.InspectionPutawayNoteSupport;
 import com.conk.wms.common.support.PickingPackingNoteSupport;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -45,6 +49,15 @@ class ProcessWorkerTaskServiceTest {
     @Mock
     private PickingPackingNoteSupport pickingPackingNoteSupport;
 
+    @Mock
+    private InspectionPutawayRepository inspectionPutawayRepository;
+
+    @Mock
+    private InspectionPutawayNoteSupport inspectionPutawayNoteSupport;
+
+    @Mock
+    private LocationRepository locationRepository;
+
     @InjectMocks
     private ProcessWorkerTaskService processWorkerTaskService;
 
@@ -64,8 +77,8 @@ class ProcessWorkerTaskServiceTest {
         )).thenReturn(Optional.empty());
         when(pickingPackingNoteSupport.mergePicking(null, "수량 부족", "2개만 피킹"))
                 .thenReturn("PICK::수량 부족::2개만 피킹");
-        when(workDetailRepository.findAllByIdWorkIdAndIdOrderIdOrderByIdLocationIdAscIdSkuIdAsc(
-                "WORK-OUT-CONK-ORD-001", "ORD-001"
+        when(workDetailRepository.findAllByIdWorkIdOrderByIdLocationIdAscIdSkuIdAsc(
+                "WORK-OUT-CONK-ORD-001"
         )).thenReturn(List.of(detail));
 
         ProcessWorkerTaskResponse response = processWorkerTaskService.process(
@@ -74,8 +87,10 @@ class ProcessWorkerTaskServiceTest {
                 "WORKER-001",
                 "PICKING",
                 "ORD-001",
+                null,
                 "SKU-001",
                 "LOC-A-01-01",
+                null,
                 2,
                 "수량 부족",
                 "2개만 피킹"
@@ -111,8 +126,8 @@ class ProcessWorkerTaskServiceTest {
         )).thenReturn(Optional.of(pickingPacking));
         when(pickingPackingNoteSupport.mergePacking("PICK::정상::", "", ""))
                 .thenReturn("PICK::정상::||PACK::::");
-        when(workDetailRepository.findAllByIdWorkIdAndIdOrderIdOrderByIdLocationIdAscIdSkuIdAsc(
-                "WORK-OUT-CONK-ORD-001", "ORD-001"
+        when(workDetailRepository.findAllByIdWorkIdOrderByIdLocationIdAscIdSkuIdAsc(
+                "WORK-OUT-CONK-ORD-001"
         )).thenReturn(List.of(detail));
 
         ProcessWorkerTaskResponse response = processWorkerTaskService.process(
@@ -121,8 +136,10 @@ class ProcessWorkerTaskServiceTest {
                 "WORKER-001",
                 "PACKING",
                 "ORD-001",
+                null,
                 "SKU-001",
                 "LOC-A-01-01",
+                null,
                 3,
                 "",
                 ""
@@ -158,8 +175,10 @@ class ProcessWorkerTaskServiceTest {
                         "WORKER-001",
                         "PACKING",
                         "ORD-001",
+                        null,
                         "SKU-001",
                         "LOC-A-01-01",
+                        null,
                         3,
                         "",
                         ""
@@ -167,5 +186,96 @@ class ProcessWorkerTaskServiceTest {
         );
 
         assertEquals(ErrorCode.OUTBOUND_PACKING_NOT_READY, exception.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("검수 저장 성공: inspection_putaway와 work_detail을 함께 갱신한다")
+    void processInspection_success() {
+        WorkAssignment assignment = new WorkAssignment("WORK-IN-CONK-ASN-001-WORKER-003", "CONK", "WORKER-003", "CONK");
+        WorkDetail detail = WorkDetail.forInspectionLoading("WORK-IN-CONK-ASN-001-WORKER-003",
+                "ASN-001", "SKU-001", "LOC-C-01-01", 5, "CONK");
+        InspectionPutaway row = new InspectionPutaway("ASN-001", "SKU-001", "CONK");
+        row.assignLocation("LOC-C-01-01");
+
+        when(workAssignmentRepository.findAllByIdWorkIdAndIdTenantId("WORK-IN-CONK-ASN-001-WORKER-003", "CONK"))
+                .thenReturn(List.of(assignment));
+        when(workDetailRepository.findByIdWorkIdAndAsnIdAndIdSkuIdAndIdLocationId(
+                "WORK-IN-CONK-ASN-001-WORKER-003", "ASN-001", "SKU-001", "LOC-C-01-01"
+        )).thenReturn(Optional.of(detail));
+        when(inspectionPutawayRepository.findByAsnIdAndSkuId("ASN-001", "SKU-001"))
+                .thenReturn(Optional.of(row));
+        when(inspectionPutawayNoteSupport.mergeInspection("수량 불일치", "2박스 확인"))
+                .thenReturn("INSP::수량 불일치::2박스 확인");
+        when(workDetailRepository.findAllByIdWorkIdOrderByIdLocationIdAscIdSkuIdAsc("WORK-IN-CONK-ASN-001-WORKER-003"))
+                .thenReturn(List.of(detail));
+
+        ProcessWorkerTaskResponse response = processWorkerTaskService.process(
+                "CONK",
+                "WORK-IN-CONK-ASN-001-WORKER-003",
+                "WORKER-003",
+                "INSPECTION",
+                null,
+                "ASN-001",
+                "SKU-001",
+                "LOC-C-01-01",
+                null,
+                5,
+                "수량 불일치",
+                "2박스 확인"
+        );
+
+        verify(inspectionPutawayRepository).save(row);
+        verify(workDetailRepository).save(detail);
+        assertEquals("INSPECTED", response.getDetailStatus());
+        assertFalse(response.isWorkCompleted());
+        assertEquals(5, row.getInspectedQuantity());
+    }
+
+    @Test
+    @DisplayName("적재 저장 성공: 검수 완료 후 putaway 수량과 작업 완료를 반영한다")
+    void processPutaway_success() {
+        WorkAssignment assignment = new WorkAssignment("WORK-IN-CONK-ASN-001-WORKER-003", "CONK", "WORKER-003", "CONK");
+        WorkDetail detail = WorkDetail.forInspectionLoading("WORK-IN-CONK-ASN-001-WORKER-003",
+                "ASN-001", "SKU-001", "LOC-C-01-01", 5, "CONK");
+        detail.markInspected("WORKER-003", "INSP::정상::", java.time.LocalDateTime.now());
+        InspectionPutaway row = new InspectionPutaway("ASN-001", "SKU-001", "CONK");
+        row.assignLocation("LOC-C-01-01");
+        row.saveProgress("LOC-C-01-01", 5, 0, "INSP::정상::", 0);
+
+        when(workAssignmentRepository.findAllByIdWorkIdAndIdTenantId("WORK-IN-CONK-ASN-001-WORKER-003", "CONK"))
+                .thenReturn(List.of(assignment));
+        when(workDetailRepository.findByIdWorkIdAndAsnIdAndIdSkuIdAndIdLocationId(
+                "WORK-IN-CONK-ASN-001-WORKER-003", "ASN-001", "SKU-001", "LOC-C-01-01"
+        )).thenReturn(Optional.of(detail));
+        when(inspectionPutawayRepository.findByAsnIdAndSkuId("ASN-001", "SKU-001"))
+                .thenReturn(Optional.of(row));
+        when(inspectionPutawayNoteSupport.mergePutaway("C-01-01", "", ""))
+                .thenReturn("PUT::C-01-01::::");
+        when(locationRepository.findByBinId("C-01-01"))
+                .thenReturn(Optional.empty());
+        when(workDetailRepository.findAllByIdWorkIdOrderByIdLocationIdAscIdSkuIdAsc("WORK-IN-CONK-ASN-001-WORKER-003"))
+                .thenReturn(List.of(detail));
+
+        ProcessWorkerTaskResponse response = processWorkerTaskService.process(
+                "CONK",
+                "WORK-IN-CONK-ASN-001-WORKER-003",
+                "WORKER-003",
+                "PUTAWAY",
+                null,
+                "ASN-001",
+                "SKU-001",
+                "LOC-C-01-01",
+                "C-01-01",
+                5,
+                "",
+                ""
+        );
+
+        verify(inspectionPutawayRepository).save(row);
+        verify(workDetailRepository).save(detail);
+        verify(workAssignmentRepository).save(assignment);
+        assertEquals("PUTAWAY_COMPLETED", response.getDetailStatus());
+        assertTrue(response.isWorkCompleted());
+        assertEquals(5, row.getPutawayQuantity());
     }
 }

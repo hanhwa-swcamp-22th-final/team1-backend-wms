@@ -2,6 +2,7 @@ package com.conk.wms.command.service;
 
 import com.conk.wms.command.domain.aggregate.WorkAssignment;
 import com.conk.wms.command.domain.aggregate.AllocatedInventory;
+import com.conk.wms.command.domain.aggregate.WorkDetail;
 import com.conk.wms.command.domain.repository.OutboundPendingRepository;
 import com.conk.wms.command.domain.repository.AllocatedInventoryRepository;
 import com.conk.wms.command.domain.repository.WorkAssignmentRepository;
@@ -42,6 +43,9 @@ class AssignTaskServiceTest {
     @Mock
     private WorkDetailRepository workDetailRepository;
 
+    @Mock
+    private AutoAssignTaskService autoAssignTaskService;
+
     @InjectMocks
     private AssignTaskService assignTaskService;
 
@@ -49,7 +53,7 @@ class AssignTaskServiceTest {
     @DisplayName("작업 배정 성공: 출고 지시된 주문에 work_assignment를 생성한다")
     void assign_success() {
         when(outboundPendingRepository.existsByIdOrderIdAndIdTenantId("ORD-001", "CONK")).thenReturn(true);
-        when(workAssignmentRepository.findAllByIdWorkIdAndIdTenantId("WORK-OUT-CONK-ORD-001", "CONK"))
+        when(workDetailRepository.findAllByIdOrderIdOrderByIdLocationIdAscIdSkuIdAsc("ORD-001"))
                 .thenReturn(List.of());
         when(allocatedInventoryRepository.findAllByIdOrderIdAndIdTenantId("ORD-001", "CONK"))
                 .thenReturn(List.of(new AllocatedInventory(
@@ -88,8 +92,15 @@ class AssignTaskServiceTest {
     @DisplayName("작업 재배정 성공: 기존 work_assignment를 지우고 새 작업자로 덮어쓴다")
     void assign_whenAlreadyAssigned_thenReplaceAssignment() {
         when(outboundPendingRepository.existsByIdOrderIdAndIdTenantId("ORD-001", "CONK")).thenReturn(true);
-        when(workAssignmentRepository.findAllByIdWorkIdAndIdTenantId("WORK-OUT-CONK-ORD-001", "CONK"))
-                .thenReturn(List.of(new WorkAssignment("WORK-OUT-CONK-ORD-001", "CONK", "WORKER-OLD", "MANAGER-001")));
+        when(workDetailRepository.findAllByIdOrderIdOrderByIdLocationIdAscIdSkuIdAsc("ORD-001"))
+                .thenReturn(List.of(new WorkDetail(
+                        "WORK-OUT-CONK-ORD-001",
+                        "ORD-001",
+                        "SKU-001",
+                        "LOC-A-01-01",
+                        3,
+                        "MANAGER-001"
+                )));
         when(allocatedInventoryRepository.findAllByIdOrderIdAndIdTenantId("ORD-001", "CONK"))
                 .thenReturn(List.of(new AllocatedInventory(
                         "ORD-001",
@@ -107,8 +118,7 @@ class AssignTaskServiceTest {
                 "MANAGER-002"
         );
 
-        verify(workAssignmentRepository).deleteAllByIdWorkIdAndIdTenantId("WORK-OUT-CONK-ORD-001", "CONK");
-        verify(workDetailRepository).deleteAllByIdWorkId("WORK-OUT-CONK-ORD-001");
+        verify(autoAssignTaskService).clearExistingAssignments("ORD-001", "CONK");
         verify(workAssignmentRepository).save(any(WorkAssignment.class));
         assertTrue(result.isReassigned());
     }

@@ -49,6 +49,9 @@ class AssignAsnPutawayServiceTest {
     @Mock
     private PutawayLocationSupport putawayLocationSupport;
 
+    @Mock
+    private AutoAssignTaskService autoAssignTaskService;
+
     @InjectMocks
     private AssignAsnPutawayService assignAsnPutawayService;
 
@@ -81,6 +84,7 @@ class AssignAsnPutawayServiceTest {
 
         ArgumentCaptor<InspectionPutaway> captor = ArgumentCaptor.forClass(InspectionPutaway.class);
         verify(inspectionPutawayRepository).save(captor.capture());
+        verify(autoAssignTaskService).assignInspectionLoading("ASN-001", "CONK", "CONK");
 
         assertEquals(1, assignedCount);
         assertEquals("SKU-001", captor.getValue().getSkuId());

@@ -3,6 +3,7 @@ package com.conk.wms.command;
 import com.conk.wms.command.domain.aggregate.OutboundPending;
 import com.conk.wms.command.domain.aggregate.AllocatedInventory;
 import com.conk.wms.command.domain.aggregate.WorkAssignment;
+import com.conk.wms.command.domain.aggregate.WorkDetail;
 import com.conk.wms.command.domain.repository.OutboundPendingRepository;
 import com.conk.wms.command.domain.repository.AllocatedInventoryRepository;
 import com.conk.wms.command.domain.repository.WorkAssignmentRepository;
@@ -102,6 +103,14 @@ class TaskAssignmentIntegrationTest {
                 "WORK-OUT-CONK-ORD-001",
                 "CONK",
                 "WORKER-OLD",
+                "MANAGER-001"
+        ));
+        workDetailRepository.save(new WorkDetail(
+                "WORK-OUT-CONK-ORD-001",
+                "ORD-001",
+                "SKU-001",
+                "LOC-A-01-01",
+                3,
                 "MANAGER-001"
         ));
 

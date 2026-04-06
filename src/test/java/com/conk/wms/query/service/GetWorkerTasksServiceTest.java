@@ -1,13 +1,20 @@
 package com.conk.wms.query.service;
 
+import com.conk.wms.command.domain.aggregate.Asn;
+import com.conk.wms.command.domain.aggregate.AsnItem;
+import com.conk.wms.command.domain.aggregate.InspectionPutaway;
 import com.conk.wms.command.domain.aggregate.Location;
 import com.conk.wms.command.domain.aggregate.PickingPacking;
 import com.conk.wms.command.domain.aggregate.WorkAssignment;
 import com.conk.wms.command.domain.aggregate.WorkDetail;
+import com.conk.wms.command.domain.repository.AsnItemRepository;
+import com.conk.wms.command.domain.repository.AsnRepository;
+import com.conk.wms.command.domain.repository.InspectionPutawayRepository;
 import com.conk.wms.command.domain.repository.LocationRepository;
 import com.conk.wms.command.domain.repository.PickingPackingRepository;
 import com.conk.wms.command.domain.repository.WorkAssignmentRepository;
 import com.conk.wms.command.domain.repository.WorkDetailRepository;
+import com.conk.wms.common.support.InspectionPutawayNoteSupport;
 import com.conk.wms.common.support.PickingPackingNoteSupport;
 import com.conk.wms.query.client.OrderServiceClient;
 import com.conk.wms.query.client.dto.OrderItemDto;
@@ -21,6 +28,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -47,6 +55,18 @@ class GetWorkerTasksServiceTest {
 
     @Mock
     private PickingPackingNoteSupport pickingPackingNoteSupport;
+
+    @Mock
+    private AsnRepository asnRepository;
+
+    @Mock
+    private AsnItemRepository asnItemRepository;
+
+    @Mock
+    private InspectionPutawayRepository inspectionPutawayRepository;
+
+    @Mock
+    private InspectionPutawayNoteSupport inspectionPutawayNoteSupport;
 
     @InjectMocks
     private GetWorkerTasksService getWorkerTasksService;
@@ -100,5 +120,50 @@ class GetWorkerTasksServiceTest {
         assertEquals("수량 부족", response.get(0).getBins().get(0).getPickExceptionType());
         assertEquals(1, response.get(0).getPackOrders().size());
         assertEquals(2, response.get(0).getPackOrders().get(0).getActualPickedQty());
+    }
+
+    @Test
+    @DisplayName("입고 작업 조회 성공: 검수/적재 자동 배정 작업을 INBOUND record로 반환한다")
+    void getTasks_inboundSuccess() {
+        WorkAssignment assignment = new WorkAssignment("WORK-IN-CONK-ASN-001-WORKER-003", "CONK", "WORKER-003", "CONK");
+        WorkDetail detail = WorkDetail.forInspectionLoading("WORK-IN-CONK-ASN-001-WORKER-003",
+                "ASN-001", "SKU-001", "LOC-C-01-01", 5, "CONK");
+        detail.markInspected("WORKER-003", "INSP::수량 불일치::2박스 확인", LocalDateTime.of(2026, 4, 6, 9, 30));
+
+        InspectionPutaway row = new InspectionPutaway("ASN-001", "SKU-001", "CONK");
+        row.assignLocation("LOC-C-01-01");
+        row.saveProgress("LOC-C-01-01", 5, 0, "INSP::수량 불일치::2박스 확인", 0);
+
+        when(workAssignmentRepository.findAllByIdTenantIdAndIdAccountId("CONK", "WORKER-003"))
+                .thenReturn(List.of(assignment));
+        when(workDetailRepository.findAllByIdWorkIdOrderByIdLocationIdAscIdSkuIdAsc("WORK-IN-CONK-ASN-001-WORKER-003"))
+                .thenReturn(List.of(detail));
+        when(asnRepository.findByAsnId("ASN-001"))
+                .thenReturn(Optional.of(new Asn("ASN-001", "WH-001", "SELLER-001",
+                        LocalDate.of(2026, 4, 7), "INSPECTING_PUTAWAY", "입고 메모",
+                        2, LocalDateTime.of(2026, 4, 6, 9, 0), LocalDateTime.of(2026, 4, 6, 9, 0),
+                        "SELLER-001", "SELLER-001")));
+        when(asnItemRepository.findAllByAsnId("ASN-001"))
+                .thenReturn(List.of(new AsnItem("ASN-001", "SKU-001", 5, "상품A", 1)));
+        when(inspectionPutawayRepository.findAllByAsnId("ASN-001"))
+                .thenReturn(List.of(row));
+        when(locationRepository.findById("LOC-C-01-01"))
+                .thenReturn(Optional.of(new Location("LOC-C-01-01", "C-01-01", "WH-001", "C", "01", 300, true)));
+        when(inspectionPutawayNoteSupport.extractInspection("INSP::수량 불일치::2박스 확인"))
+                .thenReturn(new InspectionPutawayNoteSupport.StageNote("수량 불일치", "2박스 확인", "", "INSP::수량 불일치::2박스 확인"));
+        when(inspectionPutawayNoteSupport.extractPutaway("INSP::수량 불일치::2박스 확인"))
+                .thenReturn(new InspectionPutawayNoteSupport.StageNote("", "", "", ""));
+
+        List<WorkerTaskResponse> response = getWorkerTasksService.getTasks("CONK", "WORKER-003");
+
+        assertEquals(1, response.size());
+        assertEquals("INBOUND", response.get(0).getCategory());
+        assertEquals("진행중", response.get(0).getStatus());
+        assertEquals("ASN-001", response.get(0).getRefNo());
+        assertEquals(1, response.get(0).getBins().size());
+        assertEquals("C-01-01", response.get(0).getBins().get(0).getBinCode());
+        assertEquals(5, response.get(0).getBins().get(0).getPlannedQty());
+        assertEquals(5, response.get(0).getBins().get(0).getInspectedQty());
+        assertEquals("수량 불일치", response.get(0).getBins().get(0).getInspectExceptionType());
     }
 }
