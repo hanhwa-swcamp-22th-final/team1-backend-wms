@@ -59,4 +59,14 @@ public class AllocatedInventory {
     public Integer getQuantity() {
         return quantity;
     }
+
+    public LocalDateTime getReleasedAt() {
+        return releasedAt;
+    }
+
+    public void release(String actorId, LocalDateTime releasedAt) {
+        this.releasedAt = releasedAt;
+        this.updatedAt = releasedAt;
+        this.updatedBy = actorId;
+    }
 }
