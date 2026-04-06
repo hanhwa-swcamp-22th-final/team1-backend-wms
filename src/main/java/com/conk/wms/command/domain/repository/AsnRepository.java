@@ -11,6 +11,8 @@ import java.util.Optional;
  */
 public interface AsnRepository extends JpaRepository<Asn, Long> {
 
+    List<Asn> findAllByWarehouseId(String warehouseId);
+
     List<Asn> findAllByWarehouseIdAndStatus(String warehouseId, String status);
 
     List<Asn> findAllBySellerIdOrderByCreatedAtDesc(String sellerId);
