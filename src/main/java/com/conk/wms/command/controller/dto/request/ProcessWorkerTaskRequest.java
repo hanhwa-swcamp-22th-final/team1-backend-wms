@@ -17,8 +17,10 @@ public class ProcessWorkerTaskRequest {
     private String workerAccountId;
     private String stage;
     private String orderId;
+    private String asnId;
     private String skuId;
     private String locationId;
+    private String actualBin;
     private Integer actualQuantity;
     private String exceptionType;
     private String issueNote;

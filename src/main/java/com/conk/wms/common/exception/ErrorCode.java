@@ -43,6 +43,10 @@ public enum ErrorCode {
     ASN_CONFIRM_NOT_ALLOWED(HttpStatus.CONFLICT, "ASN-030", "현재 상태에서는 입고 확정을 진행할 수 없습니다."),
     ASN_CONFIRM_RESULT_REQUIRED(HttpStatus.BAD_REQUEST, "ASN-031", "입고 확정을 위한 검수/적재 데이터가 없습니다."),
     ASN_CONFIRM_INCOMPLETE(HttpStatus.BAD_REQUEST, "ASN-032", "완료되지 않은 검수/적재 데이터가 있습니다."),
+    ASN_WORKER_TASK_NOT_FOUND(HttpStatus.NOT_FOUND, "ASN-033", "입고 작업을 찾을 수 없습니다."),
+    ASN_WORK_DETAIL_NOT_FOUND(HttpStatus.NOT_FOUND, "ASN-034", "입고 작업 상세를 찾을 수 없습니다."),
+    ASN_WORK_STAGE_INVALID(HttpStatus.BAD_REQUEST, "ASN-035", "지원하지 않는 입고 작업 단계입니다."),
+    ASN_PUTAWAY_NOT_READY(HttpStatus.CONFLICT, "ASN-036", "검수가 완료되지 않아 적재를 진행할 수 없습니다."),
 
     OUTBOUND_ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "OUTBOUND-001", "출고 대상 주문을 찾을 수 없습니다."),
     OUTBOUND_DISPATCH_NOT_ALLOWED(HttpStatus.CONFLICT, "OUTBOUND-002", "현재 상태에서는 출고 지시를 진행할 수 없습니다."),
@@ -65,7 +69,16 @@ public enum ErrorCode {
     OUTBOUND_CONFIRM_ALREADY_COMPLETED(HttpStatus.CONFLICT, "OUTBOUND-019", "이미 출고 확정된 주문입니다."),
     OUTBOUND_CONFIRM_ORDER_IDS_REQUIRED(HttpStatus.BAD_REQUEST, "OUTBOUND-020", "출고 확정할 주문은 1건 이상이어야 합니다."),
     OUTBOUND_CONFIRM_SOURCE_NOT_FOUND(HttpStatus.NOT_FOUND, "OUTBOUND-021", "출고 확정 대상 주문을 찾을 수 없습니다."),
-    OUTBOUND_CONFIRM_ALLOCATED_NOT_FOUND(HttpStatus.NOT_FOUND, "OUTBOUND-022", "마감할 ALLOCATED 재고를 찾을 수 없습니다.");
+    OUTBOUND_CONFIRM_ALLOCATED_NOT_FOUND(HttpStatus.NOT_FOUND, "OUTBOUND-022", "마감할 ALLOCATED 재고를 찾을 수 없습니다."),
+
+    WORKER_ACCOUNT_ID_REQUIRED(HttpStatus.BAD_REQUEST, "WORKER-001", "작업자 코드는 필수입니다."),
+    WORKER_ACCOUNT_NAME_REQUIRED(HttpStatus.BAD_REQUEST, "WORKER-002", "작업자 이름은 필수입니다."),
+    WORKER_ACCOUNT_PASSWORD_REQUIRED(HttpStatus.BAD_REQUEST, "WORKER-003", "초기 비밀번호는 필수입니다."),
+    WORKER_ACCOUNT_NOT_FOUND(HttpStatus.NOT_FOUND, "WORKER-004", "작업자 계정을 찾을 수 없습니다."),
+    WORKER_ACCOUNT_ALREADY_EXISTS(HttpStatus.CONFLICT, "WORKER-005", "이미 존재하는 작업자 계정입니다."),
+    BIN_ASSIGNMENT_BIN_REQUIRED(HttpStatus.BAD_REQUEST, "WORKER-006", "배정할 Bin은 필수입니다."),
+    BIN_ASSIGNMENT_LOCATION_NOT_FOUND(HttpStatus.NOT_FOUND, "WORKER-007", "배정 대상 Bin을 찾을 수 없습니다."),
+    BIN_ASSIGNMENT_WORKER_NOT_FOUND(HttpStatus.NOT_FOUND, "WORKER-008", "배정 대상 작업자를 찾을 수 없습니다.");
 
     private final HttpStatus status;
     private final String code;

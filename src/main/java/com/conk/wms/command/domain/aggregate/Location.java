@@ -28,6 +28,9 @@ public class Location {
     @Column(name = "rack_id", nullable = false)
     private String rackId;
 
+    @Column(name = "worker_account_id")
+    private String workerAccountId;
+
     @Column(name = "capacity_quantity", nullable = false)
     private int capacityQuantity;
 
@@ -43,6 +46,7 @@ public class Location {
         this.warehouseId = warehouseId;
         this.zoneId = zoneId;
         this.rackId = rackId;
+        this.workerAccountId = null;
         this.capacityQuantity = capacityQuantity;
         this.active = active;
     }
@@ -67,11 +71,23 @@ public class Location {
         return rackId;
     }
 
+    public String getWorkerAccountId() {
+        return workerAccountId;
+    }
+
     public int getCapacityQuantity() {
         return capacityQuantity;
     }
 
     public boolean isActive() {
         return active;
+    }
+
+    public void assignWorker(String workerAccountId) {
+        this.workerAccountId = workerAccountId;
+    }
+
+    public void clearWorkerAssignment() {
+        this.workerAccountId = null;
     }
 }
