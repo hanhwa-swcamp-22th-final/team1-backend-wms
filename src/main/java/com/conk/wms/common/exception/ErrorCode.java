@@ -60,7 +60,12 @@ public enum ErrorCode {
     OUTBOUND_PACKING_NOT_READY(HttpStatus.CONFLICT, "OUTBOUND-014", "피킹이 완료되지 않아 패킹을 진행할 수 없습니다."),
     OUTBOUND_INVOICE_NOT_READY(HttpStatus.CONFLICT, "OUTBOUND-015", "패킹이 완료되지 않아 송장을 발행할 수 없습니다."),
     OUTBOUND_INVOICE_SOURCE_NOT_FOUND(HttpStatus.NOT_FOUND, "OUTBOUND-016", "송장 발행 대상 주문을 찾을 수 없습니다."),
-    OUTBOUND_INVOICE_ORDER_IDS_REQUIRED(HttpStatus.BAD_REQUEST, "OUTBOUND-017", "송장 발행할 주문은 1건 이상이어야 합니다.");
+    OUTBOUND_INVOICE_ORDER_IDS_REQUIRED(HttpStatus.BAD_REQUEST, "OUTBOUND-017", "송장 발행할 주문은 1건 이상이어야 합니다."),
+    OUTBOUND_CONFIRM_NOT_READY(HttpStatus.CONFLICT, "OUTBOUND-018", "패킹 및 송장이 완료되지 않아 출고 확정을 진행할 수 없습니다."),
+    OUTBOUND_CONFIRM_ALREADY_COMPLETED(HttpStatus.CONFLICT, "OUTBOUND-019", "이미 출고 확정된 주문입니다."),
+    OUTBOUND_CONFIRM_ORDER_IDS_REQUIRED(HttpStatus.BAD_REQUEST, "OUTBOUND-020", "출고 확정할 주문은 1건 이상이어야 합니다."),
+    OUTBOUND_CONFIRM_SOURCE_NOT_FOUND(HttpStatus.NOT_FOUND, "OUTBOUND-021", "출고 확정 대상 주문을 찾을 수 없습니다."),
+    OUTBOUND_CONFIRM_ALLOCATED_NOT_FOUND(HttpStatus.NOT_FOUND, "OUTBOUND-022", "마감할 ALLOCATED 재고를 찾을 수 없습니다.");
 
     private final HttpStatus status;
     private final String code;
