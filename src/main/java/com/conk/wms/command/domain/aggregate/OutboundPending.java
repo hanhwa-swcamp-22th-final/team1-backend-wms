@@ -50,4 +50,14 @@ public class OutboundPending {
     public OutboundPendingId getId() {
         return id;
     }
+
+    public LocalDateTime getInvoiceIssuedAt() {
+        return invoiceIssuedAt;
+    }
+
+    public void markInvoiceIssued(String actorId, LocalDateTime issuedAt) {
+        this.invoiceIssuedAt = issuedAt;
+        this.updatedAt = issuedAt;
+        this.updatedBy = actorId;
+    }
 }

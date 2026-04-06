@@ -57,7 +57,10 @@ public enum ErrorCode {
     OUTBOUND_WORK_STAGE_REQUIRED(HttpStatus.BAD_REQUEST, "OUTBOUND-011", "작업 단계는 필수입니다."),
     OUTBOUND_WORK_STAGE_INVALID(HttpStatus.BAD_REQUEST, "OUTBOUND-012", "지원하지 않는 작업 단계입니다."),
     OUTBOUND_WORK_QUANTITY_INVALID(HttpStatus.BAD_REQUEST, "OUTBOUND-013", "실제 처리 수량은 0 이상이어야 합니다."),
-    OUTBOUND_PACKING_NOT_READY(HttpStatus.CONFLICT, "OUTBOUND-014", "피킹이 완료되지 않아 패킹을 진행할 수 없습니다.");
+    OUTBOUND_PACKING_NOT_READY(HttpStatus.CONFLICT, "OUTBOUND-014", "피킹이 완료되지 않아 패킹을 진행할 수 없습니다."),
+    OUTBOUND_INVOICE_NOT_READY(HttpStatus.CONFLICT, "OUTBOUND-015", "패킹이 완료되지 않아 송장을 발행할 수 없습니다."),
+    OUTBOUND_INVOICE_SOURCE_NOT_FOUND(HttpStatus.NOT_FOUND, "OUTBOUND-016", "송장 발행 대상 주문을 찾을 수 없습니다."),
+    OUTBOUND_INVOICE_ORDER_IDS_REQUIRED(HttpStatus.BAD_REQUEST, "OUTBOUND-017", "송장 발행할 주문은 1건 이상이어야 합니다.");
 
     private final HttpStatus status;
     private final String code;
