@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * 작업자에게 배정된 피킹/패킹 작업 조회 API를 제공하는 컨트롤러다.
+ * 작업자에게 배정된 검수/적재 또는 피킹/패킹 작업 조회 API를 제공하는 컨트롤러다.
  */
 @RestController
 @RequestMapping({"/wms/worker/tasks", "/wh_worker_tasks"})

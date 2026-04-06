@@ -45,6 +45,9 @@ class DispatchPendingOrderServiceTest {
     @Mock
     private AllocatedInventoryRepository allocatedInventoryRepository;
 
+    @Mock
+    private AutoAssignTaskService autoAssignTaskService;
+
     @InjectMocks
     private DispatchPendingOrderService dispatchPendingOrderService;
 
@@ -84,6 +87,7 @@ class DispatchPendingOrderServiceTest {
         verify(inventoryRepository, times(2)).save(inventoryCaptor.capture());
         verify(outboundPendingRepository).save(any(OutboundPending.class));
         verify(allocatedInventoryRepository).save(any(AllocatedInventory.class));
+        verify(autoAssignTaskService).assign("ORD-001", "CONK", "WORKER-001");
 
         Inventory availableInventory = inventoryCaptor.getAllValues().get(0);
         Inventory allocatedInventory = inventoryCaptor.getAllValues().get(1);

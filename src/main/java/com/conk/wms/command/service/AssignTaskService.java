@@ -23,15 +23,18 @@ public class AssignTaskService {
     private final AllocatedInventoryRepository allocatedInventoryRepository;
     private final WorkAssignmentRepository workAssignmentRepository;
     private final WorkDetailRepository workDetailRepository;
+    private final AutoAssignTaskService autoAssignTaskService;
 
     public AssignTaskService(OutboundPendingRepository outboundPendingRepository,
                              AllocatedInventoryRepository allocatedInventoryRepository,
                              WorkAssignmentRepository workAssignmentRepository,
-                             WorkDetailRepository workDetailRepository) {
+                             WorkDetailRepository workDetailRepository,
+                             AutoAssignTaskService autoAssignTaskService) {
         this.outboundPendingRepository = outboundPendingRepository;
         this.allocatedInventoryRepository = allocatedInventoryRepository;
         this.workAssignmentRepository = workAssignmentRepository;
         this.workDetailRepository = workDetailRepository;
+        this.autoAssignTaskService = autoAssignTaskService;
     }
 
     /**
@@ -51,10 +54,9 @@ public class AssignTaskService {
         }
 
         String workId = buildWorkId(orderId, tenantCode);
-        boolean reassigned = !workAssignmentRepository.findAllByIdWorkIdAndIdTenantId(workId, tenantCode).isEmpty();
+        boolean reassigned = !workDetailRepository.findAllByIdOrderIdOrderByIdLocationIdAscIdSkuIdAsc(orderId).isEmpty();
         if (reassigned) {
-            workAssignmentRepository.deleteAllByIdWorkIdAndIdTenantId(workId, tenantCode);
-            workDetailRepository.deleteAllByIdWorkId(workId);
+            autoAssignTaskService.clearExistingAssignments(orderId, tenantCode);
         }
 
         String actor = assignedByAccountId == null || assignedByAccountId.isBlank() ? "SYSTEM" : assignedByAccountId;

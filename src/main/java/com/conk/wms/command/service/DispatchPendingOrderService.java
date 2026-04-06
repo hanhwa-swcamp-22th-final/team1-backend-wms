@@ -27,15 +27,18 @@ public class DispatchPendingOrderService {
     private final InventoryRepository inventoryRepository;
     private final OutboundPendingRepository outboundPendingRepository;
     private final AllocatedInventoryRepository allocatedInventoryRepository;
+    private final AutoAssignTaskService autoAssignTaskService;
 
     public DispatchPendingOrderService(OrderServiceClient orderServiceClient,
                                        InventoryRepository inventoryRepository,
                                        OutboundPendingRepository outboundPendingRepository,
-                                       AllocatedInventoryRepository allocatedInventoryRepository) {
+                                       AllocatedInventoryRepository allocatedInventoryRepository,
+                                       AutoAssignTaskService autoAssignTaskService) {
         this.orderServiceClient = orderServiceClient;
         this.inventoryRepository = inventoryRepository;
         this.outboundPendingRepository = outboundPendingRepository;
         this.allocatedInventoryRepository = allocatedInventoryRepository;
+        this.autoAssignTaskService = autoAssignTaskService;
     }
 
     /**
@@ -56,6 +59,8 @@ public class DispatchPendingOrderService {
         for (OrderItemDto item : order.getItems()) {
             allocatedRowCount += allocateItem(order, item, tenantCode, actorId);
         }
+
+        autoAssignTaskService.assign(orderId, tenantCode, actorId);
 
         return new DispatchResult(1, allocatedRowCount);
     }

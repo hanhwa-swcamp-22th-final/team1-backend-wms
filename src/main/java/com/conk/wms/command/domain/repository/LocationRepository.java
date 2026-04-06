@@ -10,5 +10,11 @@ import java.util.List;
  */
 public interface LocationRepository extends JpaRepository<Location, String> {
 
+    List<Location> findAllByActiveTrueOrderByZoneIdAscRackIdAscBinIdAsc();
+
     List<Location> findAllByWarehouseIdAndActiveTrueOrderByZoneIdAscRackIdAscBinIdAsc(String warehouseId);
+
+    List<Location> findAllByWorkerAccountIdOrderByZoneIdAscRackIdAscBinIdAsc(String workerAccountId);
+
+    java.util.Optional<Location> findByBinId(String binId);
 }

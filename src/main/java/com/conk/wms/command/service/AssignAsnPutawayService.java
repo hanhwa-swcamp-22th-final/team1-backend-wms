@@ -36,16 +36,19 @@ public class AssignAsnPutawayService {
     private final InspectionPutawayRepository inspectionPutawayRepository;
     private final LocationRepository locationRepository;
     private final PutawayLocationSupport putawayLocationSupport;
+    private final AutoAssignTaskService autoAssignTaskService;
 
     public AssignAsnPutawayService(AsnRepository asnRepository, AsnItemRepository asnItemRepository,
                                    InspectionPutawayRepository inspectionPutawayRepository,
                                    LocationRepository locationRepository,
-                                   PutawayLocationSupport putawayLocationSupport) {
+                                   PutawayLocationSupport putawayLocationSupport,
+                                   AutoAssignTaskService autoAssignTaskService) {
         this.asnRepository = asnRepository;
         this.asnItemRepository = asnItemRepository;
         this.inspectionPutawayRepository = inspectionPutawayRepository;
         this.locationRepository = locationRepository;
         this.putawayLocationSupport = putawayLocationSupport;
+        this.autoAssignTaskService = autoAssignTaskService;
     }
 
     /**
@@ -81,6 +84,9 @@ public class AssignAsnPutawayService {
             row.assignLocation(item.getLocationId());
             inspectionPutawayRepository.save(row);
         }
+
+        // ASN별 BIN 배정이 끝나면, 해당 BIN 담당 작업자 기준으로 검수/적재 작업을 자동 생성한다.
+        autoAssignTaskService.assignInspectionLoading(command.getAsnId(), command.getTenantCode(), command.getTenantCode());
 
         return command.getItems().size();
     }

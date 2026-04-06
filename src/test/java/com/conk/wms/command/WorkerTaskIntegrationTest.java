@@ -1,8 +1,12 @@
 package com.conk.wms.command;
 
+import com.conk.wms.command.domain.aggregate.Asn;
+import com.conk.wms.command.domain.aggregate.AsnItem;
 import com.conk.wms.command.domain.aggregate.Location;
 import com.conk.wms.command.domain.aggregate.OutboundPending;
 import com.conk.wms.command.domain.aggregate.AllocatedInventory;
+import com.conk.wms.command.domain.repository.AsnItemRepository;
+import com.conk.wms.command.domain.repository.AsnRepository;
 import com.conk.wms.command.domain.repository.AllocatedInventoryRepository;
 import com.conk.wms.command.domain.repository.LocationRepository;
 import com.conk.wms.command.domain.repository.OutboundPendingRepository;
@@ -20,6 +24,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -41,6 +47,12 @@ class WorkerTaskIntegrationTest {
 
     @Autowired
     private OutboundPendingRepository outboundPendingRepository;
+
+    @Autowired
+    private AsnRepository asnRepository;
+
+    @Autowired
+    private AsnItemRepository asnItemRepository;
 
     @Autowired
     private AllocatedInventoryRepository allocatedInventoryRepository;
@@ -120,6 +132,89 @@ class WorkerTaskIntegrationTest {
         assertThat(workAssignmentRepository.findAllByIdWorkIdAndIdTenantId("WORK-OUT-CONK-ORD-001", "CONK"))
                 .allMatch(assignment -> Boolean.TRUE.equals(assignment.getIsCompleted()));
         assertThat(workDetailRepository.findAllByIdWorkIdOrderByIdLocationIdAscIdSkuIdAsc("WORK-OUT-CONK-ORD-001"))
+                .allMatch(detail -> detail.getCompletedAt() != null);
+    }
+
+    @Test
+    @DisplayName("입고 작업 조회와 검수/적재 저장이 한 흐름으로 동작한다")
+    void inboundWorkerTaskFlow_success() throws Exception {
+        Location inboundLocation = new Location("LOC-C-01-01", "C-01-01", "WH-001", "C", "01", 300, true);
+        inboundLocation.assignWorker("WORKER-003");
+        locationRepository.save(inboundLocation);
+
+        asnRepository.save(new Asn(
+                "ASN-WORK-001",
+                "WH-001",
+                "SELLER-001",
+                LocalDate.of(2026, 4, 7),
+                "ARRIVED",
+                "입고 메모",
+                1,
+                LocalDateTime.of(2026, 4, 6, 9, 0),
+                LocalDateTime.of(2026, 4, 6, 9, 0),
+                "SELLER-001",
+                "SELLER-001",
+                LocalDateTime.of(2026, 4, 6, 9, 0),
+                null
+        ));
+        asnItemRepository.save(new AsnItem("ASN-WORK-001", "SKU-003", 5, "상품C", 1));
+
+        mockMvc.perform(patch("/wms/asns/ASN-WORK-001/putaway")
+                        .header("X-Tenant-Code", "CONK")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "items", java.util.List.of(Map.of(
+                                        "skuId", "SKU-003",
+                                        "locationId", "LOC-C-01-01"
+                                ))
+                        ))))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/wms/worker/tasks")
+                        .header("X-Tenant-Code", "CONK")
+                        .param("workerAccountId", "WORKER-003"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].category").value("INBOUND"))
+                .andExpect(jsonPath("$.data[0].refNo").value("ASN-WORK-001"))
+                .andExpect(jsonPath("$.data[0].bins[0].sku").value("SKU-003"));
+
+        mockMvc.perform(patch("/wms/worker/tasks/WORK-IN-CONK-ASN-WORK-001-WORKER-003")
+                        .header("X-Tenant-Code", "CONK")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "workerAccountId", "WORKER-003",
+                                "stage", "INSPECTION",
+                                "asnId", "ASN-WORK-001",
+                                "skuId", "SKU-003",
+                                "locationId", "LOC-C-01-01",
+                                "actualQuantity", 5,
+                                "exceptionType", "",
+                                "issueNote", ""
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.detailStatus").value("INSPECTED"));
+
+        mockMvc.perform(patch("/wms/worker/tasks/WORK-IN-CONK-ASN-WORK-001-WORKER-003")
+                        .header("X-Tenant-Code", "CONK")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "workerAccountId", "WORKER-003",
+                                "stage", "PUTAWAY",
+                                "asnId", "ASN-WORK-001",
+                                "skuId", "SKU-003",
+                                "locationId", "LOC-C-01-01",
+                                "actualBin", "C-01-01",
+                                "actualQuantity", 5,
+                                "exceptionType", "",
+                                "issueNote", ""
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.detailStatus").value("PUTAWAY_COMPLETED"))
+                .andExpect(jsonPath("$.data.workCompleted").value(true));
+
+        assertThat(workAssignmentRepository.findAllByIdWorkIdAndIdTenantId("WORK-IN-CONK-ASN-WORK-001-WORKER-003", "CONK"))
+                .allMatch(assignment -> Boolean.TRUE.equals(assignment.getIsCompleted()));
+        assertThat(workDetailRepository.findAllByAsnIdOrderByIdLocationIdAscIdSkuIdAsc("ASN-WORK-001"))
                 .allMatch(detail -> detail.getCompletedAt() != null);
     }
 }

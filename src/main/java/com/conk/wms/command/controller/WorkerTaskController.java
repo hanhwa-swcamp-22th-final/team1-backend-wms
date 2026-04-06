@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 작업자가 피킹/패킹 결과를 저장하는 command API 컨트롤러다.
+ * 작업자가 검수/적재 또는 피킹/패킹 결과를 저장하는 command API 컨트롤러다.
  */
 @RestController
 @RequestMapping({"/wms/worker/tasks", "/wh_worker_tasks"})
@@ -40,8 +40,10 @@ public class WorkerTaskController {
                 request.getWorkerAccountId(),
                 request.getStage(),
                 request.getOrderId(),
+                request.getAsnId(),
                 request.getSkuId(),
                 request.getLocationId(),
+                request.getActualBin(),
                 request.getActualQuantity(),
                 request.getExceptionType(),
                 request.getIssueNote()
