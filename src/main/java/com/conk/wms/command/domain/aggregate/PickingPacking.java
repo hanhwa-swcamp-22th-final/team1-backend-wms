@@ -89,6 +89,10 @@ public class PickingPacking {
         return issueNote;
     }
 
+    public String getWorkerAccountId() {
+        return workerAccountId;
+    }
+
     public void recordPicking(int actualQuantity, String actorId, String issueNote, LocalDateTime pickedAt) {
         if (this.startedAt == null) {
             this.startedAt = pickedAt;
