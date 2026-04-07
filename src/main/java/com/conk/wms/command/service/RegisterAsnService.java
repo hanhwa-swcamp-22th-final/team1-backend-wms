@@ -98,6 +98,16 @@ public class RegisterAsnService {
                         item.getBoxQuantity()
                 ))
         );
+
+        // Kafka 알림 이벤트 연결 가이드:
+        //   실제 발행 로직을 붙일 때는 ASN 헤더 / 품목 저장이 모두 끝난 뒤
+        //   NotificationEventKafkaPublisher.publishAsnCreated(...)를 호출한다.
+        //   payload 권장값:
+        //     - asnId: command.getAsnId()
+        //     - managerId: WarehouseManagerAssignmentRepository에서 창고별 담당 관리자 accountId 조회
+        //     - asnCount: 현재 단건 등록 흐름에서는 1
+        //     - expectedDate: command.getExpectedDate().toString()
+        //     - timestamp: LocalDateTime.now()
     }
 
     // 서비스 레벨 사전 검증.
