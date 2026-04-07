@@ -20,7 +20,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.Comparator;
 import java.util.stream.Collectors;
 
 /**
@@ -119,10 +118,10 @@ public class AutoAssignTaskService {
     }
 
     /**
-     * 분산 피킹 주문의 모든 picking 작업이 끝난 뒤 packing 작업을 한 명에게 집중 배정한다.
+     * 분산 피킹 주문의 모든 picking 작업이 끝난 뒤 마지막 피킹 완료 작업자에게 packing 작업을 배정한다.
      */
     @Transactional
-    public boolean assignPackingIfReady(String orderId, String tenantCode, String actorId) {
+    public boolean assignPackingIfReady(String orderId, String tenantCode, String lastPickingWorkerId) {
         List<WorkDetail> orderDetails = workDetailRepository.findAllByIdOrderIdOrderByIdLocationIdAscIdSkuIdAsc(orderId);
         List<WorkDetail> pickingDetails = orderDetails.stream()
                 .filter(WorkDetail::isPickingOnlyWork)
@@ -147,9 +146,15 @@ public class AutoAssignTaskService {
         if (participantWorkerIds.isEmpty()) {
             return false;
         }
+        if (lastPickingWorkerId == null || lastPickingWorkerId.isBlank()) {
+            return false;
+        }
+        if (!participantWorkerIds.contains(lastPickingWorkerId)) {
+            return false;
+        }
 
-        String actor = actorId == null || actorId.isBlank() ? "SYSTEM" : actorId;
-        String packingWorkerId = choosePackingWorker(tenantCode, participantWorkerIds);
+        String actor = lastPickingWorkerId;
+        String packingWorkerId = lastPickingWorkerId;
         String workId = buildOutboundPackingWorkId(orderId, tenantCode, packingWorkerId);
 
         workAssignmentRepository.save(new WorkAssignment(workId, tenantCode, packingWorkerId, actor));
@@ -245,19 +250,6 @@ public class AutoAssignTaskService {
             workAssignmentRepository.deleteAllByIdWorkIdAndIdTenantId(workId, tenantCode);
             workDetailRepository.deleteAllByIdWorkId(workId);
         }
-    }
-
-    private String choosePackingWorker(String tenantCode, Set<String> participantWorkerIds) {
-        return participantWorkerIds.stream()
-                .min(Comparator.comparingLong((String workerId) -> countActiveAssignments(tenantCode, workerId))
-                        .thenComparing(String::compareTo))
-                .orElseThrow();
-    }
-
-    private long countActiveAssignments(String tenantCode, String workerId) {
-        return workAssignmentRepository.findAllByIdTenantIdAndIdAccountId(tenantCode, workerId).stream()
-                .filter(assignment -> !Boolean.TRUE.equals(assignment.getIsCompleted()))
-                .count();
     }
 
     private String buildOutboundWorkId(String orderId, String tenantCode, String workerId) {

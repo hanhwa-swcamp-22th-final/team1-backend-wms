@@ -118,7 +118,7 @@ class AutoAssignTaskServiceTest {
     }
 
     @Test
-    @DisplayName("분산 피킹이 모두 끝나면 작업량이 적은 참여자에게 패킹 작업을 만든다")
+    @DisplayName("분산 피킹이 모두 끝나면 마지막 피킹 완료 작업자에게 패킹 작업을 만든다")
     void assignPackingIfReady_success() {
         WorkDetail firstPicking = WorkDetail.forOutboundPicking(
                 "WORK-OUT-CONK-ORD-001-PICK-WORKER-001", "ORD-001", "SKU-001", "LOC-A-01-01", 3, "SYSTEM"
@@ -135,17 +135,8 @@ class AutoAssignTaskServiceTest {
                 .thenReturn(List.of(new WorkAssignment("WORK-OUT-CONK-ORD-001-PICK-WORKER-001", "CONK", "WORKER-001", "SYSTEM")));
         when(workAssignmentRepository.findAllByIdWorkIdAndIdTenantId("WORK-OUT-CONK-ORD-001-PICK-WORKER-002", "CONK"))
                 .thenReturn(List.of(new WorkAssignment("WORK-OUT-CONK-ORD-001-PICK-WORKER-002", "CONK", "WORKER-002", "SYSTEM")));
-        when(workAssignmentRepository.findAllByIdTenantIdAndIdAccountId("CONK", "WORKER-001"))
-                .thenReturn(List.of(
-                        new WorkAssignment("OTHER-001", "CONK", "WORKER-001", "SYSTEM"),
-                        new WorkAssignment("OTHER-002", "CONK", "WORKER-001", "SYSTEM")
-                ));
-        when(workAssignmentRepository.findAllByIdTenantIdAndIdAccountId("CONK", "WORKER-002"))
-                .thenReturn(List.of(
-                        new WorkAssignment("OTHER-003", "CONK", "WORKER-002", "SYSTEM")
-                ));
 
-        boolean assigned = autoAssignTaskService.assignPackingIfReady("ORD-001", "CONK", "SYSTEM");
+        boolean assigned = autoAssignTaskService.assignPackingIfReady("ORD-001", "CONK", "WORKER-002");
 
         ArgumentCaptor<WorkAssignment> assignmentCaptor = ArgumentCaptor.forClass(WorkAssignment.class);
         ArgumentCaptor<WorkDetail> detailCaptor = ArgumentCaptor.forClass(WorkDetail.class);
