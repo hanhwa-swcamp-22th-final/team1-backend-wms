@@ -14,10 +14,12 @@ import java.time.LocalDateTime;
 @Table(name = "work_detail")
 public class WorkDetail {
 
-    private static final String OUTBOUND_REFERENCE_TYPE = "ORDER";
-    private static final String OUTBOUND_WORK_TYPE = "PICKING_PACKING";
-    private static final String INBOUND_REFERENCE_TYPE = "ASN";
-    private static final String INBOUND_WORK_TYPE = "INSPECTION_LOADING";
+    public static final String OUTBOUND_REFERENCE_TYPE = "ORDER";
+    public static final String OUTBOUND_WORK_TYPE_PICKING_PACKING = "PICKING_PACKING";
+    public static final String OUTBOUND_WORK_TYPE_PICKING = "PICKING";
+    public static final String OUTBOUND_WORK_TYPE_PACKING = "PACKING";
+    public static final String INBOUND_REFERENCE_TYPE = "ASN";
+    public static final String INBOUND_WORK_TYPE = "INSPECTION_LOADING";
     private static final String INBOUND_ORDER_REF_PREFIX = "ASN::";
 
     @EmbeddedId
@@ -65,7 +67,37 @@ public class WorkDetail {
     public WorkDetail(String workId, String orderId, String skuId, String locationId,
                       int quantity, String actorId) {
         this(workId, orderId, null, skuId, locationId, quantity,
-                OUTBOUND_REFERENCE_TYPE, OUTBOUND_WORK_TYPE, actorId);
+                OUTBOUND_REFERENCE_TYPE, OUTBOUND_WORK_TYPE_PICKING_PACKING, actorId);
+    }
+
+    public static WorkDetail forOutboundPicking(String workId, String orderId, String skuId,
+                                                String locationId, int quantity, String actorId) {
+        return new WorkDetail(
+                workId,
+                orderId,
+                null,
+                skuId,
+                locationId,
+                quantity,
+                OUTBOUND_REFERENCE_TYPE,
+                OUTBOUND_WORK_TYPE_PICKING,
+                actorId
+        );
+    }
+
+    public static WorkDetail forOutboundPacking(String workId, String orderId, String skuId,
+                                                String locationId, int quantity, String actorId) {
+        return new WorkDetail(
+                workId,
+                orderId,
+                null,
+                skuId,
+                locationId,
+                quantity,
+                OUTBOUND_REFERENCE_TYPE,
+                OUTBOUND_WORK_TYPE_PACKING,
+                actorId
+        );
     }
 
     private WorkDetail(String workId, String orderId, String asnId, String skuId, String locationId,
@@ -146,6 +178,14 @@ public class WorkDetail {
     }
 
     public void markPicked(String actorId, String issueNote, LocalDateTime pickedAt) {
+        markPicking(actorId, issueNote, pickedAt, false);
+    }
+
+    public void markPickingCompleted(String actorId, String issueNote, LocalDateTime pickedAt) {
+        markPicking(actorId, issueNote, pickedAt, true);
+    }
+
+    private void markPicking(String actorId, String issueNote, LocalDateTime pickedAt, boolean completesWork) {
         if (this.startedAt == null) {
             this.startedAt = pickedAt;
         }
@@ -153,6 +193,7 @@ public class WorkDetail {
         this.updatedAt = pickedAt;
         this.updatedBy = actorId;
         this.issueNote = issueNote;
+        this.completedAt = completesWork ? pickedAt : null;
     }
 
     public void markPacked(String actorId, String issueNote, LocalDateTime packedAt) {
@@ -185,5 +226,29 @@ public class WorkDetail {
         this.updatedBy = actorId;
         this.issueNote = issueNote;
         this.completedAt = putawayAt;
+    }
+
+    public boolean isInboundWork() {
+        return INBOUND_WORK_TYPE.equals(this.workType) || INBOUND_REFERENCE_TYPE.equals(this.referenceType);
+    }
+
+    public boolean isPickingOnlyWork() {
+        return OUTBOUND_WORK_TYPE_PICKING.equals(this.workType);
+    }
+
+    public boolean isPackingOnlyWork() {
+        return OUTBOUND_WORK_TYPE_PACKING.equals(this.workType);
+    }
+
+    public boolean isCombinedOutboundWork() {
+        return OUTBOUND_WORK_TYPE_PICKING_PACKING.equals(this.workType);
+    }
+
+    public boolean isPackingRelevantWork() {
+        return isCombinedOutboundWork() || isPackingOnlyWork();
+    }
+
+    public boolean isCompleted() {
+        return this.completedAt != null;
     }
 }

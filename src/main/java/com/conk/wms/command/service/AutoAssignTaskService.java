@@ -20,6 +20,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Comparator;
+import java.util.stream.Collectors;
 
 /**
  * location에 고정 배정된 작업자를 기준으로 출고 작업을 자동 생성하는 서비스다.
@@ -77,29 +79,91 @@ public class AutoAssignTaskService {
         }
 
         String actor = actorId == null || actorId.isBlank() ? "SYSTEM" : actorId;
+        boolean splitPickingAndPacking = rowsByWorker.size() > 1;
+
         int assignmentCount = 0;
         int detailCount = 0;
 
         for (Map.Entry<String, List<AllocatedInventory>> entry : rowsByWorker.entrySet()) {
             String workerId = entry.getKey();
-            String workId = buildOutboundWorkId(orderId, tenantCode, workerId);
+            String workId = splitPickingAndPacking
+                    ? buildOutboundPickingWorkId(orderId, tenantCode, workerId)
+                    : buildOutboundWorkId(orderId, tenantCode, workerId);
             workAssignmentRepository.save(new WorkAssignment(workId, tenantCode, workerId, actor));
             assignmentCount++;
 
             for (AllocatedInventory allocated : entry.getValue()) {
-                workDetailRepository.save(new WorkDetail(
+                WorkDetail detail = splitPickingAndPacking
+                        ? WorkDetail.forOutboundPicking(
                         workId,
                         orderId,
                         allocated.getId().getSkuId(),
                         allocated.getId().getLocationId(),
                         allocated.getQuantity(),
                         actor
-                ));
+                )
+                        : new WorkDetail(
+                        workId,
+                        orderId,
+                        allocated.getId().getSkuId(),
+                        allocated.getId().getLocationId(),
+                        allocated.getQuantity(),
+                        actor
+                );
+                workDetailRepository.save(detail);
                 detailCount++;
             }
         }
 
         return new AutoAssignResult(assignmentCount, detailCount, unassignedRowCount);
+    }
+
+    /**
+     * 분산 피킹 주문의 모든 picking 작업이 끝난 뒤 packing 작업을 한 명에게 집중 배정한다.
+     */
+    @Transactional
+    public boolean assignPackingIfReady(String orderId, String tenantCode, String actorId) {
+        List<WorkDetail> orderDetails = workDetailRepository.findAllByIdOrderIdOrderByIdLocationIdAscIdSkuIdAsc(orderId);
+        List<WorkDetail> pickingDetails = orderDetails.stream()
+                .filter(WorkDetail::isPickingOnlyWork)
+                .toList();
+
+        if (pickingDetails.isEmpty()) {
+            return false;
+        }
+        if (pickingDetails.stream().anyMatch(detail -> !detail.isCompleted())) {
+            return false;
+        }
+        boolean packingAlreadyAssigned = orderDetails.stream().anyMatch(WorkDetail::isPackingOnlyWork);
+        if (packingAlreadyAssigned) {
+            return false;
+        }
+
+        Set<String> participantWorkerIds = pickingDetails.stream()
+                .map(detail -> workAssignmentRepository.findAllByIdWorkIdAndIdTenantId(detail.getId().getWorkId(), tenantCode))
+                .flatMap(List::stream)
+                .map(assignment -> assignment.getId().getAccountId())
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        if (participantWorkerIds.isEmpty()) {
+            return false;
+        }
+
+        String actor = actorId == null || actorId.isBlank() ? "SYSTEM" : actorId;
+        String packingWorkerId = choosePackingWorker(tenantCode, participantWorkerIds);
+        String workId = buildOutboundPackingWorkId(orderId, tenantCode, packingWorkerId);
+
+        workAssignmentRepository.save(new WorkAssignment(workId, tenantCode, packingWorkerId, actor));
+        for (WorkDetail pickingDetail : pickingDetails) {
+            workDetailRepository.save(WorkDetail.forOutboundPacking(
+                    workId,
+                    orderId,
+                    pickingDetail.getId().getSkuId(),
+                    pickingDetail.getId().getLocationId(),
+                    pickingDetail.getQuantity(),
+                    actor
+            ));
+        }
+        return true;
     }
 
     /**
@@ -183,8 +247,29 @@ public class AutoAssignTaskService {
         }
     }
 
+    private String choosePackingWorker(String tenantCode, Set<String> participantWorkerIds) {
+        return participantWorkerIds.stream()
+                .min(Comparator.comparingLong((String workerId) -> countActiveAssignments(tenantCode, workerId))
+                        .thenComparing(String::compareTo))
+                .orElseThrow();
+    }
+
+    private long countActiveAssignments(String tenantCode, String workerId) {
+        return workAssignmentRepository.findAllByIdTenantIdAndIdAccountId(tenantCode, workerId).stream()
+                .filter(assignment -> !Boolean.TRUE.equals(assignment.getIsCompleted()))
+                .count();
+    }
+
     private String buildOutboundWorkId(String orderId, String tenantCode, String workerId) {
         return OUTBOUND_WORK_ID_PREFIX + sanitizeForId(tenantCode) + "-" + orderId + "-" + sanitizeForId(workerId);
+    }
+
+    private String buildOutboundPickingWorkId(String orderId, String tenantCode, String workerId) {
+        return OUTBOUND_WORK_ID_PREFIX + sanitizeForId(tenantCode) + "-" + orderId + "-PICK-" + sanitizeForId(workerId);
+    }
+
+    private String buildOutboundPackingWorkId(String orderId, String tenantCode, String workerId) {
+        return OUTBOUND_WORK_ID_PREFIX + sanitizeForId(tenantCode) + "-" + orderId + "-PACK-" + sanitizeForId(workerId);
     }
 
     private String buildInboundWorkId(String asnId, String tenantCode, String workerId) {

@@ -123,7 +123,10 @@ public class GetOutboundConfirmOrdersService {
 
     private boolean isPacked(String orderId) {
         List<WorkDetail> details = workDetailRepository.findAllByIdOrderIdOrderByIdLocationIdAscIdSkuIdAsc(orderId);
-        return !details.isEmpty() && details.stream().allMatch(detail -> detail.getCompletedAt() != null);
+        List<WorkDetail> packingDetails = details.stream()
+                .filter(WorkDetail::isPackingRelevantWork)
+                .toList();
+        return !packingDetails.isEmpty() && packingDetails.stream().allMatch(WorkDetail::isCompleted);
     }
 
     private String buildItemSummary(OrderSummaryDto order) {

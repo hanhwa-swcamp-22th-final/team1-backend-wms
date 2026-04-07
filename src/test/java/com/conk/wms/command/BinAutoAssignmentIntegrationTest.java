@@ -85,11 +85,12 @@ class BinAutoAssignmentIntegrationTest {
         assertThat(workAssignmentRepository.findAllByIdTenantId("CONK"))
                 .extracting(assignment -> assignment.getId().getWorkId())
                 .containsExactlyInAnyOrder(
-                        "WORK-OUT-CONK-ORD-001-WORKER-001",
-                        "WORK-OUT-CONK-ORD-001-WORKER-002"
+                        "WORK-OUT-CONK-ORD-001-PICK-WORKER-001",
+                        "WORK-OUT-CONK-ORD-001-PICK-WORKER-002"
                 );
         assertThat(workDetailRepository.findAllByIdOrderIdOrderByIdLocationIdAscIdSkuIdAsc("ORD-001"))
-                .hasSize(2);
+                .hasSize(2)
+                .allMatch(detail -> "PICKING".equals(detail.getWorkType()));
     }
 
     @Test

@@ -58,6 +58,9 @@ class ProcessWorkerTaskServiceTest {
     @Mock
     private LocationRepository locationRepository;
 
+    @Mock
+    private AutoAssignTaskService autoAssignTaskService;
+
     @InjectMocks
     private ProcessWorkerTaskService processWorkerTaskService;
 
@@ -100,10 +103,56 @@ class ProcessWorkerTaskServiceTest {
         verify(pickingPackingRepository).save(pickingCaptor.capture());
         verify(workDetailRepository).save(detail);
         verify(workAssignmentRepository, never()).save(any());
+        verify(autoAssignTaskService, never()).assignPackingIfReady(any(), any(), any());
 
         assertEquals("PICKED", response.getDetailStatus());
         assertFalse(response.isWorkCompleted());
         assertEquals(2, pickingCaptor.getValue().getPickedQuantity());
+    }
+
+    @Test
+    @DisplayName("분산 피킹 저장 성공: 피킹 전용 detail은 완료 처리되고 패킹 작업 생성을 시도한다")
+    void processPicking_splitSuccess_thenTriggerPackingAssignment() {
+        WorkAssignment assignment = new WorkAssignment("WORK-OUT-CONK-ORD-001-PICK-WORKER-001", "CONK", "WORKER-001", "MANAGER-001");
+        WorkDetail detail = WorkDetail.forOutboundPicking(
+                "WORK-OUT-CONK-ORD-001-PICK-WORKER-001", "ORD-001", "SKU-001", "LOC-A-01-01", 3, "MANAGER-001"
+        );
+
+        when(workAssignmentRepository.findAllByIdWorkIdAndIdTenantId("WORK-OUT-CONK-ORD-001-PICK-WORKER-001", "CONK"))
+                .thenReturn(List.of(assignment));
+        when(workDetailRepository.findByIdWorkIdAndIdOrderIdAndIdSkuIdAndIdLocationId(
+                "WORK-OUT-CONK-ORD-001-PICK-WORKER-001", "ORD-001", "SKU-001", "LOC-A-01-01"
+        )).thenReturn(Optional.of(detail));
+        when(pickingPackingRepository.findByIdOrderIdAndIdSkuIdAndIdLocationIdAndIdTenantId(
+                "ORD-001", "SKU-001", "LOC-A-01-01", "CONK"
+        )).thenReturn(Optional.empty());
+        when(pickingPackingNoteSupport.mergePicking(null, "", ""))
+                .thenReturn("");
+        when(workDetailRepository.findAllByIdWorkIdOrderByIdLocationIdAscIdSkuIdAsc(
+                "WORK-OUT-CONK-ORD-001-PICK-WORKER-001"
+        )).thenReturn(List.of(detail));
+        when(autoAssignTaskService.assignPackingIfReady("ORD-001", "CONK", "WORKER-001"))
+                .thenReturn(true);
+
+        ProcessWorkerTaskResponse response = processWorkerTaskService.process(
+                "CONK",
+                "WORK-OUT-CONK-ORD-001-PICK-WORKER-001",
+                "WORKER-001",
+                "PICKING",
+                "ORD-001",
+                null,
+                "SKU-001",
+                "LOC-A-01-01",
+                null,
+                3,
+                "",
+                ""
+        );
+
+        verify(workAssignmentRepository).save(assignment);
+        verify(autoAssignTaskService).assignPackingIfReady("ORD-001", "CONK", "WORKER-001");
+        assertEquals("PICKED", response.getDetailStatus());
+        assertTrue(response.isWorkCompleted());
     }
 
     @Test

@@ -123,6 +123,55 @@ class GetWorkerTasksServiceTest {
     }
 
     @Test
+    @DisplayName("분산 피킹 assignment 조회 성공: 화면은 그대로 피킹&패킹이지만 상태는 패킹 대기로 반환한다")
+    void getTasks_splitPickingAssignment_success() {
+        WorkAssignment assignment = new WorkAssignment("WORK-OUT-CONK-ORD-001-PICK-WORKER-001", "CONK", "WORKER-001", "MANAGER-001");
+        assignment.markCompleted("WORKER-001", LocalDateTime.of(2026, 4, 5, 10, 30));
+        WorkDetail detail = WorkDetail.forOutboundPicking(
+                "WORK-OUT-CONK-ORD-001-PICK-WORKER-001", "ORD-001", "SKU-001", "LOC-A-01-01", 3, "MANAGER-001"
+        );
+        detail.markPickingCompleted("WORKER-001", "PICK::정상::", LocalDateTime.of(2026, 4, 5, 10, 30));
+        PickingPacking pickingPacking = new PickingPacking("SKU-001", "LOC-A-01-01", "CONK", "ORD-001", "WORKER-001");
+        pickingPacking.recordPicking(3, "WORKER-001", "PICK::정상::", LocalDateTime.of(2026, 4, 5, 10, 30));
+
+        when(workAssignmentRepository.findAllByIdTenantIdAndIdAccountId("CONK", "WORKER-001"))
+                .thenReturn(List.of(assignment));
+        when(workDetailRepository.findAllByIdWorkIdOrderByIdLocationIdAscIdSkuIdAsc("WORK-OUT-CONK-ORD-001-PICK-WORKER-001"))
+                .thenReturn(List.of(detail));
+        when(pickingPackingRepository.findAllByIdOrderIdAndIdTenantId("ORD-001", "CONK"))
+                .thenReturn(List.of(pickingPacking));
+        when(locationRepository.findById("LOC-A-01-01"))
+                .thenReturn(Optional.of(new Location("LOC-A-01-01", "A-01-01", "WH-001", "A", "01", 300, true)));
+        when(orderServiceClient.getPendingOrder("CONK", "ORD-001"))
+                .thenReturn(Optional.of(OrderSummaryDto.builder()
+                        .orderId("ORD-001")
+                        .sellerId("SELLER-001")
+                        .sellerName("셀러A")
+                        .warehouseId("WH-001")
+                        .channel("SHOPIFY")
+                        .orderStatus("CONFIRMED")
+                        .recipientName("김고객")
+                        .cityName("서울")
+                        .orderedAt(LocalDateTime.of(2026, 4, 5, 9, 30))
+                        .items(List.of(
+                                OrderItemDto.builder().skuId("SKU-001").productName("상품A").quantity(3).build()
+                        ))
+                        .build()));
+        when(pickingPackingNoteSupport.extractPicking("PICK::정상::"))
+                .thenReturn(new PickingPackingNoteSupport.StageNote("", "", "PICK::정상::"));
+        when(pickingPackingNoteSupport.extractPacking("PICK::정상::"))
+                .thenReturn(new PickingPackingNoteSupport.StageNote("", "", ""));
+
+        List<WorkerTaskResponse> response = getWorkerTasksService.getTasks("CONK", "WORKER-001");
+
+        assertEquals(1, response.size());
+        assertEquals("완료", response.get(0).getStatus());
+        assertEquals("작업 완료", response.get(0).getActiveStep());
+        assertEquals("패킹대기", response.get(0).getOrderStatus());
+        assertEquals("대기", response.get(0).getPackOrders().get(0).getStatusPack());
+    }
+
+    @Test
     @DisplayName("입고 작업 조회 성공: 검수/적재 자동 배정 작업을 INBOUND record로 반환한다")
     void getTasks_inboundSuccess() {
         WorkAssignment assignment = new WorkAssignment("WORK-IN-CONK-ASN-001-WORKER-003", "CONK", "WORKER-003", "CONK");
