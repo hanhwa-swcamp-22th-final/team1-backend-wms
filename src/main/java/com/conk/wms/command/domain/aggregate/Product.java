@@ -46,6 +46,18 @@ public class Product {
         this.status = status;
     }
 
+    public String getSku() {
+        return sku;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getSellerId() {
+        return sellerId;
+    }
+
     public String getStatus() {
         return status;
     }
