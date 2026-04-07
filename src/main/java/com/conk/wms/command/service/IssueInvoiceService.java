@@ -106,7 +106,10 @@ public class IssueInvoiceService {
 
     private void validatePacked(String orderId) {
         List<WorkDetail> details = workDetailRepository.findAllByIdOrderIdOrderByIdLocationIdAscIdSkuIdAsc(orderId);
-        if (details.isEmpty() || details.stream().anyMatch(detail -> detail.getCompletedAt() == null)) {
+        List<WorkDetail> packingDetails = details.stream()
+                .filter(WorkDetail::isPackingRelevantWork)
+                .toList();
+        if (packingDetails.isEmpty() || packingDetails.stream().anyMatch(detail -> !detail.isCompleted())) {
             throw new BusinessException(ErrorCode.OUTBOUND_INVOICE_NOT_READY);
         }
     }

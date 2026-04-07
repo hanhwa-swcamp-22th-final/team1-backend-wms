@@ -93,7 +93,7 @@ public class GetWorkerTasksService {
         }
 
         WorkDetail firstDetail = details.get(0);
-        if (INBOUND_WORK_TYPE.equals(firstDetail.getWorkType()) || firstDetail.getAsnId() != null) {
+        if (firstDetail.isInboundWork() || INBOUND_WORK_TYPE.equals(firstDetail.getWorkType()) || firstDetail.getAsnId() != null) {
             return toInboundWorkerTask(assignment, details);
         }
         return toOutboundWorkerTask(tenantCode, assignment, details);
@@ -195,6 +195,8 @@ public class GetWorkerTasksService {
 
     private WorkerTaskResponse toOutboundWorkerTask(String tenantCode, WorkAssignment assignment, List<WorkDetail> details) {
         String orderId = details.get(0).getId().getOrderId();
+        boolean pickingOnlyAssignment = details.stream().allMatch(WorkDetail::isPickingOnlyWork);
+        boolean packingOnlyAssignment = details.stream().allMatch(WorkDetail::isPackingOnlyWork);
         OrderSummaryDto order = orderId == null
                 ? null
                 : orderServiceClient.getPendingOrder(tenantCode, orderId).orElse(null);
@@ -244,6 +246,7 @@ public class GetWorkerTasksService {
                     PickingPackingNoteSupport.StageNote packNote = pickingPacking == null
                             ? new PickingPackingNoteSupport.StageNote("", "", "")
                             : pickingPackingNoteSupport.extractPacking(pickingPacking.getIssueNote());
+                    boolean packCompleted = !pickingOnlyAssignment && isPackCompleted(pickingPacking);
 
                     return WorkerTaskResponse.PackOrderTaskResponse.builder()
                             .id(detailKey(detail))
@@ -251,23 +254,22 @@ public class GetWorkerTasksService {
                             .sku(detail.getId().getSkuId())
                             .orderedQty(detail.getQuantity())
                             .actualPickedQty(isPickCompleted(pickingPacking) ? pickingPacking.getPickedQuantity() : null)
-                            .verifiedQty(isPackCompleted(pickingPacking) ? pickingPacking.getPackedQuantity() : null)
-                            .packReason(packNote.getReason())
-                            .packExceptionType(packNote.getExceptionType())
-                            .statusPack(resolvePackStatus(pickingPacking))
+                            .verifiedQty(packCompleted ? pickingPacking.getPackedQuantity() : null)
+                            .packReason(pickingOnlyAssignment ? "" : packNote.getReason())
+                            .packExceptionType(pickingOnlyAssignment ? "" : packNote.getExceptionType())
+                            .statusPack(resolvePackStatus(pickingPacking, pickingOnlyAssignment))
                             .statusPackAt(formatDateTime(pickingPacking == null ? null : pickingPacking.getCompletedAt(),
-                                    isPackCompleted(pickingPacking) ? pickingPacking.getCompletedAt() : null))
+                                    packCompleted ? pickingPacking.getCompletedAt() : null))
                             .build();
                 })
                 .toList();
 
-        String status = resolveRecordStatus(packOrders, bins);
-        String activeStep = resolveActiveStep(packOrders, bins);
-        String orderStatus = resolveOrderStatus(packOrders, bins);
-        LocalDateTime completedAt = packOrders.stream()
-                .map(WorkerTaskResponse.PackOrderTaskResponse::getStatusPackAt)
-                .filter(value -> value != null)
-                .map(value -> LocalDateTime.parse(value, DATE_TIME_FORMATTER))
+        String status = resolveRecordStatus(assignment, packOrders, bins, pickingOnlyAssignment, packingOnlyAssignment);
+        String activeStep = resolveActiveStep(assignment, packOrders, bins, pickingOnlyAssignment, packingOnlyAssignment);
+        String orderStatus = resolveOrderStatus(packOrders, bins, pickingOnlyAssignment, packingOnlyAssignment);
+        LocalDateTime completedAt = details.stream()
+                .map(WorkDetail::getCompletedAt)
+                .filter(java.util.Objects::nonNull)
                 .max(LocalDateTime::compareTo)
                 .orElse(null);
 
@@ -406,7 +408,10 @@ public class GetWorkerTasksService {
         return "대기";
     }
 
-    private String resolvePackStatus(PickingPacking pickingPacking) {
+    private String resolvePackStatus(PickingPacking pickingPacking, boolean pickingOnlyAssignment) {
+        if (pickingOnlyAssignment) {
+            return "대기";
+        }
         if (isPackCompleted(pickingPacking)) {
             return "완료";
         }
@@ -416,8 +421,26 @@ public class GetWorkerTasksService {
         return "대기";
     }
 
-    private String resolveRecordStatus(List<WorkerTaskResponse.PackOrderTaskResponse> packOrders,
-                                       List<WorkerTaskResponse.BinTaskResponse> bins) {
+    private String resolveRecordStatus(WorkAssignment assignment,
+                                       List<WorkerTaskResponse.PackOrderTaskResponse> packOrders,
+                                       List<WorkerTaskResponse.BinTaskResponse> bins,
+                                       boolean pickingOnlyAssignment,
+                                       boolean packingOnlyAssignment) {
+        if (pickingOnlyAssignment) {
+            boolean anyPicked = bins.stream().anyMatch(bin -> bin.getPickedQty() != null);
+            if (Boolean.TRUE.equals(assignment.getIsCompleted())) {
+                return "완료";
+            }
+            return anyPicked ? "진행중" : "대기";
+        }
+        if (packingOnlyAssignment) {
+            boolean allPacked = !packOrders.isEmpty() && packOrders.stream().allMatch(order -> order.getVerifiedQty() != null);
+            boolean anyPacked = packOrders.stream().anyMatch(order -> order.getVerifiedQty() != null);
+            if (allPacked) {
+                return "완료";
+            }
+            return anyPacked ? "진행중" : "대기";
+        }
         boolean allPacked = !packOrders.isEmpty() && packOrders.stream().allMatch(order -> order.getVerifiedQty() != null);
         boolean anyStarted = packOrders.stream().anyMatch(order -> order.getVerifiedQty() != null || order.getActualPickedQty() != null)
                 || bins.stream().anyMatch(bin -> bin.getPickedQty() != null);
@@ -430,8 +453,18 @@ public class GetWorkerTasksService {
         return "대기";
     }
 
-    private String resolveActiveStep(List<WorkerTaskResponse.PackOrderTaskResponse> packOrders,
-                                     List<WorkerTaskResponse.BinTaskResponse> bins) {
+    private String resolveActiveStep(WorkAssignment assignment,
+                                     List<WorkerTaskResponse.PackOrderTaskResponse> packOrders,
+                                     List<WorkerTaskResponse.BinTaskResponse> bins,
+                                     boolean pickingOnlyAssignment,
+                                     boolean packingOnlyAssignment) {
+        if (pickingOnlyAssignment) {
+            return Boolean.TRUE.equals(assignment.getIsCompleted()) ? "작업 완료" : "피킹";
+        }
+        if (packingOnlyAssignment) {
+            boolean allPacked = !packOrders.isEmpty() && packOrders.stream().allMatch(order -> order.getVerifiedQty() != null);
+            return allPacked ? "작업 완료" : "패킹";
+        }
         boolean allPicked = !bins.isEmpty() && bins.stream().allMatch(bin -> bin.getPickedQty() != null);
         boolean allPacked = !packOrders.isEmpty() && packOrders.stream().allMatch(order -> order.getVerifiedQty() != null);
         if (allPacked) {
@@ -444,7 +477,25 @@ public class GetWorkerTasksService {
     }
 
     private String resolveOrderStatus(List<WorkerTaskResponse.PackOrderTaskResponse> packOrders,
-                                      List<WorkerTaskResponse.BinTaskResponse> bins) {
+                                      List<WorkerTaskResponse.BinTaskResponse> bins,
+                                      boolean pickingOnlyAssignment,
+                                      boolean packingOnlyAssignment) {
+        if (pickingOnlyAssignment) {
+            boolean allPicked = !bins.isEmpty() && bins.stream().allMatch(bin -> bin.getPickedQty() != null);
+            boolean anyPicked = bins.stream().anyMatch(bin -> bin.getPickedQty() != null);
+            if (allPicked) {
+                return "패킹대기";
+            }
+            return anyPicked ? "피킹중" : "피킹대기";
+        }
+        if (packingOnlyAssignment) {
+            boolean allPacked = !packOrders.isEmpty() && packOrders.stream().allMatch(order -> order.getVerifiedQty() != null);
+            boolean anyPacked = packOrders.stream().anyMatch(order -> order.getVerifiedQty() != null);
+            if (allPacked) {
+                return "출고완료";
+            }
+            return anyPacked ? "패킹중" : "패킹대기";
+        }
         boolean allPicked = !bins.isEmpty() && bins.stream().allMatch(bin -> bin.getPickedQty() != null);
         boolean allPacked = !packOrders.isEmpty() && packOrders.stream().allMatch(order -> order.getVerifiedQty() != null);
         boolean anyPicked = bins.stream().anyMatch(bin -> bin.getPickedQty() != null);

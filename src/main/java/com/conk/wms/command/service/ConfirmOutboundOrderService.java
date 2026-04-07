@@ -119,7 +119,10 @@ public class ConfirmOutboundOrderService {
     private void validateReady(String orderId, List<OutboundPending> pendingRows) {
         boolean invoiceIssued = pendingRows.stream().allMatch(pending -> pending.getInvoiceIssuedAt() != null);
         List<WorkDetail> details = workDetailRepository.findAllByIdOrderIdOrderByIdLocationIdAscIdSkuIdAsc(orderId);
-        boolean packed = !details.isEmpty() && details.stream().allMatch(detail -> detail.getCompletedAt() != null);
+        List<WorkDetail> packingDetails = details.stream()
+                .filter(WorkDetail::isPackingRelevantWork)
+                .toList();
+        boolean packed = !packingDetails.isEmpty() && packingDetails.stream().allMatch(WorkDetail::isCompleted);
         if (!invoiceIssued || !packed) {
             throw new BusinessException(ErrorCode.OUTBOUND_CONFIRM_NOT_READY);
         }

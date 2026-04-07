@@ -79,6 +79,39 @@ class IssueInvoiceServiceTest {
     }
 
     @Test
+    @DisplayName("분산 피킹 주문도 패킹 detail만 완료되면 송장 발행할 수 있다")
+    void issue_whenSplitPackingCompleted_thenSuccess() {
+        OutboundPending pending = new OutboundPending("ORD-001", "SKU-001", "LOC-A-01-01", "CONK", "SYSTEM");
+        when(outboundPendingRepository.findAllByIdOrderIdAndIdTenantId("ORD-001", "CONK"))
+                .thenReturn(List.of(pending));
+        when(workDetailRepository.findAllByIdOrderIdOrderByIdLocationIdAscIdSkuIdAsc("ORD-001"))
+                .thenReturn(List.of(splitPickedDetail(), splitPackedDetail()));
+        when(integrationServiceClient.issueLabel(eq("CONK"), any()))
+                .thenReturn(ShipmentInvoiceDto.builder()
+                        .orderId("ORD-001")
+                        .invoiceNo("INV-ORD-001")
+                        .trackingCode("TRK-ORD-001")
+                        .carrierType("UPS")
+                        .service("Ground")
+                        .trackingUrl("https://tracking.example/ORD-001")
+                        .labelFileUrl("https://label.example/ORD-001.pdf")
+                        .issuedAt(LocalDateTime.of(2026, 4, 6, 11, 0))
+                        .build());
+
+        IssueInvoiceService.IssueResult result = issueInvoiceService.issue(
+                "ORD-001",
+                "CONK",
+                "UPS",
+                "Ground",
+                "4x6 PDF",
+                "MANAGER-001"
+        );
+
+        assertThat(result.getOrderId()).isEqualTo("ORD-001");
+        verify(outboundPendingRepository).save(any());
+    }
+
+    @Test
     @DisplayName("패킹 완료되지 않은 주문은 송장 발행할 수 없다")
     void issue_whenNotPacked_thenThrowException() {
         OutboundPending pending = new OutboundPending("ORD-001", "SKU-001", "LOC-A-01-01", "CONK", "SYSTEM");
@@ -99,6 +132,24 @@ class IssueInvoiceServiceTest {
         com.conk.wms.command.domain.aggregate.WorkDetail detail =
                 new com.conk.wms.command.domain.aggregate.WorkDetail("WORK-OUT-CONK-ORD-001", "ORD-001",
                         "SKU-001", "LOC-A-01-01", 3, "SYSTEM");
+        detail.markPacked("SYSTEM", "", LocalDateTime.of(2026, 4, 6, 10, 30));
+        return detail;
+    }
+
+    private com.conk.wms.command.domain.aggregate.WorkDetail splitPickedDetail() {
+        com.conk.wms.command.domain.aggregate.WorkDetail detail =
+                com.conk.wms.command.domain.aggregate.WorkDetail.forOutboundPicking(
+                        "WORK-OUT-CONK-ORD-001-PICK-WORKER-001", "ORD-001", "SKU-001", "LOC-A-01-01", 3, "SYSTEM"
+                );
+        detail.markPickingCompleted("SYSTEM", "", LocalDateTime.of(2026, 4, 6, 10, 0));
+        return detail;
+    }
+
+    private com.conk.wms.command.domain.aggregate.WorkDetail splitPackedDetail() {
+        com.conk.wms.command.domain.aggregate.WorkDetail detail =
+                com.conk.wms.command.domain.aggregate.WorkDetail.forOutboundPacking(
+                        "WORK-OUT-CONK-ORD-001-PACK-WORKER-002", "ORD-001", "SKU-001", "LOC-A-01-01", 3, "SYSTEM"
+                );
         detail.markPacked("SYSTEM", "", LocalDateTime.of(2026, 4, 6, 10, 30));
         return detail;
     }

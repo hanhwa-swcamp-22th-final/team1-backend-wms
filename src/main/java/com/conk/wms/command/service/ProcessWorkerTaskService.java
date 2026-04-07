@@ -39,6 +39,7 @@ public class ProcessWorkerTaskService {
     private final InspectionPutawayRepository inspectionPutawayRepository;
     private final InspectionPutawayNoteSupport inspectionPutawayNoteSupport;
     private final LocationRepository locationRepository;
+    private final AutoAssignTaskService autoAssignTaskService;
 
     public ProcessWorkerTaskService(WorkAssignmentRepository workAssignmentRepository,
                                     WorkDetailRepository workDetailRepository,
@@ -46,7 +47,8 @@ public class ProcessWorkerTaskService {
                                     PickingPackingNoteSupport pickingPackingNoteSupport,
                                     InspectionPutawayRepository inspectionPutawayRepository,
                                     InspectionPutawayNoteSupport inspectionPutawayNoteSupport,
-                                    LocationRepository locationRepository) {
+                                    LocationRepository locationRepository,
+                                    AutoAssignTaskService autoAssignTaskService) {
         this.workAssignmentRepository = workAssignmentRepository;
         this.workDetailRepository = workDetailRepository;
         this.pickingPackingRepository = pickingPackingRepository;
@@ -54,6 +56,7 @@ public class ProcessWorkerTaskService {
         this.inspectionPutawayRepository = inspectionPutawayRepository;
         this.inspectionPutawayNoteSupport = inspectionPutawayNoteSupport;
         this.locationRepository = locationRepository;
+        this.autoAssignTaskService = autoAssignTaskService;
     }
 
     /**
@@ -122,6 +125,9 @@ public class ProcessWorkerTaskService {
         if (workCompleted) {
             assignment.markCompleted(workerAccountId, now);
             workAssignmentRepository.save(assignment);
+        }
+        if (!isInboundStage(stage) && STAGE_PICKING.equals(stage) && detail.isPickingOnlyWork()) {
+            autoAssignTaskService.assignPackingIfReady(orderId, tenantCode, workerAccountId);
         }
 
         return ProcessWorkerTaskResponse.builder()
@@ -227,14 +233,20 @@ public class ProcessWorkerTaskService {
                 .orElseGet(() -> new PickingPacking(skuId, locationId, tenantCode, orderId, workerAccountId));
 
         if (STAGE_PICKING.equals(stage)) {
+            validatePickingStage(detail);
             String mergedNote = pickingPackingNoteSupport.mergePicking(
                     pickingPacking.getIssueNote(),
                     trim(exceptionType),
                     trim(issueNote)
             );
             pickingPacking.recordPicking(actualQuantity, workerAccountId, mergedNote, now);
-            detail.markPicked(workerAccountId, mergedNote, now);
+            if (detail.isPickingOnlyWork()) {
+                detail.markPickingCompleted(workerAccountId, mergedNote, now);
+            } else {
+                detail.markPicked(workerAccountId, mergedNote, now);
+            }
         } else if (STAGE_PACKING.equals(stage)) {
+            validatePackingStage(detail);
             if (pickingPacking.getStartedAt() == null) {
                 throw new BusinessException(ErrorCode.OUTBOUND_PACKING_NOT_READY);
             }
@@ -252,6 +264,18 @@ public class ProcessWorkerTaskService {
         pickingPackingRepository.save(pickingPacking);
         workDetailRepository.save(detail);
         return detail;
+    }
+
+    private void validatePickingStage(WorkDetail detail) {
+        if (detail.isPackingOnlyWork()) {
+            throw new BusinessException(ErrorCode.OUTBOUND_WORK_STAGE_INVALID);
+        }
+    }
+
+    private void validatePackingStage(WorkDetail detail) {
+        if (detail.isPickingOnlyWork()) {
+            throw new BusinessException(ErrorCode.OUTBOUND_WORK_STAGE_INVALID);
+        }
     }
 
     private String resolvePutawayLocationId(String fallbackLocationId, String actualBin) {

@@ -86,6 +86,30 @@ class ConfirmOutboundOrderServiceTest {
     }
 
     @Test
+    @DisplayName("분산 피킹 주문도 패킹 detail이 완료되면 출고 확정할 수 있다")
+    void confirm_whenSplitPackingCompleted_thenSuccess() {
+        OutboundPending pending = new OutboundPending("ORD-001", "SKU-001", "LOC-A-01-01", "CONK", "SYSTEM");
+        pending.markInvoiceIssued("SYSTEM", LocalDateTime.of(2026, 4, 6, 10, 0));
+        AllocatedInventory allocated = new AllocatedInventory("ORD-001", "SKU-001", "LOC-A-01-01", "CONK", 3, "SYSTEM");
+        Inventory allocatedInventory = new Inventory("LOC-A-01-01", "SKU-001", "CONK", 5, "ALLOCATED");
+
+        when(outboundCompletedRepository.existsByIdOrderIdAndIdTenantId("ORD-001", "CONK")).thenReturn(false);
+        when(outboundPendingRepository.findAllByIdOrderIdAndIdTenantId("ORD-001", "CONK")).thenReturn(List.of(pending));
+        when(workDetailRepository.findAllByIdOrderIdOrderByIdLocationIdAscIdSkuIdAsc("ORD-001"))
+                .thenReturn(List.of(splitPickedDetail(), splitPackedDetail()));
+        when(allocatedInventoryRepository.findAllByIdOrderIdAndIdTenantId("ORD-001", "CONK"))
+                .thenReturn(List.of(allocated));
+        when(inventoryRepository.findByIdLocationIdAndIdSkuAndIdTenantIdAndIdInventoryType(
+                "LOC-A-01-01", "SKU-001", "CONK", "ALLOCATED"
+        )).thenReturn(Optional.of(allocatedInventory));
+
+        ConfirmOutboundOrderService.ConfirmResult result = confirmOutboundOrderService.confirm("ORD-001", "CONK", "MANAGER-001");
+
+        assertThat(result.getStatus()).isEqualTo("CONFIRMED");
+        verify(outboundCompletedRepository).save(any());
+    }
+
+    @Test
     @DisplayName("송장 발행이나 패킹 완료가 안 된 주문은 출고 확정할 수 없다")
     void confirm_whenNotReady_thenThrowException() {
         OutboundPending pending = new OutboundPending("ORD-001", "SKU-001", "LOC-A-01-01", "CONK", "SYSTEM");
@@ -113,6 +137,22 @@ class ConfirmOutboundOrderServiceTest {
 
     private WorkDetail packedDetail() {
         WorkDetail detail = new WorkDetail("WORK-OUT-CONK-ORD-001", "ORD-001", "SKU-001", "LOC-A-01-01", 3, "SYSTEM");
+        detail.markPacked("SYSTEM", "", LocalDateTime.of(2026, 4, 6, 9, 30));
+        return detail;
+    }
+
+    private WorkDetail splitPickedDetail() {
+        WorkDetail detail = WorkDetail.forOutboundPicking(
+                "WORK-OUT-CONK-ORD-001-PICK-WORKER-001", "ORD-001", "SKU-001", "LOC-A-01-01", 3, "SYSTEM"
+        );
+        detail.markPickingCompleted("SYSTEM", "", LocalDateTime.of(2026, 4, 6, 9, 0));
+        return detail;
+    }
+
+    private WorkDetail splitPackedDetail() {
+        WorkDetail detail = WorkDetail.forOutboundPacking(
+                "WORK-OUT-CONK-ORD-001-PACK-WORKER-002", "ORD-001", "SKU-001", "LOC-A-01-01", 3, "SYSTEM"
+        );
         detail.markPacked("SYSTEM", "", LocalDateTime.of(2026, 4, 6, 9, 30));
         return detail;
     }
