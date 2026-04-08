@@ -28,12 +28,15 @@ public class RegisterAsnService {
     private final AsnRepository asnRepository;
     private final AsnItemRepository asnItemRepository;
     private final WarehouseRepository warehouseRepository;
+    private final SellerWarehouseValidator sellerWarehouseValidator;
 
     public RegisterAsnService(AsnRepository asnRepository, AsnItemRepository asnItemRepository,
-                              WarehouseRepository warehouseRepository) {
+                              WarehouseRepository warehouseRepository,
+                              SellerWarehouseValidator sellerWarehouseValidator) {
         this.asnRepository = asnRepository;
         this.asnItemRepository = asnItemRepository;
         this.warehouseRepository = warehouseRepository;
+        this.sellerWarehouseValidator = sellerWarehouseValidator;
     }
 
     /**
@@ -50,6 +53,7 @@ public class RegisterAsnService {
                     buildDetailedMessage(ErrorCode.ASN_WAREHOUSE_NOT_FOUND, command.getWarehouseId())
             );
         }
+        sellerWarehouseValidator.assertSellerUsesWarehouse(command.getSellerId(), command.getWarehouseId());
         if (asnRepository.existsByAsnId(command.getAsnId())) {
             throw new BusinessException(
                     ErrorCode.ASN_ALREADY_EXISTS,

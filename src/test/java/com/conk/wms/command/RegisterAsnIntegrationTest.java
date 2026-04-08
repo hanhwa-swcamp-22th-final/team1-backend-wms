@@ -2,9 +2,11 @@ package com.conk.wms.command;
 
 import com.conk.wms.command.domain.aggregate.Asn;
 import com.conk.wms.command.domain.aggregate.AsnItem;
+import com.conk.wms.command.domain.aggregate.SellerWarehouse;
 import com.conk.wms.command.domain.aggregate.Warehouse;
 import com.conk.wms.command.domain.repository.AsnItemRepository;
 import com.conk.wms.command.domain.repository.AsnRepository;
+import com.conk.wms.command.domain.repository.SellerWarehouseRepository;
 import com.conk.wms.command.domain.repository.WarehouseRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,9 +52,13 @@ class RegisterAsnIntegrationTest {
     @Autowired
     private WarehouseRepository warehouseRepository;
 
+    @Autowired
+    private SellerWarehouseRepository sellerWarehouseRepository;
+
     @BeforeEach
     void setUp() {
         warehouseRepository.save(new Warehouse("WH-001", "서울 창고", "TENANT-001"));
+        sellerWarehouseRepository.save(new SellerWarehouse("SELLER-001", "WH-001", true, "SYSTEM"));
     }
 
     @Test
@@ -281,5 +287,38 @@ class RegisterAsnIntegrationTest {
                 .andExpect(jsonPath("$.message").value("존재하지 않는 창고입니다: WH-999"));
 
         assertThat(asnRepository.existsByAsnId("ASN-20260329-001")).isFalse();
+    }
+
+    @Test
+    @DisplayName("셀러와 연결되지 않은 창고면 400을 반환한다")
+    void registerAsn_whenSellerWarehouseMismatch_thenReturn400() throws Exception {
+        warehouseRepository.save(new Warehouse("WH-002", "부산 창고", "TENANT-001"));
+
+        Map<String, Object> body = Map.of(
+                "asnNo", "ASN-20260329-009",
+                "warehouseId", "WH-002",
+                "expectedDate", "2026-03-29",
+                "note", "메모",
+                "detail", Map.of(
+                        "items", List.of(
+                                Map.of(
+                                        "sku", "SKU-001",
+                                        "productName", "루미에르 앰플 30ml",
+                                        "quantity", 100,
+                                        "cartons", 5
+                                )
+                        )
+                )
+        );
+
+        mockMvc.perform(post("/wms/seller/asns")
+                        .header("X-Tenant-Code", "SELLER-001")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("ASN-037"));
+
+        assertThat(asnRepository.existsByAsnId("ASN-20260329-009")).isFalse();
     }
 }

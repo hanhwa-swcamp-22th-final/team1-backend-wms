@@ -48,6 +48,7 @@ public enum ErrorCode {
     ASN_WORK_DETAIL_NOT_FOUND(HttpStatus.NOT_FOUND, "ASN-034", "입고 작업 상세를 찾을 수 없습니다."),
     ASN_WORK_STAGE_INVALID(HttpStatus.BAD_REQUEST, "ASN-035", "지원하지 않는 입고 작업 단계입니다."),
     ASN_PUTAWAY_NOT_READY(HttpStatus.CONFLICT, "ASN-036", "검수가 완료되지 않아 적재를 진행할 수 없습니다."),
+    ASN_SELLER_WAREHOUSE_MISMATCH(HttpStatus.BAD_REQUEST, "ASN-037", "셀러가 이용할 수 없는 창고입니다."),
 
     OUTBOUND_ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "OUTBOUND-001", "출고 대상 주문을 찾을 수 없습니다."),
     OUTBOUND_DISPATCH_NOT_ALLOWED(HttpStatus.CONFLICT, "OUTBOUND-002", "현재 상태에서는 출고 지시를 진행할 수 없습니다."),
@@ -90,6 +91,10 @@ public enum ErrorCode {
     PRODUCT_ALREADY_EXISTS(HttpStatus.CONFLICT, "PRODUCT-007", "이미 존재하는 SKU 입니다."),
     PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "PRODUCT-008", "상품을 찾을 수 없습니다."),
     PRODUCT_SKU_CHANGE_NOT_ALLOWED(HttpStatus.CONFLICT, "PRODUCT-009", "기존 SKU는 수정할 수 없습니다."),
+
+    SELLER_WAREHOUSE_SELLER_ID_REQUIRED(HttpStatus.BAD_REQUEST, "SW-001", "셀러 ID는 필수입니다."),
+    SELLER_WAREHOUSE_WAREHOUSE_ID_REQUIRED(HttpStatus.BAD_REQUEST, "SW-002", "창고 ID는 필수입니다."),
+    SELLER_WAREHOUSE_WAREHOUSE_NOT_FOUND(HttpStatus.BAD_REQUEST, "SW-003", "존재하지 않는 창고가 포함되어 있습니다."),
 
     WAREHOUSE_NAME_REQUIRED(HttpStatus.BAD_REQUEST, "WH-001", "창고명은 필수입니다."),
     WAREHOUSE_ADDRESS_REQUIRED(HttpStatus.BAD_REQUEST, "WH-002", "창고 주소는 필수입니다."),
