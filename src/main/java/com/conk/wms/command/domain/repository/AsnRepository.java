@@ -3,6 +3,7 @@ package com.conk.wms.command.domain.repository;
 import com.conk.wms.command.domain.aggregate.Asn;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -14,6 +15,8 @@ public interface AsnRepository extends JpaRepository<Asn, Long> {
     List<Asn> findAllByWarehouseId(String warehouseId);
 
     List<Asn> findAllByWarehouseIdAndStatus(String warehouseId, String status);
+
+    List<Asn> findAllByWarehouseIdIn(Collection<String> warehouseIds);
 
     List<Asn> findAllBySellerIdOrderByCreatedAtDesc(String sellerId);
 
