@@ -96,6 +96,10 @@ public enum ErrorCode {
     SELLER_WAREHOUSE_WAREHOUSE_ID_REQUIRED(HttpStatus.BAD_REQUEST, "SW-002", "창고 ID는 필수입니다."),
     SELLER_WAREHOUSE_WAREHOUSE_NOT_FOUND(HttpStatus.BAD_REQUEST, "SW-003", "존재하지 않는 창고가 포함되어 있습니다."),
 
+    FEE_SETTINGS_REQUIRED(HttpStatus.BAD_REQUEST, "FEE-001", "요금 설정 값은 필수입니다."),
+    FEE_SETTINGS_INVALID_AMOUNT(HttpStatus.BAD_REQUEST, "FEE-002", "요금 금액 형식이 올바르지 않습니다."),
+    FEE_SETTINGS_INVALID_MIN_UNIT(HttpStatus.BAD_REQUEST, "FEE-003", "최소 청구 단위는 1 이상이어야 합니다."),
+
     WAREHOUSE_NAME_REQUIRED(HttpStatus.BAD_REQUEST, "WH-001", "창고명은 필수입니다."),
     WAREHOUSE_ADDRESS_REQUIRED(HttpStatus.BAD_REQUEST, "WH-002", "창고 주소는 필수입니다."),
     WAREHOUSE_AREA_INVALID(HttpStatus.BAD_REQUEST, "WH-003", "창고 면적은 1 이상이어야 합니다."),
