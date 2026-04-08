@@ -80,6 +80,16 @@ public enum ErrorCode {
     BIN_ASSIGNMENT_LOCATION_NOT_FOUND(HttpStatus.NOT_FOUND, "WORKER-007", "배정 대상 Bin을 찾을 수 없습니다."),
     BIN_ASSIGNMENT_WORKER_NOT_FOUND(HttpStatus.NOT_FOUND, "WORKER-008", "배정 대상 작업자를 찾을 수 없습니다."),
 
+    PRODUCT_SKU_REQUIRED(HttpStatus.BAD_REQUEST, "PRODUCT-001", "SKU는 필수입니다."),
+    PRODUCT_NAME_REQUIRED(HttpStatus.BAD_REQUEST, "PRODUCT-002", "상품명은 필수입니다."),
+    PRODUCT_CATEGORY_REQUIRED(HttpStatus.BAD_REQUEST, "PRODUCT-003", "카테고리는 필수입니다."),
+    PRODUCT_SALE_PRICE_INVALID(HttpStatus.BAD_REQUEST, "PRODUCT-004", "판매가는 0보다 커야 합니다."),
+    PRODUCT_WEIGHT_INVALID(HttpStatus.BAD_REQUEST, "PRODUCT-005", "상품 중량은 0보다 커야 합니다."),
+    PRODUCT_DIMENSION_INVALID(HttpStatus.BAD_REQUEST, "PRODUCT-006", "상품 치수는 모두 0보다 커야 합니다."),
+    PRODUCT_ALREADY_EXISTS(HttpStatus.CONFLICT, "PRODUCT-007", "이미 존재하는 SKU 입니다."),
+    PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "PRODUCT-008", "상품을 찾을 수 없습니다."),
+    PRODUCT_SKU_CHANGE_NOT_ALLOWED(HttpStatus.CONFLICT, "PRODUCT-009", "기존 SKU는 수정할 수 없습니다."),
+
     WAREHOUSE_NAME_REQUIRED(HttpStatus.BAD_REQUEST, "WH-001", "창고명은 필수입니다."),
     WAREHOUSE_ADDRESS_REQUIRED(HttpStatus.BAD_REQUEST, "WH-002", "창고 주소는 필수입니다."),
     WAREHOUSE_AREA_INVALID(HttpStatus.BAD_REQUEST, "WH-003", "창고 면적은 1 이상이어야 합니다."),

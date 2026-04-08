@@ -3,6 +3,7 @@ package com.conk.wms.command.domain.repository;
 import com.conk.wms.command.domain.aggregate.Location;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -15,6 +16,8 @@ public interface LocationRepository extends JpaRepository<Location, String> {
     List<Location> findAllByWarehouseIdAndActiveTrueOrderByZoneIdAscRackIdAscBinIdAsc(String warehouseId);
 
     List<Location> findAllByWorkerAccountIdOrderByZoneIdAscRackIdAscBinIdAsc(String workerAccountId);
+
+    List<Location> findAllByLocationIdIn(Collection<String> locationIds);
 
     java.util.Optional<Location> findByBinId(String binId);
 }
