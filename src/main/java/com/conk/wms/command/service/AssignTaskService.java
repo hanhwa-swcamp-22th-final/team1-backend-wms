@@ -71,6 +71,16 @@ public class AssignTaskService {
                         actor
                 )));
 
+        // Kafka 알림 이벤트 연결 가이드:
+        //   실제 발행 로직을 붙일 때는 위의 work_assignment / work_detail 저장이 모두 끝난 뒤
+        //   NotificationEventKafkaPublisher.publishTaskAssigned(...)를 호출한다.
+        //   payload 권장값:
+        //     - workerId: 메서드 인자로 받은 workerId
+        //     - roleId: "ROLE_WH_WORKER"
+        //     - assignedCount: 이번 배정으로 생성한 work_detail 건수
+        //     - tenantId: 메서드 인자로 받은 tenantCode
+        //     - timestamp: LocalDateTime.now()
+
         return new AssignResult(workId, orderId, workerId, reassigned);
     }
 
