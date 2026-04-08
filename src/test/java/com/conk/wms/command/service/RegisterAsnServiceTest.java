@@ -41,6 +41,9 @@ class RegisterAsnServiceTest {
     @Mock
     private WarehouseRepository warehouseRepository;
 
+    @Mock
+    private SellerWarehouseValidator sellerWarehouseValidator;
+
     @InjectMocks
     private RegisterAsnService registerAsnService;
 
@@ -100,6 +103,25 @@ class RegisterAsnServiceTest {
 
         BusinessException exception = assertThrows(BusinessException.class, () -> registerAsnService.register(command));
         assertEquals(ErrorCode.ASN_WAREHOUSE_NOT_FOUND, exception.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("ASN 등록 실패: 셀러와 연결되지 않은 창고면 예외가 발생한다")
+    void register_whenSellerWarehouseMismatch_thenThrow() {
+        RegisterAsnCommand command = new RegisterAsnCommand(
+                "ASN-001",
+                "WH-001",
+                "SELLER-001",
+                LocalDate.of(2026, 3, 29),
+                "메모",
+                List.of(new RegisterAsnItemCommand("SKU-001", "상품", 100, 5))
+        );
+        when(warehouseRepository.existsById("WH-001")).thenReturn(true);
+        org.mockito.Mockito.doThrow(new BusinessException(ErrorCode.ASN_SELLER_WAREHOUSE_MISMATCH))
+                .when(sellerWarehouseValidator).assertSellerUsesWarehouse("SELLER-001", "WH-001");
+
+        BusinessException exception = assertThrows(BusinessException.class, () -> registerAsnService.register(command));
+        assertEquals(ErrorCode.ASN_SELLER_WAREHOUSE_MISMATCH, exception.getErrorCode());
     }
 
     @Test
