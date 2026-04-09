@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -25,9 +26,16 @@ public class StubOrderServiceClient implements OrderServiceClient {
                         .sellerName("셀러A")
                         .warehouseId("WH-001")
                         .channel("AMAZON")
-                        .orderStatus("CONFIRMED")
+                        .orderStatus("RECEIVED")
                         .recipientName("김고객")
+                        .street1("서울 기본주소")
+                        .street2("상세주소 101호")
                         .cityName("서울")
+                        .state("서울")
+                        .zip("00000")
+                        .country("KR")
+                        .phone("01000000000")
+                        .email("ord-001@example.com")
                         .orderedAt(LocalDateTime.of(2026, 4, 4, 9, 30))
                         .items(List.of(
                                 OrderItemDto.builder().skuId("SKU-001").productName("상품A").quantity(3).build(),
@@ -40,9 +48,16 @@ public class StubOrderServiceClient implements OrderServiceClient {
                         .sellerName("셀러B")
                         .warehouseId("WH-001")
                         .channel("MANUAL")
-                        .orderStatus("PENDING")
+                        .orderStatus("RECEIVED")
                         .recipientName("박고객")
+                        .street1("부산 기본주소")
+                        .street2("상세주소 101호")
                         .cityName("부산")
+                        .state("부산")
+                        .zip("00000")
+                        .country("KR")
+                        .phone("01000000000")
+                        .email("ord-002@example.com")
                         .orderedAt(LocalDateTime.of(2026, 4, 4, 10, 0))
                         .items(List.of(
                                 OrderItemDto.builder().skuId("SKU-003").productName("상품C").quantity(4).build()
@@ -54,9 +69,16 @@ public class StubOrderServiceClient implements OrderServiceClient {
                         .sellerName("셀러C")
                         .warehouseId("WH-001")
                         .channel("AMAZON")
-                        .orderStatus("CANCELLED")
+                        .orderStatus("CANCELED")
                         .recipientName("이고객")
+                        .street1("대구 기본주소")
+                        .street2("상세주소 101호")
                         .cityName("대구")
+                        .state("대구")
+                        .zip("00000")
+                        .country("KR")
+                        .phone("01000000000")
+                        .email("ord-003@example.com")
                         .orderedAt(LocalDateTime.of(2026, 4, 4, 11, 0))
                         .items(List.of(
                                 OrderItemDto.builder().skuId("SKU-004").productName("상품D").quantity(1).build()
@@ -70,5 +92,10 @@ public class StubOrderServiceClient implements OrderServiceClient {
         return getPendingOrders(tenantCode).stream()
                 .filter(order -> orderId.equals(order.getOrderId()))
                 .findFirst();
+    }
+
+    @Override
+    public void updateOrderStatus(String orderId, Map<String, String> body) {
+        // 임시 stub에서는 주문 상태를 고정값으로 반환한다.
     }
 }

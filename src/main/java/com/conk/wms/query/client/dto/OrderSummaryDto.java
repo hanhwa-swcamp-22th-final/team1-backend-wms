@@ -20,7 +20,14 @@ public class OrderSummaryDto {
     private String channel;
     private String orderStatus;
     private String recipientName;
+    private String street1;
+    private String street2;
     private String cityName;
+    private String state;
+    private String zip;
+    private String country;
+    private String phone;
+    private String email;
     private LocalDateTime orderedAt;
     private List<OrderItemDto> items;
 }

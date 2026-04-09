@@ -12,12 +12,14 @@ import com.conk.wms.command.domain.repository.OutboundPendingRepository;
 import com.conk.wms.command.domain.repository.WorkDetailRepository;
 import com.conk.wms.common.exception.BusinessException;
 import com.conk.wms.common.exception.ErrorCode;
+import com.conk.wms.query.client.OrderServiceClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 송장 발행까지 끝난 주문을 최종 출고 확정하고 ALLOCATED 재고를 마감하는 서비스다.
@@ -26,23 +28,27 @@ import java.util.List;
 public class ConfirmOutboundOrderService {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    private static final String ORDER_STATUS_OUTBOUND_COMPLETED = "OUTBOUND_COMPLETED";
 
     private final OutboundPendingRepository outboundPendingRepository;
     private final WorkDetailRepository workDetailRepository;
     private final AllocatedInventoryRepository allocatedInventoryRepository;
     private final InventoryRepository inventoryRepository;
     private final OutboundCompletedRepository outboundCompletedRepository;
+    private final OrderServiceClient orderServiceClient;
 
     public ConfirmOutboundOrderService(OutboundPendingRepository outboundPendingRepository,
                                        WorkDetailRepository workDetailRepository,
                                        AllocatedInventoryRepository allocatedInventoryRepository,
                                        InventoryRepository inventoryRepository,
-                                       OutboundCompletedRepository outboundCompletedRepository) {
+                                       OutboundCompletedRepository outboundCompletedRepository,
+                                       OrderServiceClient orderServiceClient) {
         this.outboundPendingRepository = outboundPendingRepository;
         this.workDetailRepository = workDetailRepository;
         this.allocatedInventoryRepository = allocatedInventoryRepository;
         this.inventoryRepository = inventoryRepository;
         this.outboundCompletedRepository = outboundCompletedRepository;
+        this.orderServiceClient = orderServiceClient;
     }
 
     /**
@@ -95,8 +101,9 @@ public class ConfirmOutboundOrderService {
         }
 
         outboundCompletedRepository.save(new OutboundCompleted(orderId, tenantCode, actor, confirmedAt));
+        orderServiceClient.updateOrderStatus(orderId, Map.of("status", ORDER_STATUS_OUTBOUND_COMPLETED));
 
-        return new ConfirmResult(orderId, "CONFIRMED", releasedRowCount, confirmedAt);
+        return new ConfirmResult(orderId, ORDER_STATUS_OUTBOUND_COMPLETED, releasedRowCount, confirmedAt);
     }
 
     /**

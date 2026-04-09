@@ -54,6 +54,8 @@ class IssueInvoiceServiceTest {
                         .invoiceNo("INV-ORD-001")
                         .trackingCode("TRK-ORD-001")
                         .carrierType("UPS")
+                        .freightChargeAmt(1250)
+                        .shipToAddress("Seoul, KR")
                         .service("Ground")
                         .trackingUrl("https://tracking.example/ORD-001")
                         .labelFileUrl("https://label.example/ORD-001.pdf")
@@ -79,13 +81,11 @@ class IssueInvoiceServiceTest {
     }
 
     @Test
-    @DisplayName("분산 피킹 주문도 패킹 detail만 완료되면 송장 발행할 수 있다")
-    void issue_whenSplitPackingCompleted_thenSuccess() {
+    @DisplayName("출고 지시 시점 자동 송장 발행은 패킹 완료 전에도 가능하다")
+    void issueOnDispatch_whenNotPacked_thenSuccess() {
         OutboundPending pending = new OutboundPending("ORD-001", "SKU-001", "LOC-A-01-01", "CONK", "SYSTEM");
         when(outboundPendingRepository.findAllByIdOrderIdAndIdTenantId("ORD-001", "CONK"))
                 .thenReturn(List.of(pending));
-        when(workDetailRepository.findAllByIdOrderIdOrderByIdLocationIdAscIdSkuIdAsc("ORD-001"))
-                .thenReturn(List.of(splitPickedDetail(), splitPackedDetail()));
         when(integrationServiceClient.issueLabel(eq("CONK"), any()))
                 .thenReturn(ShipmentInvoiceDto.builder()
                         .orderId("ORD-001")
@@ -98,7 +98,7 @@ class IssueInvoiceServiceTest {
                         .issuedAt(LocalDateTime.of(2026, 4, 6, 11, 0))
                         .build());
 
-        IssueInvoiceService.IssueResult result = issueInvoiceService.issue(
+        IssueInvoiceService.IssueResult result = issueInvoiceService.issueOnDispatch(
                 "ORD-001",
                 "CONK",
                 "UPS",
@@ -109,6 +109,27 @@ class IssueInvoiceServiceTest {
 
         assertThat(result.getOrderId()).isEqualTo("ORD-001");
         verify(outboundPendingRepository).save(any());
+    }
+
+    @Test
+    @DisplayName("이미 송장이 발행된 주문은 자동 송장 발행할 수 없다")
+    void issueOnDispatch_whenAlreadyIssued_thenThrowException() {
+        OutboundPending pending = new OutboundPending("ORD-001", "SKU-001", "LOC-A-01-01", "CONK", "SYSTEM");
+        pending.markInvoiceIssued("SYSTEM", LocalDateTime.of(2026, 4, 6, 11, 0));
+        when(outboundPendingRepository.findAllByIdOrderIdAndIdTenantId("ORD-001", "CONK"))
+                .thenReturn(List.of(pending));
+
+        assertThatThrownBy(() -> issueInvoiceService.issueOnDispatch(
+                "ORD-001",
+                "CONK",
+                "UPS",
+                "Ground",
+                "4x6 PDF",
+                "MANAGER-001"
+        ))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.OUTBOUND_INVOICE_ALREADY_ISSUED);
     }
 
     @Test
@@ -132,24 +153,6 @@ class IssueInvoiceServiceTest {
         com.conk.wms.command.domain.aggregate.WorkDetail detail =
                 new com.conk.wms.command.domain.aggregate.WorkDetail("WORK-OUT-CONK-ORD-001", "ORD-001",
                         "SKU-001", "LOC-A-01-01", 3, "SYSTEM");
-        detail.markPacked("SYSTEM", "", LocalDateTime.of(2026, 4, 6, 10, 30));
-        return detail;
-    }
-
-    private com.conk.wms.command.domain.aggregate.WorkDetail splitPickedDetail() {
-        com.conk.wms.command.domain.aggregate.WorkDetail detail =
-                com.conk.wms.command.domain.aggregate.WorkDetail.forOutboundPicking(
-                        "WORK-OUT-CONK-ORD-001-PICK-WORKER-001", "ORD-001", "SKU-001", "LOC-A-01-01", 3, "SYSTEM"
-                );
-        detail.markPickingCompleted("SYSTEM", "", LocalDateTime.of(2026, 4, 6, 10, 0));
-        return detail;
-    }
-
-    private com.conk.wms.command.domain.aggregate.WorkDetail splitPackedDetail() {
-        com.conk.wms.command.domain.aggregate.WorkDetail detail =
-                com.conk.wms.command.domain.aggregate.WorkDetail.forOutboundPacking(
-                        "WORK-OUT-CONK-ORD-001-PACK-WORKER-002", "ORD-001", "SKU-001", "LOC-A-01-01", 3, "SYSTEM"
-                );
         detail.markPacked("SYSTEM", "", LocalDateTime.of(2026, 4, 6, 10, 30));
         return detail;
     }

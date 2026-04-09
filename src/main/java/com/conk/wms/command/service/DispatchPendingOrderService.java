@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 대기 주문을 출고 대상으로 확정하고 AVAILABLE 재고를 ALLOCATED로 전환하는 서비스다.
@@ -23,21 +24,27 @@ import java.util.List;
 @Service
 public class DispatchPendingOrderService {
 
+    private static final String ORDER_STATUS_RECEIVED = "RECEIVED";
+    private static final String ORDER_STATUS_OUTBOUND_INSTRUCTED = "OUTBOUND_INSTRUCTED";
+
     private final OrderServiceClient orderServiceClient;
     private final InventoryRepository inventoryRepository;
     private final OutboundPendingRepository outboundPendingRepository;
     private final AllocatedInventoryRepository allocatedInventoryRepository;
+    private final IssueInvoiceService issueInvoiceService;
     private final AutoAssignTaskService autoAssignTaskService;
 
     public DispatchPendingOrderService(OrderServiceClient orderServiceClient,
                                        InventoryRepository inventoryRepository,
                                        OutboundPendingRepository outboundPendingRepository,
                                        AllocatedInventoryRepository allocatedInventoryRepository,
+                                       IssueInvoiceService issueInvoiceService,
                                        AutoAssignTaskService autoAssignTaskService) {
         this.orderServiceClient = orderServiceClient;
         this.inventoryRepository = inventoryRepository;
         this.outboundPendingRepository = outboundPendingRepository;
         this.allocatedInventoryRepository = allocatedInventoryRepository;
+        this.issueInvoiceService = issueInvoiceService;
         this.autoAssignTaskService = autoAssignTaskService;
     }
 
@@ -46,7 +53,12 @@ public class DispatchPendingOrderService {
      * 재고가 충분하지 않으면 전체 주문 배정 자체를 실패시킨다.
      */
     @Transactional
-    public DispatchResult dispatch(String orderId, String tenantCode, String actorId) {
+    public DispatchResult dispatch(String orderId,
+                                   String tenantCode,
+                                   String actorId,
+                                   String carrier,
+                                   String service,
+                                   String labelFormat) {
         OrderSummaryDto order = orderServiceClient.getPendingOrder(tenantCode, orderId)
                 .orElseThrow(() -> new BusinessException(
                         ErrorCode.OUTBOUND_ORDER_NOT_FOUND,
@@ -60,7 +72,9 @@ public class DispatchPendingOrderService {
             allocatedRowCount += allocateItem(order, item, tenantCode, actorId);
         }
 
+        issueInvoiceService.issueOnDispatch(orderId, tenantCode, carrier, service, labelFormat, actorId);
         autoAssignTaskService.assign(orderId, tenantCode, actorId);
+        orderServiceClient.updateOrderStatus(orderId, Map.of("status", ORDER_STATUS_OUTBOUND_INSTRUCTED));
 
         return new DispatchResult(1, allocatedRowCount);
     }
@@ -70,14 +84,20 @@ public class DispatchPendingOrderService {
      * 현재는 요청 옵션보다 실제 재고 할당 성공 여부에 집중한 1차 구현이다.
      */
     @Transactional
-    public DispatchResult dispatchBulk(List<String> orderIds, String tenantCode, String actorId) {
+    public DispatchResult dispatchBulk(List<String> orderIds,
+                                       String tenantCode,
+                                       String actorId,
+                                       String carrier,
+                                       String service,
+                                       String labelFormat) {
         if (orderIds == null || orderIds.isEmpty()) {
             throw new BusinessException(ErrorCode.OUTBOUND_ORDER_IDS_REQUIRED);
         }
 
         int allocatedRowCount = 0;
         for (String orderId : orderIds) {
-            allocatedRowCount += dispatch(orderId, tenantCode, actorId).getAllocatedRowCount();
+            allocatedRowCount += dispatch(orderId, tenantCode, actorId, carrier, service, labelFormat)
+                    .getAllocatedRowCount();
         }
 
         return new DispatchResult(orderIds.size(), allocatedRowCount);
@@ -87,7 +107,7 @@ public class DispatchPendingOrderService {
         if (outboundPendingRepository.existsByIdOrderIdAndIdTenantId(order.getOrderId(), tenantCode)) {
             throw new BusinessException(ErrorCode.OUTBOUND_ALREADY_DISPATCHED);
         }
-        if ("CANCELLED".equals(order.getOrderStatus()) || "SHIPPED".equals(order.getOrderStatus())) {
+        if (!ORDER_STATUS_RECEIVED.equals(order.getOrderStatus())) {
             throw new BusinessException(ErrorCode.OUTBOUND_DISPATCH_NOT_ALLOWED);
         }
     }

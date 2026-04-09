@@ -11,6 +11,7 @@ import com.conk.wms.command.domain.repository.OutboundPendingRepository;
 import com.conk.wms.command.domain.repository.WorkDetailRepository;
 import com.conk.wms.common.exception.BusinessException;
 import com.conk.wms.common.exception.ErrorCode;
+import com.conk.wms.query.client.OrderServiceClient;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,6 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -47,6 +49,9 @@ class ConfirmOutboundOrderServiceTest {
     @Mock
     private OutboundCompletedRepository outboundCompletedRepository;
 
+    @Mock
+    private OrderServiceClient orderServiceClient;
+
     @InjectMocks
     private ConfirmOutboundOrderService confirmOutboundOrderService;
 
@@ -71,7 +76,7 @@ class ConfirmOutboundOrderServiceTest {
         ConfirmOutboundOrderService.ConfirmResult result = confirmOutboundOrderService.confirm("ORD-001", "CONK", "MANAGER-001");
 
         assertThat(result.getOrderId()).isEqualTo("ORD-001");
-        assertThat(result.getStatus()).isEqualTo("CONFIRMED");
+        assertThat(result.getStatus()).isEqualTo("OUTBOUND_COMPLETED");
         assertThat(result.getReleasedRowCount()).isEqualTo(1);
 
         ArgumentCaptor<Inventory> inventoryCaptor = ArgumentCaptor.forClass(Inventory.class);
@@ -83,6 +88,7 @@ class ConfirmOutboundOrderServiceTest {
         assertThat(allocatedCaptor.getValue().getReleasedAt()).isNotNull();
 
         verify(outboundCompletedRepository).save(any());
+        verify(orderServiceClient).updateOrderStatus("ORD-001", Map.of("status", "OUTBOUND_COMPLETED"));
     }
 
     @Test
@@ -105,8 +111,9 @@ class ConfirmOutboundOrderServiceTest {
 
         ConfirmOutboundOrderService.ConfirmResult result = confirmOutboundOrderService.confirm("ORD-001", "CONK", "MANAGER-001");
 
-        assertThat(result.getStatus()).isEqualTo("CONFIRMED");
+        assertThat(result.getStatus()).isEqualTo("OUTBOUND_COMPLETED");
         verify(outboundCompletedRepository).save(any());
+        verify(orderServiceClient).updateOrderStatus("ORD-001", Map.of("status", "OUTBOUND_COMPLETED"));
     }
 
     @Test

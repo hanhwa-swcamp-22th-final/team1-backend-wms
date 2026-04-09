@@ -47,6 +47,29 @@ public class IssueInvoiceService {
                              String service,
                              String labelFormat,
                              String actorId) {
+        return issueInternal(orderId, tenantCode, carrier, service, labelFormat, actorId, true);
+    }
+
+    /**
+     * 출고 지시 시점에 패킹 완료 검증 없이 송장을 자동 발행한다.
+     */
+    @Transactional
+    public IssueResult issueOnDispatch(String orderId,
+                                       String tenantCode,
+                                       String carrier,
+                                       String service,
+                                       String labelFormat,
+                                       String actorId) {
+        return issueInternal(orderId, tenantCode, carrier, service, labelFormat, actorId, false);
+    }
+
+    private IssueResult issueInternal(String orderId,
+                                      String tenantCode,
+                                      String carrier,
+                                      String service,
+                                      String labelFormat,
+                                      String actorId,
+                                      boolean requirePacked) {
         List<OutboundPending> pendingRows = outboundPendingRepository.findAllByIdOrderIdAndIdTenantId(orderId, tenantCode);
         if (pendingRows.isEmpty()) {
             throw new BusinessException(
@@ -54,7 +77,10 @@ public class IssueInvoiceService {
                     ErrorCode.OUTBOUND_INVOICE_SOURCE_NOT_FOUND.getMessage() + ": " + orderId
             );
         }
-        validatePacked(orderId);
+        validateNotIssued(orderId, pendingRows);
+        if (requirePacked) {
+            validatePacked(orderId);
+        }
 
         ShipmentInvoiceDto issued = integrationServiceClient.issueLabel(
                 tenantCode,
@@ -66,9 +92,10 @@ public class IssueInvoiceService {
                         .build()
         );
 
+        LocalDateTime issuedAt = issued.getIssuedAt() == null ? LocalDateTime.now() : issued.getIssuedAt();
         String actor = actorId == null || actorId.isBlank() ? "SYSTEM" : actorId;
         pendingRows.forEach(pending -> {
-            pending.markInvoiceIssued(actor, issued.getIssuedAt());
+            pending.markInvoiceIssued(actor, issuedAt);
             outboundPendingRepository.save(pending);
         });
 
@@ -78,7 +105,7 @@ public class IssueInvoiceService {
                 issued.getCarrierType(),
                 issued.getService(),
                 issued.getLabelFileUrl(),
-                issued.getIssuedAt()
+                issuedAt
         );
     }
 
@@ -86,7 +113,12 @@ public class IssueInvoiceService {
      * 여러 주문을 순차적으로 송장 발행한다. 현재는 fail-fast 방식으로 단순화했다.
      */
     @Transactional
-    public BulkIssueResult issueBulk(List<String> orderIds, String tenantCode, String actorId) {
+    public BulkIssueResult issueBulk(List<String> orderIds,
+                                     String tenantCode,
+                                     String carrier,
+                                     String service,
+                                     String labelFormat,
+                                     String actorId) {
         if (orderIds == null || orderIds.isEmpty()) {
             throw new BusinessException(ErrorCode.OUTBOUND_INVOICE_ORDER_IDS_REQUIRED);
         }
@@ -95,13 +127,23 @@ public class IssueInvoiceService {
             ShipmentRecommendationDto recommendation = integrationServiceClient.recommendShipment(tenantCode, orderId);
             issue(orderId,
                     tenantCode,
-                    recommendation.getRecommendedCarrier(),
-                    recommendation.getRecommendedService(),
-                    "4x6 PDF",
+                    hasText(carrier) ? carrier : recommendation.getRecommendedCarrier(),
+                    hasText(service) ? service : recommendation.getRecommendedService(),
+                    hasText(labelFormat) ? labelFormat : "4x6 PDF",
                     actorId);
         }
 
         return new BulkIssueResult(orderIds.size());
+    }
+
+    private void validateNotIssued(String orderId, List<OutboundPending> pendingRows) {
+        boolean alreadyIssued = pendingRows.stream().anyMatch(pending -> pending.getInvoiceIssuedAt() != null);
+        if (alreadyIssued) {
+            throw new BusinessException(
+                    ErrorCode.OUTBOUND_INVOICE_ALREADY_ISSUED,
+                    ErrorCode.OUTBOUND_INVOICE_ALREADY_ISSUED.getMessage() + ": " + orderId
+            );
+        }
     }
 
     private void validatePacked(String orderId) {
@@ -112,6 +154,10 @@ public class IssueInvoiceService {
         if (packingDetails.isEmpty() || packingDetails.stream().anyMatch(detail -> !detail.isCompleted())) {
             throw new BusinessException(ErrorCode.OUTBOUND_INVOICE_NOT_READY);
         }
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 
     public static class IssueResult {

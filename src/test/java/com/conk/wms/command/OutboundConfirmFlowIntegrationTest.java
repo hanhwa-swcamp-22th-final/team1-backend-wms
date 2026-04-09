@@ -9,6 +9,7 @@ import com.conk.wms.command.domain.repository.InventoryRepository;
 import com.conk.wms.command.domain.repository.OutboundCompletedRepository;
 import com.conk.wms.command.domain.repository.OutboundPendingRepository;
 import com.conk.wms.command.domain.repository.WorkDetailRepository;
+import com.conk.wms.query.client.StubIntegrationServiceClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -55,8 +56,12 @@ class OutboundConfirmFlowIntegrationTest {
     @Autowired
     private OutboundCompletedRepository outboundCompletedRepository;
 
+    @Autowired
+    private StubIntegrationServiceClient stubIntegrationServiceClient;
+
     @BeforeEach
     void setUp() throws Exception {
+        stubIntegrationServiceClient.clearIssuedInvoices();
         outboundPendingRepository.save(new OutboundPending("ORD-001", "SKU-001", "LOC-A-01-01", "CONK", "SYSTEM"));
         allocatedInventoryRepository.save(new AllocatedInventory("ORD-001", "SKU-001", "LOC-A-01-01", "CONK", 3, "SYSTEM"));
         inventoryRepository.save(new Inventory("LOC-A-01-01", "SKU-001", "CONK", 3, "ALLOCATED"));
@@ -90,11 +95,11 @@ class OutboundConfirmFlowIntegrationTest {
                         .header("X-Tenant-Code", "CONK")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
-                                "status", "CONFIRMED"
+                                "status", "OUTBOUND_COMPLETED"
                         ))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.orderId").value("ORD-001"))
-                .andExpect(jsonPath("$.data.status").value("CONFIRMED"));
+                .andExpect(jsonPath("$.data.status").value("OUTBOUND_COMPLETED"));
 
         assertThat(outboundCompletedRepository.existsByIdOrderIdAndIdTenantId("ORD-001", "CONK")).isTrue();
         assertThat(allocatedInventoryRepository.findAllByIdOrderIdAndIdTenantId("ORD-001", "CONK"))

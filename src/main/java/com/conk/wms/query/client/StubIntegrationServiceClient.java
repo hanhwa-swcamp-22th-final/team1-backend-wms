@@ -44,6 +44,11 @@ public class StubIntegrationServiceClient implements IntegrationServiceClient {
 
     @Override
     public ShipmentInvoiceDto issueLabel(String tenantCode, IssueLabelRequestDto request) {
+        ShipmentInvoiceDto existing = issuedInvoices.get(key(tenantCode, request.getOrderId()));
+        if (existing != null) {
+            return existing;
+        }
+
         LocalDateTime issuedAt = LocalDateTime.now();
         ShipmentInvoiceDto invoice = ShipmentInvoiceDto.builder()
                 .orderId(request.getOrderId())
@@ -51,6 +56,8 @@ public class StubIntegrationServiceClient implements IntegrationServiceClient {
                 .trackingCode("TRK-" + request.getOrderId())
                 .carrierType(request.getCarrier())
                 .service(request.getService())
+                .freightChargeAmt(1250)
+                .shipToAddress("Seoul, KR")
                 .trackingUrl("https://tracking.example/" + request.getOrderId())
                 .labelFileUrl("https://label.example/" + request.getOrderId() + ".pdf")
                 .issuedAt(issuedAt)
@@ -65,6 +72,10 @@ public class StubIntegrationServiceClient implements IntegrationServiceClient {
                 .filter(orderId -> issuedInvoices.containsKey(key(tenantCode, orderId)))
                 .map(orderId -> Map.entry(orderId, issuedInvoices.get(key(tenantCode, orderId))))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    }
+
+    public void clearIssuedInvoices() {
+        issuedInvoices.clear();
     }
 
     private String key(String tenantCode, String orderId) {

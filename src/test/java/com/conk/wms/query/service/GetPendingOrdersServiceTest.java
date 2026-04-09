@@ -45,7 +45,7 @@ class GetPendingOrdersServiceTest {
                         .sellerName("셀러A")
                         .warehouseId("WH-001")
                         .channel("AMAZON")
-                        .orderStatus("CONFIRMED")
+                        .orderStatus("RECEIVED")
                         .recipientName("김고객")
                         .cityName("서울")
                         .orderedAt(LocalDateTime.of(2026, 4, 4, 9, 30))
@@ -60,7 +60,7 @@ class GetPendingOrdersServiceTest {
                         .sellerName("셀러B")
                         .warehouseId("WH-001")
                         .channel("MANUAL")
-                        .orderStatus("PENDING")
+                        .orderStatus("OUTBOUND_INSTRUCTED")
                         .recipientName("박고객")
                         .cityName("부산")
                         .orderedAt(LocalDateTime.of(2026, 4, 4, 10, 0))
@@ -74,7 +74,7 @@ class GetPendingOrdersServiceTest {
                         .sellerName("셀러C")
                         .warehouseId("WH-001")
                         .channel("AMAZON")
-                        .orderStatus("CANCELLED")
+                        .orderStatus("CANCELED")
                         .recipientName("이고객")
                         .cityName("대구")
                         .orderedAt(LocalDateTime.of(2026, 4, 4, 11, 0))
@@ -88,24 +88,13 @@ class GetPendingOrdersServiceTest {
                 .thenReturn(List.of(new Inventory("LOC-A-01-01", "SKU-001", "CONK", 10, "AVAILABLE")));
         when(inventoryRepository.findAllByIdSkuAndIdTenantId("SKU-002", "CONK"))
                 .thenReturn(List.of(new Inventory("LOC-A-01-02", "SKU-002", "CONK", 5, "AVAILABLE")));
-        when(inventoryRepository.findAllByIdSkuAndIdTenantId("SKU-003", "CONK"))
-                .thenReturn(List.of(new Inventory("LOC-A-01-03", "SKU-003", "CONK", 2, "AVAILABLE")));
         when(outboundPendingRepository.existsByIdOrderIdAndIdTenantId("ORD-001", "CONK")).thenReturn(false);
-        when(outboundPendingRepository.existsByIdOrderIdAndIdTenantId("ORD-002", "CONK")).thenReturn(false);
 
         List<PendingOrderResponse> responses = getPendingOrdersService.getPendingOrders("CONK");
 
-        assertEquals(2, responses.size());
-        assertEquals("ORD-002", responses.get(0).getId());
-        assertEquals("MANUAL", responses.get(0).getChannel());
-        assertEquals("셀러B", responses.get(0).getSellerName());
-        assertEquals("상품C / 4개", responses.get(0).getItemSummary());
-        assertEquals("부산", responses.get(0).getShipDestination());
-        assertEquals("2026-04-04", responses.get(0).getOrderDate());
-        assertEquals("INSUFFICIENT", responses.get(0).getStockStatus());
-
-        assertEquals("ORD-001", responses.get(1).getId());
-        assertEquals("상품A 외 1건 / 4개", responses.get(1).getItemSummary());
-        assertEquals("SUFFICIENT", responses.get(1).getStockStatus());
+        assertEquals(1, responses.size());
+        assertEquals("ORD-001", responses.get(0).getId());
+        assertEquals("상품A 외 1건 / 4개", responses.get(0).getItemSummary());
+        assertEquals("SUFFICIENT", responses.get(0).getStockStatus());
     }
 }
