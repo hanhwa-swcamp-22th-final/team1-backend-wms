@@ -17,4 +17,7 @@ import java.util.List;
 public class BulkIssueLabelsRequest {
 
     private List<String> orderIds;
+    private String carrier;
+    private String service;
+    private String labelFormat;
 }

@@ -42,7 +42,7 @@ class OutboundManagementControllerTest {
     @Test
     @DisplayName("개별 출고 지시 성공 시 200과 처리 결과를 반환한다")
     void dispatchSingle_success() throws Exception {
-        when(dispatchPendingOrderService.dispatch(any(), any(), any()))
+        when(dispatchPendingOrderService.dispatch(any(), any(), any(), any(), any(), any()))
                 .thenReturn(new DispatchPendingOrderService.DispatchResult(1, 1));
 
         mockMvc.perform(patch("/wms/manager/pending-orders/ORD-001")
@@ -50,7 +50,10 @@ class OutboundManagementControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "workerId", "WORKER-001",
-                                "status", "PREPARING_ITEM"
+                                "status", "OUTBOUND_INSTRUCTED",
+                                "carrier", "UPS",
+                                "service", "Ground",
+                                "labelFormat", "4x6 PDF"
                         ))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
@@ -76,14 +79,17 @@ class OutboundManagementControllerTest {
     @DisplayName("개별 출고 지시 시 재고 부족이면 409를 반환한다")
     void dispatchSingle_whenStockInsufficient_thenReturn409() throws Exception {
         doThrow(new BusinessException(ErrorCode.OUTBOUND_STOCK_INSUFFICIENT))
-                .when(dispatchPendingOrderService).dispatch(any(), any(), any());
+                .when(dispatchPendingOrderService).dispatch(any(), any(), any(), any(), any(), any());
 
         mockMvc.perform(patch("/wms/manager/pending-orders/ORD-001")
                         .header("X-Tenant-Code", "CONK")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "workerId", "WORKER-001",
-                                "status", "PREPARING_ITEM"
+                                "status", "OUTBOUND_INSTRUCTED",
+                                "carrier", "UPS",
+                                "service", "Ground",
+                                "labelFormat", "4x6 PDF"
                         ))))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.success").value(false))
@@ -93,7 +99,7 @@ class OutboundManagementControllerTest {
     @Test
     @DisplayName("일괄 출고 지시 성공 시 200과 처리 건수를 반환한다")
     void dispatchBulk_success() throws Exception {
-        when(dispatchPendingOrderService.dispatchBulk(any(), any(), any()))
+        when(dispatchPendingOrderService.dispatchBulk(any(), any(), any(), any(), any(), any()))
                 .thenReturn(new DispatchPendingOrderService.DispatchResult(2, 3));
 
         mockMvc.perform(post("/wms/manager/pending-orders/bulk")
@@ -103,7 +109,10 @@ class OutboundManagementControllerTest {
                                 "orderIds", List.of("ORD-001", "ORD-002"),
                                 "pickingGroupBy", "WORKER_BIN",
                                 "targetTime", "오늘 14:00",
-                                "sendNotif", true
+                                "sendNotif", true,
+                                "carrier", "UPS",
+                                "service", "Ground",
+                                "labelFormat", "4x6 PDF"
                         ))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))

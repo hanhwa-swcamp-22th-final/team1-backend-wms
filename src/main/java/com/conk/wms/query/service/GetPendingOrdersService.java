@@ -22,6 +22,7 @@ import java.util.List;
 public class GetPendingOrdersService {
 
     private static final DateTimeFormatter ORDER_DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    private static final String ORDER_STATUS_RECEIVED = "RECEIVED";
 
     private final OrderServiceClient orderServiceClient;
     private final InventoryRepository inventoryRepository;
@@ -57,7 +58,7 @@ public class GetPendingOrdersService {
     }
 
     private boolean isPendingTarget(OrderSummaryDto order) {
-        return !"CANCELLED".equals(order.getOrderStatus()) && !"SHIPPED".equals(order.getOrderStatus());
+        return ORDER_STATUS_RECEIVED.equals(order.getOrderStatus());
     }
 
     private String resolveStockStatus(List<OrderItemDto> items, String tenantCode) {

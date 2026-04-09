@@ -62,7 +62,14 @@ public class InvoiceManagementController {
             @RequestBody BulkIssueLabelsRequest request
     ) {
         validateTenantCode(tenantCode);
-        IssueInvoiceService.BulkIssueResult result = issueInvoiceService.issueBulk(request.getOrderIds(), tenantCode, "SYSTEM");
+        IssueInvoiceService.BulkIssueResult result = issueInvoiceService.issueBulk(
+                request.getOrderIds(),
+                tenantCode,
+                request.getCarrier(),
+                request.getService(),
+                request.getLabelFormat(),
+                "SYSTEM"
+        );
         return ResponseEntity.ok(ApiResponse.success("bulk invoice issued",
                 BulkIssueInvoiceResponse.builder()
                         .issuedOrderCount(result.getIssuedOrderCount())

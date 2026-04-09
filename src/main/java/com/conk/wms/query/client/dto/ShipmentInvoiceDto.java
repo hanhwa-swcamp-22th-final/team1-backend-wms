@@ -17,6 +17,8 @@ public class ShipmentInvoiceDto {
     private String trackingCode;
     private String carrierType;
     private String service;
+    private Integer freightChargeAmt;
+    private String shipToAddress;
     private String trackingUrl;
     private String labelFileUrl;
     private LocalDateTime issuedAt;

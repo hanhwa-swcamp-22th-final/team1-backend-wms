@@ -4,6 +4,7 @@ import com.conk.wms.command.domain.aggregate.Inventory;
 import com.conk.wms.command.domain.repository.AllocatedInventoryRepository;
 import com.conk.wms.command.domain.repository.InventoryRepository;
 import com.conk.wms.command.domain.repository.OutboundPendingRepository;
+import com.conk.wms.query.client.StubIntegrationServiceClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -43,8 +44,12 @@ class OutboundDispatchIntegrationTest {
     @Autowired
     private AllocatedInventoryRepository allocatedInventoryRepository;
 
+    @Autowired
+    private StubIntegrationServiceClient stubIntegrationServiceClient;
+
     @BeforeEach
     void setUp() {
+        stubIntegrationServiceClient.clearIssuedInvoices();
         inventoryRepository.save(new Inventory("LOC-A-01-01", "SKU-001", "CONK", 10, "AVAILABLE"));
         inventoryRepository.save(new Inventory("LOC-A-01-02", "SKU-002", "CONK", 5, "AVAILABLE"));
         inventoryRepository.save(new Inventory("LOC-A-01-03", "SKU-003", "CONK", 2, "AVAILABLE"));
@@ -58,7 +63,10 @@ class OutboundDispatchIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "workerId", "WORKER-001",
-                                "status", "PREPARING_ITEM"
+                                "status", "OUTBOUND_INSTRUCTED",
+                                "carrier", "UPS",
+                                "service", "Ground",
+                                "labelFormat", "4x6 PDF"
                         ))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
@@ -74,6 +82,8 @@ class OutboundDispatchIntegrationTest {
         assertThat(availableSku1.getQuantity()).isEqualTo(7);
         assertThat(allocatedSku1.getQuantity()).isEqualTo(3);
         assertThat(outboundPendingRepository.findAllByIdOrderIdAndIdTenantId("ORD-001", "CONK")).hasSize(2);
+        assertThat(outboundPendingRepository.findAllByIdOrderIdAndIdTenantId("ORD-001", "CONK"))
+                .allMatch(outboundPending -> outboundPending.getInvoiceIssuedAt() != null);
         assertThat(allocatedInventoryRepository.findAllByIdOrderIdAndIdTenantId("ORD-001", "CONK")).hasSize(2);
 
         mockMvc.perform(get("/wms/manager/pending-orders")

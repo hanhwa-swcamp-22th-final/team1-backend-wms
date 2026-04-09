@@ -44,7 +44,7 @@ class OutboundConfirmManagementControllerTest {
         when(confirmOutboundOrderService.confirm("ORD-001", "CONK", "SYSTEM"))
                 .thenReturn(new ConfirmOutboundOrderService.ConfirmResult(
                         "ORD-001",
-                        "CONFIRMED",
+                        "OUTBOUND_COMPLETED",
                         1,
                         LocalDateTime.of(2026, 4, 6, 12, 0)
                 ));
@@ -53,12 +53,12 @@ class OutboundConfirmManagementControllerTest {
                         .header("X-Tenant-Code", "CONK")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
-                                "status", "CONFIRMED"
+                                "status", "OUTBOUND_COMPLETED"
                         ))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.orderId").value("ORD-001"))
-                .andExpect(jsonPath("$.data.status").value("CONFIRMED"));
+                .andExpect(jsonPath("$.data.status").value("OUTBOUND_COMPLETED"));
     }
 
     @Test
@@ -89,7 +89,7 @@ class OutboundConfirmManagementControllerTest {
                         .header("X-Tenant-Code", "CONK")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
-                                "status", "CONFIRMED"
+                                "status", "OUTBOUND_COMPLETED"
                         ))))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("OUTBOUND-018"));

@@ -68,14 +68,17 @@ class InvoiceManagementControllerTest {
     @Test
     @DisplayName("일괄 송장 발행 성공 시 200과 처리 건수를 반환한다")
     void issueBulk_success() throws Exception {
-        when(issueInvoiceService.issueBulk(java.util.List.of("ORD-001", "ORD-002"), "CONK", "SYSTEM"))
+        when(issueInvoiceService.issueBulk(java.util.List.of("ORD-001", "ORD-002"), "CONK", "UPS", "Ground", "4x6 PDF", "SYSTEM"))
                 .thenReturn(new IssueInvoiceService.BulkIssueResult(2));
 
         mockMvc.perform(post("/wh_invoice_orders/bulk_label")
                         .header("X-Tenant-Code", "CONK")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
-                                "orderIds", java.util.List.of("ORD-001", "ORD-002")
+                                "orderIds", java.util.List.of("ORD-001", "ORD-002"),
+                                "carrier", "UPS",
+                                "service", "Ground",
+                                "labelFormat", "4x6 PDF"
                         ))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.issuedOrderCount").value(2));

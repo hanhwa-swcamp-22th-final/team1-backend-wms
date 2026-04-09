@@ -22,6 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -46,6 +47,9 @@ class DispatchPendingOrderServiceTest {
     private AllocatedInventoryRepository allocatedInventoryRepository;
 
     @Mock
+    private IssueInvoiceService issueInvoiceService;
+
+    @Mock
     private AutoAssignTaskService autoAssignTaskService;
 
     @InjectMocks
@@ -61,7 +65,7 @@ class DispatchPendingOrderServiceTest {
                         .sellerName("셀러A")
                         .warehouseId("WH-001")
                         .channel("SHOPIFY")
-                        .orderStatus("CONFIRMED")
+                        .orderStatus("RECEIVED")
                         .recipientName("김고객")
                         .cityName("서울")
                         .orderedAt(LocalDateTime.of(2026, 4, 4, 9, 30))
@@ -80,14 +84,19 @@ class DispatchPendingOrderServiceTest {
         DispatchPendingOrderService.DispatchResult result = dispatchPendingOrderService.dispatch(
                 "ORD-001",
                 "CONK",
-                "WORKER-001"
+                "WORKER-001",
+                "UPS",
+                "Ground",
+                "4x6 PDF"
         );
 
         ArgumentCaptor<Inventory> inventoryCaptor = ArgumentCaptor.forClass(Inventory.class);
         verify(inventoryRepository, times(2)).save(inventoryCaptor.capture());
         verify(outboundPendingRepository).save(any(OutboundPending.class));
         verify(allocatedInventoryRepository).save(any(AllocatedInventory.class));
+        verify(issueInvoiceService).issueOnDispatch("ORD-001", "CONK", "UPS", "Ground", "4x6 PDF", "WORKER-001");
         verify(autoAssignTaskService).assign("ORD-001", "CONK", "WORKER-001");
+        verify(orderServiceClient).updateOrderStatus("ORD-001", Map.of("status", "OUTBOUND_INSTRUCTED"));
 
         Inventory availableInventory = inventoryCaptor.getAllValues().get(0);
         Inventory allocatedInventory = inventoryCaptor.getAllValues().get(1);
@@ -110,7 +119,7 @@ class DispatchPendingOrderServiceTest {
                         .sellerName("셀러A")
                         .warehouseId("WH-001")
                         .channel("SHOPIFY")
-                        .orderStatus("CONFIRMED")
+                        .orderStatus("RECEIVED")
                         .recipientName("김고객")
                         .cityName("서울")
                         .orderedAt(LocalDateTime.of(2026, 4, 4, 9, 30))
@@ -124,7 +133,7 @@ class DispatchPendingOrderServiceTest {
                 .thenReturn(List.of(new Inventory("LOC-A-01-01", "SKU-001", "CONK", 2, "AVAILABLE")));
 
         BusinessException exception = assertThrows(BusinessException.class, () ->
-                dispatchPendingOrderService.dispatch("ORD-001", "CONK", "WORKER-001")
+                dispatchPendingOrderService.dispatch("ORD-001", "CONK", "WORKER-001", "UPS", "Ground", "4x6 PDF")
         );
 
         assertEquals(ErrorCode.OUTBOUND_STOCK_INSUFFICIENT, exception.getErrorCode());

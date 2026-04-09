@@ -7,6 +7,7 @@ import com.conk.wms.command.domain.repository.AllocatedInventoryRepository;
 import com.conk.wms.command.domain.repository.LocationRepository;
 import com.conk.wms.command.domain.repository.OutboundPendingRepository;
 import com.conk.wms.command.domain.repository.WorkDetailRepository;
+import com.conk.wms.query.client.StubIntegrationServiceClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -49,8 +50,12 @@ class InvoiceIssueIntegrationTest {
     @Autowired
     private WorkDetailRepository workDetailRepository;
 
+    @Autowired
+    private StubIntegrationServiceClient stubIntegrationServiceClient;
+
     @BeforeEach
     void setUp() throws Exception {
+        stubIntegrationServiceClient.clearIssuedInvoices();
         locationRepository.save(new Location("LOC-A-01-01", "A-01-01", "WH-001", "A", "01", 300, true));
         outboundPendingRepository.save(new OutboundPending("ORD-001", "SKU-001", "LOC-A-01-01", "CONK", "SYSTEM"));
         allocatedInventoryRepository.save(new AllocatedInventory("ORD-001", "SKU-001", "LOC-A-01-01", "CONK", 3, "SYSTEM"));

@@ -20,4 +20,7 @@ public class BulkDispatchPendingOrdersRequest {
     private String pickingGroupBy;
     private String targetTime;
     private boolean sendNotif;
+    private String carrier;
+    private String service;
+    private String labelFormat;
 }

@@ -38,8 +38,14 @@ public class OutboundManagementController {
             @RequestBody DispatchPendingOrderRequest request
     ) {
         validateTenantCode(tenantCode);
-        DispatchPendingOrderService.DispatchResult result =
-                dispatchPendingOrderService.dispatch(orderId, tenantCode, request.getWorkerId());
+        DispatchPendingOrderService.DispatchResult result = dispatchPendingOrderService.dispatch(
+                orderId,
+                tenantCode,
+                request.getWorkerId(),
+                request.getCarrier(),
+                request.getService(),
+                request.getLabelFormat()
+        );
         return ResponseEntity.ok(ApiResponse.success("dispatch requested",
                 DispatchPendingOrderResponse.builder()
                         .orderId(orderId)
@@ -53,8 +59,14 @@ public class OutboundManagementController {
             @RequestBody BulkDispatchPendingOrdersRequest request
     ) {
         validateTenantCode(tenantCode);
-        DispatchPendingOrderService.DispatchResult result =
-                dispatchPendingOrderService.dispatchBulk(request.getOrderIds(), tenantCode, "SYSTEM");
+        DispatchPendingOrderService.DispatchResult result = dispatchPendingOrderService.dispatchBulk(
+                request.getOrderIds(),
+                tenantCode,
+                "SYSTEM",
+                request.getCarrier(),
+                request.getService(),
+                request.getLabelFormat()
+        );
         return ResponseEntity.ok(ApiResponse.success("bulk dispatch requested",
                 BulkDispatchPendingOrdersResponse.builder()
                         .dispatchedOrderCount(result.getDispatchedOrderCount())
