@@ -122,10 +122,10 @@ public class GetWarehouseDetailsService {
     public List<WarehouseInventoryItemResponse> getInventory(String tenantCode, String warehouseId) {
         List<Location> warehouseLocations = getWarehouseLocations(tenantCode, warehouseId);
         Set<String> locationIds = toLocationIds(warehouseLocations);
-        Map<String, String> productNameBySku = buildProductNameBySku(tenantCode, warehouseId);
+        List<Inventory> warehouseInventories = getWarehouseInventories(tenantCode, locationIds);
+        Map<String, String> productNameBySku = buildProductNameBySku(tenantCode, warehouseId, locationIds);
 
-        return inventoryRepository.findAllByIdTenantId(tenantCode).stream()
-                .filter(inventory -> locationIds.contains(inventory.getLocationId()))
+        return warehouseInventories.stream()
                 .filter(inventory -> inventory.getQuantity() > 0)
                 .collect(Collectors.groupingBy(Inventory::getSku, LinkedHashMap::new, Collectors.toList()))
                 .entrySet().stream()
@@ -274,12 +274,9 @@ public class GetWarehouseDetailsService {
         Map<String, Location> locationById = warehouseLocations.stream()
                 .collect(Collectors.toMap(Location::getLocationId, Function.identity()));
         Map<String, String> workerNameById = buildWorkerNameById(tenantCode);
-        Map<String, String> productNameBySku = buildProductNameBySku(tenantCode, warehouseId);
-
-        List<Inventory> warehouseInventories = inventoryRepository.findAllByIdTenantId(tenantCode).stream()
-                .filter(inventory -> locationIds.contains(inventory.getLocationId()))
-                .filter(inventory -> sku.equals(inventory.getSku()))
-                .toList();
+        List<Inventory> warehouseInventories = getWarehouseInventoriesBySku(tenantCode, locationIds, sku);
+        OrderContext orderContext = buildOrderContext(tenantCode, warehouseId, warehouseLocations);
+        Map<String, String> productNameBySku = buildProductNameBySku(tenantCode, warehouseId, locationIds, orderContext.orders());
 
         Map<String, Integer> quantityByLocation = warehouseInventories.stream()
                 .collect(Collectors.groupingBy(Inventory::getLocationId, LinkedHashMap::new, Collectors.summingInt(Inventory::getQuantity)));
@@ -321,7 +318,6 @@ public class GetWarehouseDetailsService {
                         Comparator.nullsLast(Comparator.reverseOrder())))
                 .toList();
 
-        OrderContext orderContext = buildOrderContext(tenantCode, warehouseId);
         List<WarehouseSkuDetailResponse.SkuOrderHistoryResponse> orderHistory = orderContext.orders().stream()
                 .filter(order -> order.getItems().stream().anyMatch(item -> sku.equals(item.getSkuId())))
                 .map(order -> WarehouseSkuDetailResponse.SkuOrderHistoryResponse.builder()
@@ -346,10 +342,7 @@ public class GetWarehouseDetailsService {
             ));
         }
 
-        pickingPackingRepository.findAll().stream()
-                .filter(history -> tenantCode.equals(history.getId().getTenantId()))
-                .filter(history -> sku.equals(history.getId().getSkuId()))
-                .filter(history -> locationIds.contains(history.getId().getLocationId()))
+        pickingPackingRepository.findAllByIdTenantIdAndIdSkuIdAndIdLocationIdIn(tenantCode, sku, locationIds).stream()
                 .filter(history -> history.getPackedQuantity() != null && history.getPackedQuantity() > 0)
                 .forEach(history -> changeEvents.add(new ChangeEvent(
                         history.getCompletedAt() != null ? history.getCompletedAt() : history.getUpdatedAt(),
@@ -389,8 +382,9 @@ public class GetWarehouseDetailsService {
             throw new BusinessException(ErrorCode.OUTBOUND_ORDER_NOT_FOUND);
         }
 
-        OrderContext orderContext = buildOrderContext(tenantCode, warehouseId);
-        Map<String, Location> locationById = getWarehouseLocations(tenantCode, warehouseId).stream()
+        List<Location> warehouseLocations = getWarehouseLocations(tenantCode, warehouseId);
+        OrderContext orderContext = buildOrderContext(tenantCode, warehouseId, warehouseLocations);
+        Map<String, Location> locationById = warehouseLocations.stream()
                 .collect(Collectors.toMap(Location::getLocationId, Function.identity()));
         Map<String, List<AllocatedInventory>> allocatedBySku = allocatedInventoryRepository
                 .findAllByIdOrderIdAndIdTenantId(orderId, tenantCode).stream()
@@ -426,12 +420,7 @@ public class GetWarehouseDetailsService {
 
     private List<Location> getWarehouseLocations(String tenantCode, String warehouseId) {
         getWarehouseOrThrow(tenantCode, warehouseId);
-        return locationRepository.findAll().stream()
-                .filter(location -> warehouseId.equals(location.getWarehouseId()))
-                .sorted(Comparator.comparing(Location::getZoneId)
-                        .thenComparing(Location::getRackId)
-                        .thenComparing(Location::getBinId))
-                .toList();
+        return locationRepository.findAllByWarehouseIdOrderByZoneIdAscRackIdAscBinIdAsc(warehouseId);
     }
 
     private Set<String> toLocationIds(List<Location> locations) {
@@ -441,8 +430,7 @@ public class GetWarehouseDetailsService {
     }
 
     private Map<String, Integer> buildUsedQuantityByLocation(String tenantCode, Set<String> locationIds) {
-        return inventoryRepository.findAllByIdTenantId(tenantCode).stream()
-                .filter(inventory -> locationIds.contains(inventory.getLocationId()))
+        return getWarehouseInventories(tenantCode, locationIds).stream()
                 .collect(Collectors.groupingBy(
                         Inventory::getLocationId,
                         LinkedHashMap::new,
@@ -460,19 +448,31 @@ public class GetWarehouseDetailsService {
         return "avail";
     }
 
-    private Map<String, String> buildProductNameBySku(String tenantCode, String warehouseId) {
-        Map<String, String> names = productRepository.findAll().stream()
+    private Map<String, String> buildProductNameBySku(String tenantCode, String warehouseId, Set<String> locationIds) {
+        List<OrderSummaryDto> warehouseOrders = orderServiceClient.getPendingOrders(tenantCode).stream()
+                .filter(order -> warehouseId.equals(order.getWarehouseId()))
+                .toList();
+        return buildProductNameBySku(tenantCode, warehouseId, locationIds, warehouseOrders);
+    }
+
+    private Map<String, String> buildProductNameBySku(String tenantCode,
+                                                      String warehouseId,
+                                                      Set<String> locationIds,
+                                                      Collection<OrderSummaryDto> warehouseOrders) {
+        LinkedHashSet<String> skuIds = new LinkedHashSet<>();
+        getWarehouseInventories(tenantCode, locationIds).forEach(inventory -> skuIds.add(inventory.getSku()));
+        List<AsnItem> warehouseAsnItems = getWarehouseAsnItems(warehouseId);
+        warehouseAsnItems.forEach(item -> skuIds.add(item.getSkuId()));
+        warehouseOrders.forEach(order -> order.getItems().forEach(item -> skuIds.add(item.getSkuId())));
+
+        Map<String, String> names = (skuIds.isEmpty() ? List.<Product>of() : productRepository.findAllBySkuIdIn(skuIds)).stream()
                 .collect(Collectors.toMap(Product::getSku, Product::getName, (left, right) -> left, LinkedHashMap::new));
 
-        List<AsnItem> warehouseAsnItems = asnRepository.findAllByWarehouseId(warehouseId).stream()
-                .map(Asn::getAsnId)
-                .collect(Collectors.collectingAndThen(Collectors.toList(), asnIds ->
-                        asnIds.isEmpty() ? List.<AsnItem>of() : asnItemRepository.findAllByAsnIdIn(asnIds)));
         for (AsnItem item : warehouseAsnItems) {
             names.putIfAbsent(item.getSkuId(), item.getProductNameSnapshot());
         }
 
-        orderServiceClient.getPendingOrders(tenantCode).forEach(order ->
+        warehouseOrders.forEach(order ->
                 order.getItems().forEach(item -> names.putIfAbsent(item.getSkuId(), item.getProductName())));
         return names;
     }
@@ -483,8 +483,11 @@ public class GetWarehouseDetailsService {
     }
 
     private OrderContext buildOrderContext(String tenantCode, String warehouseId) {
+        return buildOrderContext(tenantCode, warehouseId, getWarehouseLocations(tenantCode, warehouseId));
+    }
+
+    private OrderContext buildOrderContext(String tenantCode, String warehouseId, List<Location> warehouseLocations) {
         getWarehouseOrThrow(tenantCode, warehouseId);
-        List<Location> warehouseLocations = getWarehouseLocations(tenantCode, warehouseId);
         Set<String> locationIds = toLocationIds(warehouseLocations);
         List<OrderSummaryDto> orders = orderServiceClient.getPendingOrders(tenantCode).stream()
                 .filter(order -> warehouseId.equals(order.getWarehouseId()))
@@ -497,31 +500,36 @@ public class GetWarehouseDetailsService {
         }
 
         Map<String, String> workerNameById = buildWorkerNameById(tenantCode);
-        Map<String, String> workerNameByWorkId = workAssignmentRepository.findAllByIdTenantId(tenantCode).stream()
+        List<WorkDetail> workDetails = locationIds.isEmpty()
+                ? List.of()
+                : workDetailRepository.findAllByReferenceTypeAndIdOrderIdInAndIdLocationIdInOrderByIdOrderIdAscIdLocationIdAscIdSkuIdAsc(
+                        WorkDetail.OUTBOUND_REFERENCE_TYPE,
+                        orderIds,
+                        locationIds
+                );
+        Set<String> workIds = workDetails.stream()
+                .map(detail -> detail.getId().getWorkId())
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        Map<String, String> workerNameByWorkId = workIds.isEmpty()
+                ? Map.of()
+                : workAssignmentRepository.findAllByIdTenantIdAndIdWorkIdIn(tenantCode, workIds).stream()
                 .collect(Collectors.toMap(
                         assignment -> assignment.getId().getWorkId(),
                         assignment -> workerNameById.getOrDefault(assignment.getId().getAccountId(), assignment.getId().getAccountId()),
                         (left, right) -> left
                 ));
 
-        List<WorkDetail> workDetails = workDetailRepository.findAll().stream()
-                .filter(detail -> "ORDER".equals(detail.getReferenceType()))
-                .filter(detail -> orderIds.contains(detail.getId().getOrderId()))
-                .filter(detail -> locationIds.contains(detail.getId().getLocationId()))
-                .toList();
-
         Map<String, List<WorkDetail>> workDetailsByOrder = workDetails.stream()
                 .collect(Collectors.groupingBy(detail -> detail.getId().getOrderId(), LinkedHashMap::new, Collectors.toList()));
 
-        Map<String, List<OutboundPending>> pendingByOrder = outboundPendingRepository.findAllByIdTenantId(tenantCode).stream()
-                .filter(pending -> orderIds.contains(pending.getId().getOrderId()))
-                .filter(pending -> locationIds.contains(pending.getId().getLocationId()))
+        Map<String, List<OutboundPending>> pendingByOrder = locationIds.isEmpty()
+                ? Map.of()
+                : outboundPendingRepository.findAllByIdTenantIdAndIdOrderIdInAndIdLocationIdIn(tenantCode, orderIds, locationIds).stream()
                 .collect(Collectors.groupingBy(pending -> pending.getId().getOrderId(), LinkedHashMap::new, Collectors.toList()));
 
-        Set<String> completedOrderIds = outboundCompletedRepository.findAllByIdTenantId(tenantCode).stream()
+        Set<String> completedOrderIds = outboundCompletedRepository.findAllByIdTenantIdAndIdOrderIdIn(tenantCode, orderIds).stream()
                 .map(OutboundCompleted::getId)
                 .map(id -> id.getOrderId())
-                .filter(orderIds::contains)
                 .collect(Collectors.toCollection(LinkedHashSet::new));
 
         Map<String, Map<String, List<String>>> workerNamesByOrderAndSku = new LinkedHashMap<>();
@@ -546,6 +554,30 @@ public class GetWarehouseDetailsService {
                 completedOrderIds,
                 workerNamesByOrderAndSku
         );
+    }
+
+    private List<Inventory> getWarehouseInventories(String tenantCode, Set<String> locationIds) {
+        if (locationIds.isEmpty()) {
+            return List.of();
+        }
+        return inventoryRepository.findAllByIdTenantIdAndIdLocationIdIn(tenantCode, locationIds);
+    }
+
+    private List<Inventory> getWarehouseInventoriesBySku(String tenantCode, Set<String> locationIds, String sku) {
+        if (locationIds.isEmpty()) {
+            return List.of();
+        }
+        return inventoryRepository.findAllByIdTenantIdAndIdLocationIdInAndIdSku(tenantCode, locationIds, sku);
+    }
+
+    private List<AsnItem> getWarehouseAsnItems(String warehouseId) {
+        List<String> asnIds = asnRepository.findAllByWarehouseId(warehouseId).stream()
+                .map(Asn::getAsnId)
+                .toList();
+        if (asnIds.isEmpty()) {
+            return List.of();
+        }
+        return asnItemRepository.findAllByAsnIdIn(asnIds);
     }
 
     private String resolveOrderStatus(OrderSummaryDto order, OrderContext orderContext) {

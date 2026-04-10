@@ -53,7 +53,7 @@ class AssignTaskServiceTest {
     @DisplayName("작업 배정 성공: 출고 지시된 주문에 work_assignment를 생성한다")
     void assign_success() {
         when(outboundPendingRepository.existsByIdOrderIdAndIdTenantId("ORD-001", "CONK")).thenReturn(true);
-        when(workDetailRepository.findAllByIdOrderIdOrderByIdLocationIdAscIdSkuIdAsc("ORD-001"))
+        when(workDetailRepository.findAllByIdOrderIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc("ORD-001", "CONK"))
                 .thenReturn(List.of());
         when(allocatedInventoryRepository.findAllByIdOrderIdAndIdTenantId("ORD-001", "CONK"))
                 .thenReturn(List.of(new AllocatedInventory(
@@ -92,7 +92,7 @@ class AssignTaskServiceTest {
     @DisplayName("작업 재배정 성공: 기존 work_assignment를 지우고 새 작업자로 덮어쓴다")
     void assign_whenAlreadyAssigned_thenReplaceAssignment() {
         when(outboundPendingRepository.existsByIdOrderIdAndIdTenantId("ORD-001", "CONK")).thenReturn(true);
-        when(workDetailRepository.findAllByIdOrderIdOrderByIdLocationIdAscIdSkuIdAsc("ORD-001"))
+        when(workDetailRepository.findAllByIdOrderIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc("ORD-001", "CONK"))
                 .thenReturn(List.of(new WorkDetail(
                         "WORK-OUT-CONK-ORD-001",
                         "ORD-001",

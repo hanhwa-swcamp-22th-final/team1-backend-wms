@@ -65,9 +65,9 @@ class GetOutboundConfirmOrdersServiceTest {
         when(outboundPendingRepository.findAllByIdOrderIdAndIdTenantId("ORD-001", "CONK")).thenReturn(List.of(pending));
         when(outboundPendingRepository.findAllByIdOrderIdAndIdTenantId("ORD-002", "CONK")).thenReturn(List.of(confirmed));
 
-        when(workDetailRepository.findAllByIdOrderIdOrderByIdLocationIdAscIdSkuIdAsc("ORD-001"))
+        when(workDetailRepository.findAllByIdOrderIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc("ORD-001", "CONK"))
                 .thenReturn(List.of(packedDetail("WORK-OUT-CONK-ORD-001", "ORD-001", "SKU-001", "LOC-A-01-01", 3)));
-        when(workDetailRepository.findAllByIdOrderIdOrderByIdLocationIdAscIdSkuIdAsc("ORD-002"))
+        when(workDetailRepository.findAllByIdOrderIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc("ORD-002", "CONK"))
                 .thenReturn(List.of(packedDetail("WORK-OUT-CONK-ORD-002", "ORD-002", "SKU-002", "LOC-A-01-02", 1)));
 
         when(allocatedInventoryRepository.findAllByIdOrderIdAndIdTenantId("ORD-001", "CONK"))

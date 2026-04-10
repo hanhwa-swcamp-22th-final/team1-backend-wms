@@ -11,6 +11,12 @@ public enum ErrorCode {
 
     TENANT_CODE_REQUIRED(HttpStatus.BAD_REQUEST, "COMMON-001", "X-Tenant-Code 헤더가 필요합니다."),
     KAFKA_DISPATCH_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "COMMON-002", "Kafka 이벤트 발행에 실패했습니다."),
+    AUTH_USER_ID_REQUIRED(HttpStatus.UNAUTHORIZED, "COMMON-003", "인증 사용자 식별 정보가 필요합니다."),
+    AUTH_ROLE_REQUIRED(HttpStatus.UNAUTHORIZED, "COMMON-004", "인증 역할 정보가 필요합니다."),
+    AUTH_ROLE_INVALID(HttpStatus.UNAUTHORIZED, "COMMON-005", "지원하지 않는 인증 역할입니다."),
+    AUTH_TENANT_ID_REQUIRED(HttpStatus.FORBIDDEN, "COMMON-006", "창고 권한 요청에는 tenant 식별 정보가 필요합니다."),
+    AUTH_SELLER_ID_REQUIRED(HttpStatus.FORBIDDEN, "COMMON-007", "셀러 권한 요청에는 seller 식별 정보가 필요합니다."),
+    AUTH_ROLE_FORBIDDEN(HttpStatus.FORBIDDEN, "COMMON-008", "현재 권한으로는 요청을 수행할 수 없습니다."),
 
     ASN_ID_REQUIRED(HttpStatus.BAD_REQUEST, "ASN-001", "ASN 번호는 필수입니다."),
     ASN_WAREHOUSE_ID_REQUIRED(HttpStatus.BAD_REQUEST, "ASN-002", "창고 ID는 필수입니다."),
@@ -49,6 +55,7 @@ public enum ErrorCode {
     ASN_WORK_STAGE_INVALID(HttpStatus.BAD_REQUEST, "ASN-035", "지원하지 않는 입고 작업 단계입니다."),
     ASN_PUTAWAY_NOT_READY(HttpStatus.CONFLICT, "ASN-036", "검수가 완료되지 않아 적재를 진행할 수 없습니다."),
     ASN_SELLER_WAREHOUSE_MISMATCH(HttpStatus.BAD_REQUEST, "ASN-037", "셀러가 이용할 수 없는 창고입니다."),
+    ASN_WORK_QUANTITY_EXCEEDED(HttpStatus.BAD_REQUEST, "ASN-038", "실제 처리 수량이 허용 수량을 초과할 수 없습니다."),
 
     OUTBOUND_ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "OUTBOUND-001", "출고 대상 주문을 찾을 수 없습니다."),
     OUTBOUND_DISPATCH_NOT_ALLOWED(HttpStatus.CONFLICT, "OUTBOUND-002", "현재 상태에서는 출고 지시를 진행할 수 없습니다."),
@@ -68,6 +75,7 @@ public enum ErrorCode {
     OUTBOUND_INVOICE_SOURCE_NOT_FOUND(HttpStatus.NOT_FOUND, "OUTBOUND-016", "송장 발행 대상 주문을 찾을 수 없습니다."),
     OUTBOUND_INVOICE_ORDER_IDS_REQUIRED(HttpStatus.BAD_REQUEST, "OUTBOUND-017", "송장 발행할 주문은 1건 이상이어야 합니다."),
     OUTBOUND_INVOICE_ALREADY_ISSUED(HttpStatus.CONFLICT, "OUTBOUND-023", "이미 송장이 발행된 주문입니다."),
+    OUTBOUND_WORK_QUANTITY_EXCEEDED(HttpStatus.BAD_REQUEST, "OUTBOUND-024", "실제 처리 수량이 허용 수량을 초과할 수 없습니다."),
     OUTBOUND_CONFIRM_NOT_READY(HttpStatus.CONFLICT, "OUTBOUND-018", "패킹 및 송장이 완료되지 않아 출고 확정을 진행할 수 없습니다."),
     OUTBOUND_CONFIRM_ALREADY_COMPLETED(HttpStatus.CONFLICT, "OUTBOUND-019", "이미 출고 확정된 주문입니다."),
     OUTBOUND_CONFIRM_ORDER_IDS_REQUIRED(HttpStatus.BAD_REQUEST, "OUTBOUND-020", "출고 확정할 주문은 1건 이상이어야 합니다."),

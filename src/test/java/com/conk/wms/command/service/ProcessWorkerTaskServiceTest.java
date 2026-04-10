@@ -72,16 +72,16 @@ class ProcessWorkerTaskServiceTest {
 
         when(workAssignmentRepository.findAllByIdWorkIdAndIdTenantId("WORK-OUT-CONK-ORD-001", "CONK"))
                 .thenReturn(List.of(assignment));
-        when(workDetailRepository.findByIdWorkIdAndIdOrderIdAndIdSkuIdAndIdLocationId(
-                "WORK-OUT-CONK-ORD-001", "ORD-001", "SKU-001", "LOC-A-01-01"
+        when(workDetailRepository.findByIdWorkIdAndIdOrderIdAndIdSkuIdAndIdLocationIdAndTenantId(
+                "WORK-OUT-CONK-ORD-001", "ORD-001", "SKU-001", "LOC-A-01-01", "CONK"
         )).thenReturn(Optional.of(detail));
         when(pickingPackingRepository.findByIdOrderIdAndIdSkuIdAndIdLocationIdAndIdTenantId(
                 "ORD-001", "SKU-001", "LOC-A-01-01", "CONK"
         )).thenReturn(Optional.empty());
         when(pickingPackingNoteSupport.mergePicking(null, "수량 부족", "2개만 피킹"))
                 .thenReturn("PICK::수량 부족::2개만 피킹");
-        when(workDetailRepository.findAllByIdWorkIdOrderByIdLocationIdAscIdSkuIdAsc(
-                "WORK-OUT-CONK-ORD-001"
+        when(workDetailRepository.findAllByIdWorkIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc(
+                "WORK-OUT-CONK-ORD-001", "CONK"
         )).thenReturn(List.of(detail));
 
         ProcessWorkerTaskResponse response = processWorkerTaskService.process(
@@ -120,16 +120,16 @@ class ProcessWorkerTaskServiceTest {
 
         when(workAssignmentRepository.findAllByIdWorkIdAndIdTenantId("WORK-OUT-CONK-ORD-001-PICK-WORKER-001", "CONK"))
                 .thenReturn(List.of(assignment));
-        when(workDetailRepository.findByIdWorkIdAndIdOrderIdAndIdSkuIdAndIdLocationId(
-                "WORK-OUT-CONK-ORD-001-PICK-WORKER-001", "ORD-001", "SKU-001", "LOC-A-01-01"
+        when(workDetailRepository.findByIdWorkIdAndIdOrderIdAndIdSkuIdAndIdLocationIdAndTenantId(
+                "WORK-OUT-CONK-ORD-001-PICK-WORKER-001", "ORD-001", "SKU-001", "LOC-A-01-01", "CONK"
         )).thenReturn(Optional.of(detail));
         when(pickingPackingRepository.findByIdOrderIdAndIdSkuIdAndIdLocationIdAndIdTenantId(
                 "ORD-001", "SKU-001", "LOC-A-01-01", "CONK"
         )).thenReturn(Optional.empty());
         when(pickingPackingNoteSupport.mergePicking(null, "", ""))
                 .thenReturn("");
-        when(workDetailRepository.findAllByIdWorkIdOrderByIdLocationIdAscIdSkuIdAsc(
-                "WORK-OUT-CONK-ORD-001-PICK-WORKER-001"
+        when(workDetailRepository.findAllByIdWorkIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc(
+                "WORK-OUT-CONK-ORD-001-PICK-WORKER-001", "CONK"
         )).thenReturn(List.of(detail));
         when(autoAssignTaskService.assignPackingIfReady("ORD-001", "CONK", "WORKER-001"))
                 .thenReturn(true);
@@ -167,16 +167,16 @@ class ProcessWorkerTaskServiceTest {
 
         when(workAssignmentRepository.findAllByIdWorkIdAndIdTenantId("WORK-OUT-CONK-ORD-001", "CONK"))
                 .thenReturn(List.of(assignment));
-        when(workDetailRepository.findByIdWorkIdAndIdOrderIdAndIdSkuIdAndIdLocationId(
-                "WORK-OUT-CONK-ORD-001", "ORD-001", "SKU-001", "LOC-A-01-01"
+        when(workDetailRepository.findByIdWorkIdAndIdOrderIdAndIdSkuIdAndIdLocationIdAndTenantId(
+                "WORK-OUT-CONK-ORD-001", "ORD-001", "SKU-001", "LOC-A-01-01", "CONK"
         )).thenReturn(Optional.of(detail));
         when(pickingPackingRepository.findByIdOrderIdAndIdSkuIdAndIdLocationIdAndIdTenantId(
                 "ORD-001", "SKU-001", "LOC-A-01-01", "CONK"
         )).thenReturn(Optional.of(pickingPacking));
         when(pickingPackingNoteSupport.mergePacking("PICK::정상::", "", ""))
                 .thenReturn("PICK::정상::||PACK::::");
-        when(workDetailRepository.findAllByIdWorkIdOrderByIdLocationIdAscIdSkuIdAsc(
-                "WORK-OUT-CONK-ORD-001"
+        when(workDetailRepository.findAllByIdWorkIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc(
+                "WORK-OUT-CONK-ORD-001", "CONK"
         )).thenReturn(List.of(detail));
 
         ProcessWorkerTaskResponse response = processWorkerTaskService.process(
@@ -210,8 +210,8 @@ class ProcessWorkerTaskServiceTest {
 
         when(workAssignmentRepository.findAllByIdWorkIdAndIdTenantId("WORK-OUT-CONK-ORD-001", "CONK"))
                 .thenReturn(List.of(assignment));
-        when(workDetailRepository.findByIdWorkIdAndIdOrderIdAndIdSkuIdAndIdLocationId(
-                "WORK-OUT-CONK-ORD-001", "ORD-001", "SKU-001", "LOC-A-01-01"
+        when(workDetailRepository.findByIdWorkIdAndIdOrderIdAndIdSkuIdAndIdLocationIdAndTenantId(
+                "WORK-OUT-CONK-ORD-001", "ORD-001", "SKU-001", "LOC-A-01-01", "CONK"
         )).thenReturn(Optional.of(detail));
         when(pickingPackingRepository.findByIdOrderIdAndIdSkuIdAndIdLocationIdAndIdTenantId(
                 "ORD-001", "SKU-001", "LOC-A-01-01", "CONK"
@@ -238,6 +238,80 @@ class ProcessWorkerTaskServiceTest {
     }
 
     @Test
+    @DisplayName("피킹 저장 실패: 작업 지시 수량보다 많이 처리하면 예외가 발생한다")
+    void processPicking_whenActualQuantityExceedsWorkQuantity_thenThrow() {
+        WorkAssignment assignment = new WorkAssignment("WORK-OUT-CONK-ORD-001", "CONK", "WORKER-001", "MANAGER-001");
+        WorkDetail detail = new WorkDetail("WORK-OUT-CONK-ORD-001", "ORD-001", "SKU-001", "LOC-A-01-01", 3, "MANAGER-001");
+
+        when(workAssignmentRepository.findAllByIdWorkIdAndIdTenantId("WORK-OUT-CONK-ORD-001", "CONK"))
+                .thenReturn(List.of(assignment));
+        when(workDetailRepository.findByIdWorkIdAndIdOrderIdAndIdSkuIdAndIdLocationIdAndTenantId(
+                "WORK-OUT-CONK-ORD-001", "ORD-001", "SKU-001", "LOC-A-01-01", "CONK"
+        )).thenReturn(Optional.of(detail));
+        when(pickingPackingRepository.findByIdOrderIdAndIdSkuIdAndIdLocationIdAndIdTenantId(
+                "ORD-001", "SKU-001", "LOC-A-01-01", "CONK"
+        )).thenReturn(Optional.empty());
+
+        BusinessException exception = assertThrows(BusinessException.class, () ->
+                processWorkerTaskService.process(
+                        "CONK",
+                        "WORK-OUT-CONK-ORD-001",
+                        "WORKER-001",
+                        "PICKING",
+                        "ORD-001",
+                        null,
+                        "SKU-001",
+                        "LOC-A-01-01",
+                        null,
+                        4,
+                        "",
+                        ""
+                )
+        );
+
+        assertEquals(ErrorCode.OUTBOUND_WORK_QUANTITY_EXCEEDED, exception.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("패킹 저장 실패: 피킹 수량보다 많이 처리하면 예외가 발생한다")
+    void processPacking_whenActualQuantityExceedsPickedQuantity_thenThrow() {
+        WorkAssignment assignment = new WorkAssignment("WORK-OUT-CONK-ORD-001", "CONK", "WORKER-001", "MANAGER-001");
+        WorkDetail detail = new WorkDetail("WORK-OUT-CONK-ORD-001", "ORD-001", "SKU-001", "LOC-A-01-01", 3, "MANAGER-001");
+        detail.markPicked("WORKER-001", "PICK::정상::", java.time.LocalDateTime.now());
+
+        PickingPacking pickingPacking = new PickingPacking("SKU-001", "LOC-A-01-01", "CONK", "ORD-001", "WORKER-001");
+        pickingPacking.recordPicking(2, "WORKER-001", "PICK::정상::", java.time.LocalDateTime.now());
+
+        when(workAssignmentRepository.findAllByIdWorkIdAndIdTenantId("WORK-OUT-CONK-ORD-001", "CONK"))
+                .thenReturn(List.of(assignment));
+        when(workDetailRepository.findByIdWorkIdAndIdOrderIdAndIdSkuIdAndIdLocationIdAndTenantId(
+                "WORK-OUT-CONK-ORD-001", "ORD-001", "SKU-001", "LOC-A-01-01", "CONK"
+        )).thenReturn(Optional.of(detail));
+        when(pickingPackingRepository.findByIdOrderIdAndIdSkuIdAndIdLocationIdAndIdTenantId(
+                "ORD-001", "SKU-001", "LOC-A-01-01", "CONK"
+        )).thenReturn(Optional.of(pickingPacking));
+
+        BusinessException exception = assertThrows(BusinessException.class, () ->
+                processWorkerTaskService.process(
+                        "CONK",
+                        "WORK-OUT-CONK-ORD-001",
+                        "WORKER-001",
+                        "PACKING",
+                        "ORD-001",
+                        null,
+                        "SKU-001",
+                        "LOC-A-01-01",
+                        null,
+                        3,
+                        "",
+                        ""
+                )
+        );
+
+        assertEquals(ErrorCode.OUTBOUND_WORK_QUANTITY_EXCEEDED, exception.getErrorCode());
+    }
+
+    @Test
     @DisplayName("검수 저장 성공: inspection_putaway와 work_detail을 함께 갱신한다")
     void processInspection_success() {
         WorkAssignment assignment = new WorkAssignment("WORK-IN-CONK-ASN-001-WORKER-003", "CONK", "WORKER-003", "CONK");
@@ -248,14 +322,14 @@ class ProcessWorkerTaskServiceTest {
 
         when(workAssignmentRepository.findAllByIdWorkIdAndIdTenantId("WORK-IN-CONK-ASN-001-WORKER-003", "CONK"))
                 .thenReturn(List.of(assignment));
-        when(workDetailRepository.findByIdWorkIdAndAsnIdAndIdSkuIdAndIdLocationId(
-                "WORK-IN-CONK-ASN-001-WORKER-003", "ASN-001", "SKU-001", "LOC-C-01-01"
+        when(workDetailRepository.findByIdWorkIdAndAsnIdAndIdSkuIdAndIdLocationIdAndTenantId(
+                "WORK-IN-CONK-ASN-001-WORKER-003", "ASN-001", "SKU-001", "LOC-C-01-01", "CONK"
         )).thenReturn(Optional.of(detail));
         when(inspectionPutawayRepository.findByAsnIdAndSkuId("ASN-001", "SKU-001"))
                 .thenReturn(Optional.of(row));
         when(inspectionPutawayNoteSupport.mergeInspection("수량 불일치", "2박스 확인"))
                 .thenReturn("INSP::수량 불일치::2박스 확인");
-        when(workDetailRepository.findAllByIdWorkIdOrderByIdLocationIdAscIdSkuIdAsc("WORK-IN-CONK-ASN-001-WORKER-003"))
+        when(workDetailRepository.findAllByIdWorkIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc("WORK-IN-CONK-ASN-001-WORKER-003", "CONK"))
                 .thenReturn(List.of(detail));
 
         ProcessWorkerTaskResponse response = processWorkerTaskService.process(
@@ -293,8 +367,8 @@ class ProcessWorkerTaskServiceTest {
 
         when(workAssignmentRepository.findAllByIdWorkIdAndIdTenantId("WORK-IN-CONK-ASN-001-WORKER-003", "CONK"))
                 .thenReturn(List.of(assignment));
-        when(workDetailRepository.findByIdWorkIdAndAsnIdAndIdSkuIdAndIdLocationId(
-                "WORK-IN-CONK-ASN-001-WORKER-003", "ASN-001", "SKU-001", "LOC-C-01-01"
+        when(workDetailRepository.findByIdWorkIdAndAsnIdAndIdSkuIdAndIdLocationIdAndTenantId(
+                "WORK-IN-CONK-ASN-001-WORKER-003", "ASN-001", "SKU-001", "LOC-C-01-01", "CONK"
         )).thenReturn(Optional.of(detail));
         when(inspectionPutawayRepository.findByAsnIdAndSkuId("ASN-001", "SKU-001"))
                 .thenReturn(Optional.of(row));
@@ -302,7 +376,7 @@ class ProcessWorkerTaskServiceTest {
                 .thenReturn("PUT::C-01-01::::");
         when(locationRepository.findByBinId("C-01-01"))
                 .thenReturn(Optional.empty());
-        when(workDetailRepository.findAllByIdWorkIdOrderByIdLocationIdAscIdSkuIdAsc("WORK-IN-CONK-ASN-001-WORKER-003"))
+        when(workDetailRepository.findAllByIdWorkIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc("WORK-IN-CONK-ASN-001-WORKER-003", "CONK"))
                 .thenReturn(List.of(detail));
 
         ProcessWorkerTaskResponse response = processWorkerTaskService.process(
@@ -326,5 +400,81 @@ class ProcessWorkerTaskServiceTest {
         assertEquals("PUTAWAY_COMPLETED", response.getDetailStatus());
         assertTrue(response.isWorkCompleted());
         assertEquals(5, row.getPutawayQuantity());
+    }
+
+    @Test
+    @DisplayName("검수 저장 실패: 작업 지시 수량보다 많이 처리하면 예외가 발생한다")
+    void processInspection_whenActualQuantityExceedsWorkQuantity_thenThrow() {
+        WorkAssignment assignment = new WorkAssignment("WORK-IN-CONK-ASN-001-WORKER-003", "CONK", "WORKER-003", "CONK");
+        WorkDetail detail = WorkDetail.forInspectionLoading("WORK-IN-CONK-ASN-001-WORKER-003",
+                "ASN-001", "SKU-001", "LOC-C-01-01", 5, "CONK");
+        InspectionPutaway row = new InspectionPutaway("ASN-001", "SKU-001", "CONK");
+        row.assignLocation("LOC-C-01-01");
+
+        when(workAssignmentRepository.findAllByIdWorkIdAndIdTenantId("WORK-IN-CONK-ASN-001-WORKER-003", "CONK"))
+                .thenReturn(List.of(assignment));
+        when(workDetailRepository.findByIdWorkIdAndAsnIdAndIdSkuIdAndIdLocationIdAndTenantId(
+                "WORK-IN-CONK-ASN-001-WORKER-003", "ASN-001", "SKU-001", "LOC-C-01-01", "CONK"
+        )).thenReturn(Optional.of(detail));
+        when(inspectionPutawayRepository.findByAsnIdAndSkuId("ASN-001", "SKU-001"))
+                .thenReturn(Optional.of(row));
+
+        BusinessException exception = assertThrows(BusinessException.class, () ->
+                processWorkerTaskService.process(
+                        "CONK",
+                        "WORK-IN-CONK-ASN-001-WORKER-003",
+                        "WORKER-003",
+                        "INSPECTION",
+                        null,
+                        "ASN-001",
+                        "SKU-001",
+                        "LOC-C-01-01",
+                        null,
+                        6,
+                        "",
+                        ""
+                )
+        );
+
+        assertEquals(ErrorCode.ASN_WORK_QUANTITY_EXCEEDED, exception.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("적재 저장 실패: 검수 완료 수량보다 많이 처리하면 예외가 발생한다")
+    void processPutaway_whenActualQuantityExceedsInspectedQuantity_thenThrow() {
+        WorkAssignment assignment = new WorkAssignment("WORK-IN-CONK-ASN-001-WORKER-003", "CONK", "WORKER-003", "CONK");
+        WorkDetail detail = WorkDetail.forInspectionLoading("WORK-IN-CONK-ASN-001-WORKER-003",
+                "ASN-001", "SKU-001", "LOC-C-01-01", 5, "CONK");
+        detail.markInspected("WORKER-003", "INSP::정상::", java.time.LocalDateTime.now());
+        InspectionPutaway row = new InspectionPutaway("ASN-001", "SKU-001", "CONK");
+        row.assignLocation("LOC-C-01-01");
+        row.saveProgress("LOC-C-01-01", 4, 1, "INSP::정상::", 0);
+
+        when(workAssignmentRepository.findAllByIdWorkIdAndIdTenantId("WORK-IN-CONK-ASN-001-WORKER-003", "CONK"))
+                .thenReturn(List.of(assignment));
+        when(workDetailRepository.findByIdWorkIdAndAsnIdAndIdSkuIdAndIdLocationIdAndTenantId(
+                "WORK-IN-CONK-ASN-001-WORKER-003", "ASN-001", "SKU-001", "LOC-C-01-01", "CONK"
+        )).thenReturn(Optional.of(detail));
+        when(inspectionPutawayRepository.findByAsnIdAndSkuId("ASN-001", "SKU-001"))
+                .thenReturn(Optional.of(row));
+
+        BusinessException exception = assertThrows(BusinessException.class, () ->
+                processWorkerTaskService.process(
+                        "CONK",
+                        "WORK-IN-CONK-ASN-001-WORKER-003",
+                        "WORKER-003",
+                        "PUTAWAY",
+                        null,
+                        "ASN-001",
+                        "SKU-001",
+                        "LOC-C-01-01",
+                        "C-01-01",
+                        5,
+                        "",
+                        ""
+                )
+        );
+
+        assertEquals(ErrorCode.ASN_WORK_QUANTITY_EXCEEDED, exception.getErrorCode());
     }
 }

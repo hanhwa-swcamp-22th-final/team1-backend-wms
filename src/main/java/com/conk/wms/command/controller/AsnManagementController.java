@@ -1,8 +1,7 @@
 package com.conk.wms.command.controller;
 
+import com.conk.wms.common.auth.AuthContext;
 import com.conk.wms.common.controller.ApiResponse;
-import com.conk.wms.common.exception.BusinessException;
-import com.conk.wms.common.exception.ErrorCode;
 import com.conk.wms.command.controller.dto.request.AssignAsnPutawayRequest;
 import com.conk.wms.command.controller.dto.request.ConfirmAsnArrivalRequest;
 import com.conk.wms.command.controller.dto.request.SaveAsnInspectionRequest;
@@ -26,11 +25,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+
+import static com.conk.wms.common.auth.AuthContextSupport.resolveActorId;
 
 /**
  * 창고 관리자 기준 ASN command API를 모아둔 컨트롤러다.
@@ -66,9 +66,9 @@ public class AsnManagementController {
     public ResponseEntity<ApiResponse<ConfirmAsnArrivalResponse>> confirmArrival(
             @PathVariable String asnId,
             @RequestBody(required = false) ConfirmAsnArrivalRequest request,
-            @RequestHeader(value = "X-Tenant-Code", required = false) String tenantCode
+            AuthContext authContext
     ) {
-        String actorId = resolveActorId(tenantCode);
+        String actorId = resolveActorId(authContext);
         Asn asn = confirmAsnArrivalService.confirm(new ConfirmAsnArrivalCommand(
                 asnId,
                 request != null ? request.getArrivedAt() : null,
@@ -89,15 +89,15 @@ public class AsnManagementController {
     public ResponseEntity<ApiResponse<AssignAsnPutawayResponse>> assignPutaway(
             @PathVariable String asnId,
             @RequestBody AssignAsnPutawayRequest request,
-            @RequestHeader(value = "X-Tenant-Code", required = false) String tenantCode
+            AuthContext authContext
     ) {
-        String resolvedTenantCode = resolveActorId(tenantCode);
+        String actorId = resolveActorId(authContext);
         List<AssignAsnPutawayRequest.ItemRequest> items = request != null && request.getItems() != null
                 ? request.getItems()
                 : List.of();
         int assignedCount = assignAsnPutawayService.assign(new AssignAsnPutawayCommand(
                 asnId,
-                resolvedTenantCode,
+                actorId,
                 items.stream()
                         .map(item -> new AssignAsnPutawayCommand.ItemCommand(
                                 item.getSkuId(),
@@ -116,15 +116,15 @@ public class AsnManagementController {
     public ResponseEntity<ApiResponse<SaveAsnInspectionResponse>> saveInspection(
             @PathVariable String asnId,
             @RequestBody SaveAsnInspectionRequest request,
-            @RequestHeader(value = "X-Tenant-Code", required = false) String tenantCode
+            AuthContext authContext
     ) {
-        String resolvedTenantCode = resolveActorId(tenantCode);
+        String actorId = resolveActorId(authContext);
         List<SaveAsnInspectionRequest.ItemRequest> items = request != null && request.getItems() != null
                 ? request.getItems()
                 : List.of();
         Asn asn = saveAsnInspectionService.save(new SaveAsnInspectionCommand(
                 asnId,
-                resolvedTenantCode,
+                actorId,
                 items.stream()
                         .map(item -> new SaveAsnInspectionCommand.ItemCommand(
                                 item.getSkuId(),
@@ -150,11 +150,11 @@ public class AsnManagementController {
     @PatchMapping("/{asnId}/inspection/complete")
     public ResponseEntity<ApiResponse<CompleteAsnInspectionResponse>> completeInspection(
             @PathVariable String asnId,
-            @RequestHeader(value = "X-Tenant-Code", required = false) String tenantCode
+            AuthContext authContext
     ) {
-        String resolvedTenantCode = resolveActorId(tenantCode);
+        String actorId = resolveActorId(authContext);
         CompleteAsnInspectionService.CompleteResult result = completeAsnInspectionService.complete(
-                new CompleteAsnInspectionCommand(asnId, resolvedTenantCode)
+                new CompleteAsnInspectionCommand(asnId, actorId)
         );
 
         CompleteAsnInspectionResponse response = new CompleteAsnInspectionResponse(
@@ -170,11 +170,11 @@ public class AsnManagementController {
     @PatchMapping("/{asnId}/confirm")
     public ResponseEntity<ApiResponse<ConfirmAsnInventoryResponse>> confirmInventory(
             @PathVariable String asnId,
-            @RequestHeader(value = "X-Tenant-Code", required = false) String tenantCode
+            AuthContext authContext
     ) {
-        String resolvedTenantCode = resolveActorId(tenantCode);
+        String actorId = resolveActorId(authContext);
         ConfirmAsnInventoryService.ConfirmResult result = confirmAsnInventoryService.confirm(
-                new ConfirmAsnInventoryCommand(asnId, resolvedTenantCode)
+                new ConfirmAsnInventoryCommand(asnId, actorId)
         );
 
         ConfirmAsnInventoryResponse response = new ConfirmAsnInventoryResponse(
@@ -186,10 +186,4 @@ public class AsnManagementController {
         return ResponseEntity.ok(ApiResponse.success("inventory confirmed", response));
     }
 
-    private String resolveActorId(String tenantCode) {
-        if (tenantCode == null || tenantCode.isBlank()) {
-            throw new BusinessException(ErrorCode.TENANT_CODE_REQUIRED);
-        }
-        return tenantCode;
-    }
 }

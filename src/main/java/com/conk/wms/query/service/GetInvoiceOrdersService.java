@@ -49,7 +49,7 @@ public class GetInvoiceOrdersService {
         List<String> candidateOrderIds = outboundPendingRepository.findAllByIdTenantId(tenantCode).stream()
                 .map(outboundPending -> outboundPending.getId().getOrderId())
                 .distinct()
-                .filter(orderId -> isPacked(orderId))
+                .filter(orderId -> isPacked(orderId, tenantCode))
                 .toList();
 
         Map<String, ShipmentInvoiceDto> issuedInvoices = integrationServiceClient.getShipmentInvoices(tenantCode, candidateOrderIds);
@@ -97,8 +97,8 @@ public class GetInvoiceOrdersService {
                 .build();
     }
 
-    private boolean isPacked(String orderId) {
-        List<WorkDetail> details = workDetailRepository.findAllByIdOrderIdOrderByIdLocationIdAscIdSkuIdAsc(orderId);
+    private boolean isPacked(String orderId, String tenantCode) {
+        List<WorkDetail> details = workDetailRepository.findAllByIdOrderIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc(orderId, tenantCode);
         List<WorkDetail> packingDetails = details.stream()
                 .filter(WorkDetail::isPackingRelevantWork)
                 .toList();

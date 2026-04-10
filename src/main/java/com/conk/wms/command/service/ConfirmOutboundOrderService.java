@@ -14,7 +14,7 @@ import com.conk.wms.common.exception.BusinessException;
 import com.conk.wms.common.exception.ErrorCode;
 import com.conk.wms.query.client.OrderServiceClient;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -36,80 +36,84 @@ public class ConfirmOutboundOrderService {
     private final InventoryRepository inventoryRepository;
     private final OutboundCompletedRepository outboundCompletedRepository;
     private final OrderServiceClient orderServiceClient;
+    private final TransactionTemplate transactionTemplate;
 
     public ConfirmOutboundOrderService(OutboundPendingRepository outboundPendingRepository,
                                        WorkDetailRepository workDetailRepository,
                                        AllocatedInventoryRepository allocatedInventoryRepository,
                                        InventoryRepository inventoryRepository,
                                        OutboundCompletedRepository outboundCompletedRepository,
-                                       OrderServiceClient orderServiceClient) {
+                                       OrderServiceClient orderServiceClient,
+                                       TransactionTemplate transactionTemplate) {
         this.outboundPendingRepository = outboundPendingRepository;
         this.workDetailRepository = workDetailRepository;
         this.allocatedInventoryRepository = allocatedInventoryRepository;
         this.inventoryRepository = inventoryRepository;
         this.outboundCompletedRepository = outboundCompletedRepository;
         this.orderServiceClient = orderServiceClient;
+        this.transactionTemplate = transactionTemplate;
     }
 
     /**
      * 주문 한 건을 최종 출고 확정하고 ALLOCATED 재고를 차감 마감한다.
      */
-    @Transactional
     public ConfirmResult confirm(String orderId, String tenantCode, String actorId) {
-        if (outboundCompletedRepository.existsByIdOrderIdAndIdTenantId(orderId, tenantCode)) {
-            throw new BusinessException(ErrorCode.OUTBOUND_CONFIRM_ALREADY_COMPLETED);
-        }
+        ConfirmResult result = executeInTransaction(() -> {
+            if (outboundCompletedRepository.existsByIdOrderIdAndIdTenantId(orderId, tenantCode)) {
+                throw new BusinessException(ErrorCode.OUTBOUND_CONFIRM_ALREADY_COMPLETED);
+            }
 
-        List<OutboundPending> pendingRows = outboundPendingRepository.findAllByIdOrderIdAndIdTenantId(orderId, tenantCode);
-        if (pendingRows.isEmpty()) {
-            throw new BusinessException(
-                    ErrorCode.OUTBOUND_CONFIRM_SOURCE_NOT_FOUND,
-                    ErrorCode.OUTBOUND_CONFIRM_SOURCE_NOT_FOUND.getMessage() + ": " + orderId
-            );
-        }
+            List<OutboundPending> pendingRows = outboundPendingRepository.findAllByIdOrderIdAndIdTenantId(orderId, tenantCode);
+            if (pendingRows.isEmpty()) {
+                throw new BusinessException(
+                        ErrorCode.OUTBOUND_CONFIRM_SOURCE_NOT_FOUND,
+                        ErrorCode.OUTBOUND_CONFIRM_SOURCE_NOT_FOUND.getMessage() + ": " + orderId
+                );
+            }
 
-        validateReady(orderId, pendingRows);
+            validateReady(orderId, tenantCode, pendingRows);
 
-        List<AllocatedInventory> allocatedRows = allocatedInventoryRepository.findAllByIdOrderIdAndIdTenantId(orderId, tenantCode);
-        if (allocatedRows.isEmpty()) {
-            throw new BusinessException(
-                    ErrorCode.OUTBOUND_CONFIRM_SOURCE_NOT_FOUND,
-                    ErrorCode.OUTBOUND_CONFIRM_SOURCE_NOT_FOUND.getMessage() + ": " + orderId
-            );
-        }
+            List<AllocatedInventory> allocatedRows = allocatedInventoryRepository.findAllByIdOrderIdAndIdTenantId(orderId, tenantCode);
+            if (allocatedRows.isEmpty()) {
+                throw new BusinessException(
+                        ErrorCode.OUTBOUND_CONFIRM_SOURCE_NOT_FOUND,
+                        ErrorCode.OUTBOUND_CONFIRM_SOURCE_NOT_FOUND.getMessage() + ": " + orderId
+                );
+            }
 
-        LocalDateTime confirmedAt = LocalDateTime.now();
-        String actor = actorId == null || actorId.isBlank() ? "SYSTEM" : actorId;
-        int releasedRowCount = 0;
+            LocalDateTime confirmedAt = LocalDateTime.now();
+            String actor = actorId == null || actorId.isBlank() ? "SYSTEM" : actorId;
+            int releasedRowCount = 0;
 
-        for (AllocatedInventory allocated : allocatedRows) {
-            Inventory allocatedInventory = inventoryRepository
-                    .findByIdLocationIdAndIdSkuAndIdTenantIdAndIdInventoryType(
-                            allocated.getId().getLocationId(),
-                            allocated.getId().getSkuId(),
-                            tenantCode,
-                            "ALLOCATED"
-                    )
-                    .orElseThrow(() -> new BusinessException(ErrorCode.OUTBOUND_CONFIRM_ALLOCATED_NOT_FOUND));
+            for (AllocatedInventory allocated : allocatedRows) {
+                Inventory allocatedInventory = inventoryRepository
+                        .findByIdLocationIdAndIdSkuAndIdTenantIdAndIdInventoryType(
+                                allocated.getId().getLocationId(),
+                                allocated.getId().getSkuId(),
+                                tenantCode,
+                                "ALLOCATED"
+                        )
+                        .orElseThrow(() -> new BusinessException(ErrorCode.OUTBOUND_CONFIRM_ALLOCATED_NOT_FOUND));
 
-            allocatedInventory.deduct(allocated.getQuantity());
-            inventoryRepository.save(allocatedInventory);
+                allocatedInventory.deduct(allocated.getQuantity());
+                inventoryRepository.save(allocatedInventory);
 
-            allocated.release(actor, confirmedAt);
-            allocatedInventoryRepository.save(allocated);
-            releasedRowCount++;
-        }
+                allocated.release(actor, confirmedAt);
+                allocatedInventoryRepository.save(allocated);
+                releasedRowCount++;
+            }
 
-        outboundCompletedRepository.save(new OutboundCompleted(orderId, tenantCode, actor, confirmedAt));
+            outboundCompletedRepository.save(new OutboundCompleted(orderId, tenantCode, actor, confirmedAt));
+            return new ConfirmResult(orderId, ORDER_STATUS_OUTBOUND_COMPLETED, releasedRowCount, confirmedAt);
+        });
+
         orderServiceClient.updateOrderStatus(orderId, Map.of("status", ORDER_STATUS_OUTBOUND_COMPLETED));
-
-        return new ConfirmResult(orderId, ORDER_STATUS_OUTBOUND_COMPLETED, releasedRowCount, confirmedAt);
+        return result;
     }
 
     /**
      * 여러 주문을 순차적으로 출고 확정한다. 현재는 fail-fast 방식으로 단순화했다.
      */
-    @Transactional
     public BulkConfirmResult confirmBulk(List<String> orderIds, String tenantCode, String actorId, boolean includeCsv) {
         if (orderIds == null || orderIds.isEmpty()) {
             throw new BusinessException(ErrorCode.OUTBOUND_CONFIRM_ORDER_IDS_REQUIRED);
@@ -123,9 +127,17 @@ public class ConfirmOutboundOrderService {
         return new BulkConfirmResult(orderIds.size(), releasedRowCount, includeCsv);
     }
 
-    private void validateReady(String orderId, List<OutboundPending> pendingRows) {
+    private <T> T executeInTransaction(java.util.function.Supplier<T> supplier) {
+        T result = transactionTemplate.execute(status -> supplier.get());
+        if (result == null) {
+            throw new IllegalStateException("transaction callback returned null");
+        }
+        return result;
+    }
+
+    private void validateReady(String orderId, String tenantCode, List<OutboundPending> pendingRows) {
         boolean invoiceIssued = pendingRows.stream().allMatch(pending -> pending.getInvoiceIssuedAt() != null);
-        List<WorkDetail> details = workDetailRepository.findAllByIdOrderIdOrderByIdLocationIdAscIdSkuIdAsc(orderId);
+        List<WorkDetail> details = workDetailRepository.findAllByIdOrderIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc(orderId, tenantCode);
         List<WorkDetail> packingDetails = details.stream()
                 .filter(WorkDetail::isPackingRelevantWork)
                 .toList();

@@ -39,8 +39,11 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -90,9 +93,11 @@ class GetWarehouseDetailsServiceTest {
         Inventory allocated = new Inventory("LOC-A-01-02", "SKU-001", "CONK", 2, "ALLOCATED", LocalDateTime.now(), LocalDateTime.now());
 
         when(warehouseRepository.findByWarehouseIdAndTenantId("WH-001", "CONK")).thenReturn(Optional.of(warehouse));
-        when(locationRepository.findAll()).thenReturn(List.of(loc1, loc2));
-        when(inventoryRepository.findAllByIdTenantId("CONK")).thenReturn(List.of(available, allocated));
-        when(productRepository.findAll()).thenReturn(List.of(new Product("SKU-001", "상품A", "SELLER-001", "ACTIVE")));
+        when(locationRepository.findAllByWarehouseIdOrderByZoneIdAscRackIdAscBinIdAsc("WH-001")).thenReturn(List.of(loc1, loc2));
+        when(inventoryRepository.findAllByIdTenantIdAndIdLocationIdIn("CONK", Set.of("LOC-A-01-01", "LOC-A-01-02")))
+                .thenReturn(List.of(available, allocated));
+        when(productRepository.findAllBySkuIdIn(Set.of("SKU-001")))
+                .thenReturn(List.of(new Product("SKU-001", "상품A", "SELLER-001", "ACTIVE")));
         when(asnRepository.findAllByWarehouseId("WH-001")).thenReturn(List.of());
         when(orderServiceClient.getPendingOrders("CONK")).thenReturn(List.of());
 
@@ -103,6 +108,8 @@ class GetWarehouseDetailsServiceTest {
         assertThat(responses.get(0).getAvailable()).isEqualTo(10);
         assertThat(responses.get(0).getAllocated()).isEqualTo(2);
         assertThat(responses.get(0).getTotal()).isEqualTo(12);
+        verify(locationRepository, never()).findAll();
+        verify(productRepository, never()).findAll();
     }
 
     @Test
@@ -115,8 +122,9 @@ class GetWarehouseDetailsServiceTest {
         Inventory used = Inventory.createAvailable("LOC-A-01-01", "SKU-001", "CONK", 10, LocalDateTime.now());
 
         when(warehouseRepository.findByWarehouseIdAndTenantId("WH-001", "CONK")).thenReturn(Optional.of(warehouse));
-        when(locationRepository.findAll()).thenReturn(List.of(loc1, loc2, loc3));
-        when(inventoryRepository.findAllByIdTenantId("CONK")).thenReturn(List.of(used));
+        when(locationRepository.findAllByWarehouseIdOrderByZoneIdAscRackIdAscBinIdAsc("WH-001")).thenReturn(List.of(loc1, loc2, loc3));
+        when(inventoryRepository.findAllByIdTenantIdAndIdLocationIdIn("CONK", Set.of("LOC-A-01-01", "LOC-A-01-02", "LOC-A-01-03")))
+                .thenReturn(List.of(used));
 
         List<WarehouseLocationZoneResponse> responses = getWarehouseDetailsService.getLocations("CONK", "WH-001");
 
@@ -155,7 +163,7 @@ class GetWarehouseDetailsServiceTest {
         AllocatedInventory allocatedInventory = new AllocatedInventory("ORD-001", "SKU-001", "LOC-A-01-01", "CONK", 3, "SYSTEM");
 
         when(warehouseRepository.findByWarehouseIdAndTenantId("WH-001", "CONK")).thenReturn(Optional.of(warehouse));
-        when(locationRepository.findAll()).thenReturn(List.of(loc1));
+        when(locationRepository.findAllByWarehouseIdOrderByZoneIdAscRackIdAscBinIdAsc("WH-001")).thenReturn(List.of(loc1));
         when(orderServiceClient.getPendingOrder("CONK", "ORD-001")).thenReturn(Optional.of(order));
         when(orderServiceClient.getPendingOrders("CONK")).thenReturn(List.of(order));
         when(memberServiceClient.getWorkerAccounts("CONK")).thenReturn(List.of(WorkerAccountDto.builder()
@@ -164,10 +172,16 @@ class GetWarehouseDetailsServiceTest {
                 .email("worker1@conk.test")
                 .accountStatus("ACTIVE")
                 .build()));
-        when(workAssignmentRepository.findAllByIdTenantId("CONK")).thenReturn(List.of(assignment));
-        when(workDetailRepository.findAll()).thenReturn(List.of(detail));
-        when(outboundPendingRepository.findAllByIdTenantId("CONK")).thenReturn(List.of());
-        when(outboundCompletedRepository.findAllByIdTenantId("CONK")).thenReturn(List.of());
+        when(workDetailRepository.findAllByReferenceTypeAndIdOrderIdInAndIdLocationIdInOrderByIdOrderIdAscIdLocationIdAscIdSkuIdAsc(
+                "ORDER",
+                Set.of("ORD-001"),
+                Set.of("LOC-A-01-01")
+        )).thenReturn(List.of(detail));
+        when(workAssignmentRepository.findAllByIdTenantIdAndIdWorkIdIn("CONK", Set.of("WORK-OUT-CONK-ORD-001-WORKER-001")))
+                .thenReturn(List.of(assignment));
+        when(outboundPendingRepository.findAllByIdTenantIdAndIdOrderIdInAndIdLocationIdIn("CONK", Set.of("ORD-001"), Set.of("LOC-A-01-01")))
+                .thenReturn(List.of());
+        when(outboundCompletedRepository.findAllByIdTenantIdAndIdOrderIdIn("CONK", Set.of("ORD-001"))).thenReturn(List.of());
         when(allocatedInventoryRepository.findAllByIdOrderIdAndIdTenantId("ORD-001", "CONK")).thenReturn(List.of(allocatedInventory));
 
         WarehouseOrderDetailResponse response = getWarehouseDetailsService.getOrderDetail("CONK", "WH-001", "ORD-001");
@@ -178,6 +192,7 @@ class GetWarehouseDetailsServiceTest {
         assertThat(response.getSkuItems().get(0).getLocation()).isEqualTo("A-01-01");
         assertThat(response.getSkuItems().get(0).getWorker()).isEqualTo("김피커");
         assertThat(response.getSkuItems().get(0).getWorkStatus()).isEqualTo("PICKED");
+        verify(workDetailRepository, never()).findAll();
     }
 
     private Warehouse warehouse() {

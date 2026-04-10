@@ -3,11 +3,13 @@ package com.conk.wms.command;
 import com.conk.wms.command.domain.aggregate.AllocatedInventory;
 import com.conk.wms.command.domain.aggregate.Inventory;
 import com.conk.wms.command.domain.aggregate.OutboundPending;
+import com.conk.wms.command.domain.aggregate.WorkAssignment;
 import com.conk.wms.command.domain.aggregate.WorkDetail;
 import com.conk.wms.command.domain.repository.AllocatedInventoryRepository;
 import com.conk.wms.command.domain.repository.InventoryRepository;
 import com.conk.wms.command.domain.repository.OutboundCompletedRepository;
 import com.conk.wms.command.domain.repository.OutboundPendingRepository;
+import com.conk.wms.command.domain.repository.WorkAssignmentRepository;
 import com.conk.wms.command.domain.repository.WorkDetailRepository;
 import com.conk.wms.query.client.StubIntegrationServiceClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -54,6 +56,9 @@ class OutboundConfirmFlowIntegrationTest {
     private WorkDetailRepository workDetailRepository;
 
     @Autowired
+    private WorkAssignmentRepository workAssignmentRepository;
+
+    @Autowired
     private OutboundCompletedRepository outboundCompletedRepository;
 
     @Autowired
@@ -65,6 +70,7 @@ class OutboundConfirmFlowIntegrationTest {
         outboundPendingRepository.save(new OutboundPending("ORD-001", "SKU-001", "LOC-A-01-01", "CONK", "SYSTEM"));
         allocatedInventoryRepository.save(new AllocatedInventory("ORD-001", "SKU-001", "LOC-A-01-01", "CONK", 3, "SYSTEM"));
         inventoryRepository.save(new Inventory("LOC-A-01-01", "SKU-001", "CONK", 3, "ALLOCATED"));
+        workAssignmentRepository.save(new WorkAssignment("WORK-OUT-CONK-ORD-001", "CONK", "WORKER-001", "SYSTEM"));
 
         WorkDetail detail = new WorkDetail("WORK-OUT-CONK-ORD-001", "ORD-001", "SKU-001", "LOC-A-01-01", 3, "SYSTEM");
         detail.markPacked("SYSTEM", "", LocalDateTime.of(2026, 4, 6, 10, 0));

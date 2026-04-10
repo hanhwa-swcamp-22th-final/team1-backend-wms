@@ -1,7 +1,6 @@
 package com.conk.wms.query.controller;
 
-import com.conk.wms.common.exception.BusinessException;
-import com.conk.wms.common.exception.ErrorCode;
+import com.conk.wms.common.auth.AuthContext;
 import com.conk.wms.common.controller.ApiResponse;
 import com.conk.wms.query.service.GetAsnDetailService;
 import com.conk.wms.query.service.GetAsnKpiService;
@@ -10,9 +9,10 @@ import com.conk.wms.query.controller.dto.response.AsnKpiResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import static com.conk.wms.common.auth.AuthContextSupport.resolveSellerId;
 
 /**
  * 셀러와 공용 ASN 조회 API를 제공하는 컨트롤러다.
@@ -37,9 +37,9 @@ public class AsnQueryController {
     // 추후 관리자 권한이 붙으면 같은 경로라도 권한에 따라 집계 범위를 다르게 줄 수 있다.
     @GetMapping("/kpi")
     public ResponseEntity<ApiResponse<AsnKpiResponse>> getAsnKpi(
-            @RequestHeader(value = "X-Tenant-Code", required = false) String tenantCode
+            AuthContext authContext
     ) {
-        String sellerId = resolveSellerId(tenantCode);
+        String sellerId = resolveSellerId(authContext);
         AsnKpiResponse response = getAsnKpiService.getAsnKpi(sellerId);
         return ResponseEntity.ok(ApiResponse.success("ok", response));
     }
@@ -49,18 +49,10 @@ public class AsnQueryController {
     @GetMapping("/{asnId}")
     public ResponseEntity<ApiResponse<AsnDetailResponse>> getAsnDetail(
             @PathVariable String asnId,
-            @RequestHeader(value = "X-Tenant-Code", required = false) String tenantCode
+            AuthContext authContext
     ) {
-        String sellerId = resolveSellerId(tenantCode);
+        String sellerId = resolveSellerId(authContext);
         AsnDetailResponse response = getAsnDetailService.getAsnDetail(sellerId, asnId);
         return ResponseEntity.ok(ApiResponse.success("ok", response));
-    }
-
-    // 아직 security context가 없어서 tenant header를 seller 식별값 대용으로 사용한다.
-    private String resolveSellerId(String tenantCode) {
-        if (tenantCode == null || tenantCode.isBlank()) {
-            throw new BusinessException(ErrorCode.TENANT_CODE_REQUIRED);
-        }
-        return tenantCode;
     }
 }

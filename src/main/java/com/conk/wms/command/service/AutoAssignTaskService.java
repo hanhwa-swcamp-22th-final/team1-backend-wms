@@ -122,7 +122,7 @@ public class AutoAssignTaskService {
      */
     @Transactional
     public boolean assignPackingIfReady(String orderId, String tenantCode, String lastPickingWorkerId) {
-        List<WorkDetail> orderDetails = workDetailRepository.findAllByIdOrderIdOrderByIdLocationIdAscIdSkuIdAsc(orderId);
+        List<WorkDetail> orderDetails = workDetailRepository.findAllByIdOrderIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc(orderId, tenantCode);
         List<WorkDetail> pickingDetails = orderDetails.stream()
                 .filter(WorkDetail::isPickingOnlyWork)
                 .toList();
@@ -231,7 +231,7 @@ public class AutoAssignTaskService {
 
     public void clearExistingAssignments(String orderId, String tenantCode) {
         Set<String> existingWorkIds = new LinkedHashSet<>();
-        workDetailRepository.findAllByIdOrderIdOrderByIdLocationIdAscIdSkuIdAsc(orderId).forEach(detail ->
+        workDetailRepository.findAllByIdOrderIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc(orderId, tenantCode).forEach(detail ->
                 existingWorkIds.add(detail.getId().getWorkId()));
 
         deleteAssignmentsByWorkIds(existingWorkIds, tenantCode);
@@ -239,7 +239,7 @@ public class AutoAssignTaskService {
 
     public void clearExistingInspectionAssignments(String asnId, String tenantCode) {
         Set<String> existingWorkIds = new LinkedHashSet<>();
-        workDetailRepository.findAllByAsnIdOrderByIdLocationIdAscIdSkuIdAsc(asnId).forEach(detail ->
+        workDetailRepository.findAllByAsnIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc(asnId, tenantCode).forEach(detail ->
                 existingWorkIds.add(detail.getId().getWorkId()));
 
         deleteAssignmentsByWorkIds(existingWorkIds, tenantCode);
@@ -247,8 +247,8 @@ public class AutoAssignTaskService {
 
     private void deleteAssignmentsByWorkIds(Set<String> workIds, String tenantCode) {
         for (String workId : workIds) {
+            workDetailRepository.deleteAllByIdWorkIdAndTenantId(workId, tenantCode);
             workAssignmentRepository.deleteAllByIdWorkIdAndIdTenantId(workId, tenantCode);
-            workDetailRepository.deleteAllByIdWorkId(workId);
         }
     }
 

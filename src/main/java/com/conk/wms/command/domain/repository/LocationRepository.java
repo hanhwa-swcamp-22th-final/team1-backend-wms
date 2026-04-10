@@ -15,6 +15,8 @@ public interface LocationRepository extends JpaRepository<Location, String> {
 
     List<Location> findAllByWarehouseIdAndActiveTrueOrderByZoneIdAscRackIdAscBinIdAsc(String warehouseId);
 
+    List<Location> findAllByWarehouseIdOrderByZoneIdAscRackIdAscBinIdAsc(String warehouseId);
+
     List<Location> findAllByWorkerAccountIdOrderByZoneIdAscRackIdAscBinIdAsc(String workerAccountId);
 
     List<Location> findAllByLocationIdIn(Collection<String> locationIds);

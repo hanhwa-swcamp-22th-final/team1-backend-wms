@@ -55,8 +55,9 @@ public class GetPickingListsService {
     public List<PickingListResponse> getPickingLists(String tenantCode) {
         return workAssignmentRepository.findAllByIdTenantId(tenantCode).stream()
                 .sorted(Comparator.comparing(WorkAssignment::getAssignedAt).reversed())
-                .map(assignment -> toSummary(assignment, workDetailRepository.findAllByIdWorkIdOrderByIdLocationIdAscIdSkuIdAsc(
-                        assignment.getId().getWorkId())))
+                .map(assignment -> toSummary(assignment, workDetailRepository.findAllByIdWorkIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc(
+                        assignment.getId().getWorkId(),
+                        tenantCode)))
                 .toList();
     }
 
@@ -72,7 +73,7 @@ public class GetPickingListsService {
                         ErrorCode.OUTBOUND_PICKING_LIST_NOT_FOUND.getMessage() + ": " + workId
                 ));
 
-        List<WorkDetail> details = workDetailRepository.findAllByIdWorkIdOrderByIdLocationIdAscIdSkuIdAsc(workId);
+        List<WorkDetail> details = workDetailRepository.findAllByIdWorkIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc(workId, tenantCode);
         Summary summary = summarize(assignment, details);
 
         Map<String, String> productNamesBySku = details.stream()

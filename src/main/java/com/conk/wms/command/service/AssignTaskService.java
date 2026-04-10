@@ -54,7 +54,7 @@ public class AssignTaskService {
         }
 
         String workId = buildWorkId(orderId, tenantCode);
-        boolean reassigned = !workDetailRepository.findAllByIdOrderIdOrderByIdLocationIdAscIdSkuIdAsc(orderId).isEmpty();
+        boolean reassigned = !workDetailRepository.findAllByIdOrderIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc(orderId, tenantCode).isEmpty();
         if (reassigned) {
             autoAssignTaskService.clearExistingAssignments(orderId, tenantCode);
         }

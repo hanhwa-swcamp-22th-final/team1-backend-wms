@@ -18,6 +18,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.support.SimpleTransactionStatus;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -52,8 +55,18 @@ class DispatchPendingOrderServiceTest {
     @Mock
     private AutoAssignTaskService autoAssignTaskService;
 
+    @Mock
+    private TransactionTemplate transactionTemplate;
+
     @InjectMocks
     private DispatchPendingOrderService dispatchPendingOrderService;
+
+    @org.junit.jupiter.api.BeforeEach
+    void setUp() {
+        when(transactionTemplate.execute(any(TransactionCallback.class)))
+                .thenAnswer(invocation -> ((TransactionCallback<?>) invocation.getArgument(0))
+                        .doInTransaction(new SimpleTransactionStatus()));
+    }
 
     @Test
     @DisplayName("개별 출고 지시 성공: AVAILABLE 재고를 ALLOCATED로 이동하고 할당 이력을 저장한다")
@@ -75,7 +88,7 @@ class DispatchPendingOrderServiceTest {
                         .build()
         ));
         when(outboundPendingRepository.existsByIdOrderIdAndIdTenantId("ORD-001", "CONK")).thenReturn(false);
-        when(inventoryRepository.findAllByIdSkuAndIdTenantId("SKU-001", "CONK"))
+        when(inventoryRepository.findAllocatableAvailableBySkuAndTenantIdForUpdate("SKU-001", "CONK"))
                 .thenReturn(List.of(new Inventory("LOC-A-01-01", "SKU-001", "CONK", 10, "AVAILABLE")));
         when(inventoryRepository.findByIdLocationIdAndIdSkuAndIdTenantIdAndIdInventoryType(
                 "LOC-A-01-01", "SKU-001", "CONK", "ALLOCATED"))
@@ -129,7 +142,7 @@ class DispatchPendingOrderServiceTest {
                         .build()
         ));
         when(outboundPendingRepository.existsByIdOrderIdAndIdTenantId("ORD-001", "CONK")).thenReturn(false);
-        when(inventoryRepository.findAllByIdSkuAndIdTenantId("SKU-001", "CONK"))
+        when(inventoryRepository.findAllocatableAvailableBySkuAndTenantIdForUpdate("SKU-001", "CONK"))
                 .thenReturn(List.of(new Inventory("LOC-A-01-01", "SKU-001", "CONK", 2, "AVAILABLE")));
 
         BusinessException exception = assertThrows(BusinessException.class, () ->

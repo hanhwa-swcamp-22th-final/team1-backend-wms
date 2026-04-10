@@ -19,6 +19,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.support.SimpleTransactionStatus;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -52,8 +55,18 @@ class ConfirmOutboundOrderServiceTest {
     @Mock
     private OrderServiceClient orderServiceClient;
 
+    @Mock
+    private TransactionTemplate transactionTemplate;
+
     @InjectMocks
     private ConfirmOutboundOrderService confirmOutboundOrderService;
+
+    @org.junit.jupiter.api.BeforeEach
+    void setUp() {
+        when(transactionTemplate.execute(any(TransactionCallback.class)))
+                .thenAnswer(invocation -> ((TransactionCallback<?>) invocation.getArgument(0))
+                        .doInTransaction(new SimpleTransactionStatus()));
+    }
 
     @Test
     @DisplayName("출고 확정 성공 시 ALLOCATED 재고를 차감하고 완료 이력을 저장한다")
@@ -65,7 +78,7 @@ class ConfirmOutboundOrderServiceTest {
 
         when(outboundCompletedRepository.existsByIdOrderIdAndIdTenantId("ORD-001", "CONK")).thenReturn(false);
         when(outboundPendingRepository.findAllByIdOrderIdAndIdTenantId("ORD-001", "CONK")).thenReturn(List.of(pending));
-        when(workDetailRepository.findAllByIdOrderIdOrderByIdLocationIdAscIdSkuIdAsc("ORD-001"))
+        when(workDetailRepository.findAllByIdOrderIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc("ORD-001", "CONK"))
                 .thenReturn(List.of(packedDetail()));
         when(allocatedInventoryRepository.findAllByIdOrderIdAndIdTenantId("ORD-001", "CONK"))
                 .thenReturn(List.of(allocated));
@@ -101,7 +114,7 @@ class ConfirmOutboundOrderServiceTest {
 
         when(outboundCompletedRepository.existsByIdOrderIdAndIdTenantId("ORD-001", "CONK")).thenReturn(false);
         when(outboundPendingRepository.findAllByIdOrderIdAndIdTenantId("ORD-001", "CONK")).thenReturn(List.of(pending));
-        when(workDetailRepository.findAllByIdOrderIdOrderByIdLocationIdAscIdSkuIdAsc("ORD-001"))
+        when(workDetailRepository.findAllByIdOrderIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc("ORD-001", "CONK"))
                 .thenReturn(List.of(splitPickedDetail(), splitPackedDetail()));
         when(allocatedInventoryRepository.findAllByIdOrderIdAndIdTenantId("ORD-001", "CONK"))
                 .thenReturn(List.of(allocated));
@@ -122,7 +135,7 @@ class ConfirmOutboundOrderServiceTest {
         OutboundPending pending = new OutboundPending("ORD-001", "SKU-001", "LOC-A-01-01", "CONK", "SYSTEM");
         when(outboundCompletedRepository.existsByIdOrderIdAndIdTenantId("ORD-001", "CONK")).thenReturn(false);
         when(outboundPendingRepository.findAllByIdOrderIdAndIdTenantId("ORD-001", "CONK")).thenReturn(List.of(pending));
-        when(workDetailRepository.findAllByIdOrderIdOrderByIdLocationIdAscIdSkuIdAsc("ORD-001"))
+        when(workDetailRepository.findAllByIdOrderIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc("ORD-001", "CONK"))
                 .thenReturn(List.of(new WorkDetail("WORK-OUT-CONK-ORD-001", "ORD-001", "SKU-001", "LOC-A-01-01", 3, "SYSTEM")));
 
         assertThatThrownBy(() -> confirmOutboundOrderService.confirm("ORD-001", "CONK", "MANAGER-001"))

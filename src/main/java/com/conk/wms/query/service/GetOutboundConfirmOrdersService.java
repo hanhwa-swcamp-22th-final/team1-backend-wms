@@ -62,7 +62,7 @@ public class GetOutboundConfirmOrdersService {
                 .entrySet().stream()
                 .filter(entry -> entry.getValue().stream().allMatch(row -> row.getInvoiceIssuedAt() != null))
                 .map(Map.Entry::getKey)
-                .filter(this::isPacked)
+                .filter(orderId -> isPacked(orderId, tenantCode))
                 .sorted(java.util.Comparator.reverseOrder())
                 .toList();
 
@@ -121,8 +121,8 @@ public class GetOutboundConfirmOrdersService {
                 .toList();
     }
 
-    private boolean isPacked(String orderId) {
-        List<WorkDetail> details = workDetailRepository.findAllByIdOrderIdOrderByIdLocationIdAscIdSkuIdAsc(orderId);
+    private boolean isPacked(String orderId, String tenantCode) {
+        List<WorkDetail> details = workDetailRepository.findAllByIdOrderIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc(orderId, tenantCode);
         List<WorkDetail> packingDetails = details.stream()
                 .filter(WorkDetail::isPackingRelevantWork)
                 .toList();
