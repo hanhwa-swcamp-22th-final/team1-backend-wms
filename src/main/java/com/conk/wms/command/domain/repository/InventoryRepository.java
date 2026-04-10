@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,6 +19,10 @@ public interface InventoryRepository extends JpaRepository<Inventory, InventoryI
     List<Inventory> findLowStockByTenantId(@Param("tenantId") String tenantId, @Param("threshold") int threshold);
 
     List<Inventory> findAllByIdTenantId(String tenantId);
+
+    List<Inventory> findAllByIdTenantIdAndIdLocationIdIn(String tenantId, Collection<String> locationIds);
+
+    List<Inventory> findAllByIdTenantIdAndIdLocationIdInAndIdSku(String tenantId, Collection<String> locationIds, String sku);
 
     List<Inventory> findAllByIdSkuAndIdTenantId(String sku, String tenantId);
 

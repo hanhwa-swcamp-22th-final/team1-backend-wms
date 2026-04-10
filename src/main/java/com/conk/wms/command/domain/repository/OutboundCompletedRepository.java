@@ -4,6 +4,7 @@ import com.conk.wms.command.domain.aggregate.OutboundCompleted;
 import com.conk.wms.command.domain.aggregate.OutboundCompletedId;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -12,6 +13,8 @@ import java.util.List;
 public interface OutboundCompletedRepository extends JpaRepository<OutboundCompleted, OutboundCompletedId> {
 
     boolean existsByIdOrderIdAndIdTenantId(String orderId, String tenantId);
+
+    List<OutboundCompleted> findAllByIdTenantIdAndIdOrderIdIn(String tenantId, Collection<String> orderIds);
 
     List<OutboundCompleted> findAllByIdTenantId(String tenantId);
 }

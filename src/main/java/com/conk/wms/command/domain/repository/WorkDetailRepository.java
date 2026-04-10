@@ -4,6 +4,7 @@ import com.conk.wms.command.domain.aggregate.WorkDetail;
 import com.conk.wms.command.domain.aggregate.WorkDetailId;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -14,6 +15,12 @@ public interface WorkDetailRepository extends JpaRepository<WorkDetail, WorkDeta
     List<WorkDetail> findAllByIdWorkIdOrderByIdLocationIdAscIdSkuIdAsc(String workId);
 
     List<WorkDetail> findAllByIdOrderIdOrderByIdLocationIdAscIdSkuIdAsc(String orderId);
+
+    List<WorkDetail> findAllByReferenceTypeAndIdOrderIdInAndIdLocationIdInOrderByIdOrderIdAscIdLocationIdAscIdSkuIdAsc(
+            String referenceType,
+            Collection<String> orderIds,
+            Collection<String> locationIds
+    );
 
     List<WorkDetail> findAllByAsnIdOrderByIdLocationIdAscIdSkuIdAsc(String asnId);
 

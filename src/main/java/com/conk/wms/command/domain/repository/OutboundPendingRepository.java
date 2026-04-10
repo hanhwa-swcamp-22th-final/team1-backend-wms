@@ -4,6 +4,7 @@ import com.conk.wms.command.domain.aggregate.OutboundPending;
 import com.conk.wms.command.domain.aggregate.OutboundPendingId;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -14,6 +15,12 @@ public interface OutboundPendingRepository extends JpaRepository<OutboundPending
     boolean existsByIdOrderIdAndIdTenantId(String orderId, String tenantId);
 
     List<OutboundPending> findAllByIdOrderIdAndIdTenantId(String orderId, String tenantId);
+
+    List<OutboundPending> findAllByIdTenantIdAndIdOrderIdInAndIdLocationIdIn(
+            String tenantId,
+            Collection<String> orderIds,
+            Collection<String> locationIds
+    );
 
     List<OutboundPending> findAllByIdTenantId(String tenantId);
 }

@@ -4,6 +4,7 @@ import com.conk.wms.command.domain.aggregate.WorkAssignment;
 import com.conk.wms.command.domain.aggregate.WorkAssignmentId;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -14,6 +15,8 @@ public interface WorkAssignmentRepository extends JpaRepository<WorkAssignment, 
     List<WorkAssignment> findAllByIdWorkIdAndIdTenantId(String workId, String tenantId);
 
     List<WorkAssignment> findAllByIdTenantId(String tenantId);
+
+    List<WorkAssignment> findAllByIdTenantIdAndIdWorkIdIn(String tenantId, Collection<String> workIds);
 
     List<WorkAssignment> findAllByIdTenantIdAndIdAccountId(String tenantId, String accountId);
 

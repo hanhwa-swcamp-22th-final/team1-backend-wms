@@ -4,6 +4,7 @@ import com.conk.wms.command.domain.aggregate.PickingPacking;
 import com.conk.wms.command.domain.aggregate.PickingPackingId;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -13,6 +14,12 @@ import java.util.Optional;
 public interface PickingPackingRepository extends JpaRepository<PickingPacking, PickingPackingId> {
 
     List<PickingPacking> findAllByIdOrderIdAndIdTenantId(String orderId, String tenantId);
+
+    List<PickingPacking> findAllByIdTenantIdAndIdSkuIdAndIdLocationIdIn(
+            String tenantId,
+            String skuId,
+            Collection<String> locationIds
+    );
 
     Optional<PickingPacking> findByIdOrderIdAndIdSkuIdAndIdLocationIdAndIdTenantId(
             String orderId,
