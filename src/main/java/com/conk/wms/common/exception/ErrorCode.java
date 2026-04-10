@@ -11,6 +11,12 @@ public enum ErrorCode {
 
     TENANT_CODE_REQUIRED(HttpStatus.BAD_REQUEST, "COMMON-001", "X-Tenant-Code 헤더가 필요합니다."),
     KAFKA_DISPATCH_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "COMMON-002", "Kafka 이벤트 발행에 실패했습니다."),
+    AUTH_USER_ID_REQUIRED(HttpStatus.UNAUTHORIZED, "COMMON-003", "인증 사용자 식별 정보가 필요합니다."),
+    AUTH_ROLE_REQUIRED(HttpStatus.UNAUTHORIZED, "COMMON-004", "인증 역할 정보가 필요합니다."),
+    AUTH_ROLE_INVALID(HttpStatus.UNAUTHORIZED, "COMMON-005", "지원하지 않는 인증 역할입니다."),
+    AUTH_TENANT_ID_REQUIRED(HttpStatus.FORBIDDEN, "COMMON-006", "창고 권한 요청에는 tenant 식별 정보가 필요합니다."),
+    AUTH_SELLER_ID_REQUIRED(HttpStatus.FORBIDDEN, "COMMON-007", "셀러 권한 요청에는 seller 식별 정보가 필요합니다."),
+    AUTH_ROLE_FORBIDDEN(HttpStatus.FORBIDDEN, "COMMON-008", "현재 권한으로는 요청을 수행할 수 없습니다."),
 
     ASN_ID_REQUIRED(HttpStatus.BAD_REQUEST, "ASN-001", "ASN 번호는 필수입니다."),
     ASN_WAREHOUSE_ID_REQUIRED(HttpStatus.BAD_REQUEST, "ASN-002", "창고 ID는 필수입니다."),
