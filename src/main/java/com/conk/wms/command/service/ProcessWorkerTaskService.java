@@ -174,6 +174,7 @@ public class ProcessWorkerTaskService {
                 ));
 
         if (STAGE_INSPECTION.equals(stage)) {
+            validateInboundQuantity(detail.getQuantity(), actualQuantity);
             String mergedNote = inspectionPutawayNoteSupport.mergeInspection(trim(exceptionType), trim(issueNote));
             inspectionPutaway.saveProgress(
                     locationId,
@@ -193,6 +194,7 @@ public class ProcessWorkerTaskService {
             int inspectedQuantity = inspectionPutaway.getInspectedQuantity() > 0
                     ? inspectionPutaway.getInspectedQuantity()
                     : detail.getQuantity();
+            validateInboundQuantity(inspectedQuantity, actualQuantity);
             int defectiveQuantity = Math.max(inspectedQuantity - actualQuantity, 0);
 
             inspectionPutaway.saveProgress(
@@ -236,6 +238,7 @@ public class ProcessWorkerTaskService {
 
         if (STAGE_PICKING.equals(stage)) {
             validatePickingStage(detail);
+            validateOutboundQuantity(detail.getQuantity(), actualQuantity);
             String mergedNote = pickingPackingNoteSupport.mergePicking(
                     pickingPacking.getIssueNote(),
                     trim(exceptionType),
@@ -252,6 +255,10 @@ public class ProcessWorkerTaskService {
             if (pickingPacking.getStartedAt() == null) {
                 throw new BusinessException(ErrorCode.OUTBOUND_PACKING_NOT_READY);
             }
+            int pickableQuantity = pickingPacking.getPickedQuantity() == null
+                    ? detail.getQuantity()
+                    : pickingPacking.getPickedQuantity();
+            validateOutboundQuantity(pickableQuantity, actualQuantity);
             String mergedNote = pickingPackingNoteSupport.mergePacking(
                     pickingPacking.getIssueNote(),
                     trim(exceptionType),
@@ -305,6 +312,18 @@ public class ProcessWorkerTaskService {
         }
         if (actualQuantity == null || actualQuantity < 0) {
             throw new BusinessException(ErrorCode.OUTBOUND_WORK_QUANTITY_INVALID);
+        }
+    }
+
+    private void validateInboundQuantity(int allowedQuantity, int actualQuantity) {
+        if (actualQuantity > allowedQuantity) {
+            throw new BusinessException(ErrorCode.ASN_WORK_QUANTITY_EXCEEDED);
+        }
+    }
+
+    private void validateOutboundQuantity(int allowedQuantity, int actualQuantity) {
+        if (actualQuantity > allowedQuantity) {
+            throw new BusinessException(ErrorCode.OUTBOUND_WORK_QUANTITY_EXCEEDED);
         }
     }
 
