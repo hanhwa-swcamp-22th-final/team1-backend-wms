@@ -27,6 +27,9 @@ public class AuthContextResolver {
 
         if (acceptLegacyTenantCode) {
             String legacyTenantCode = readHeader(request, AuthHeaders.LEGACY_TENANT_CODE);
+            if (userId == null) {
+                userId = legacyTenantCode;
+            }
             if (tenantId == null) {
                 tenantId = legacyTenantCode;
             }

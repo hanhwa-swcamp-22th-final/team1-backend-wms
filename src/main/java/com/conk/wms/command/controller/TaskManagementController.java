@@ -3,16 +3,16 @@ package com.conk.wms.command.controller;
 import com.conk.wms.command.controller.dto.request.AssignTaskRequest;
 import com.conk.wms.command.controller.dto.response.AssignTaskResponse;
 import com.conk.wms.command.service.AssignTaskService;
+import com.conk.wms.common.auth.AuthContext;
 import com.conk.wms.common.controller.ApiResponse;
-import com.conk.wms.common.exception.BusinessException;
-import com.conk.wms.common.exception.ErrorCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import static com.conk.wms.common.auth.AuthContextSupport.resolveTenantId;
 
 /**
  * 출고 지시 이후 작업 배정을 처리하는 command API 컨트롤러다.
@@ -30,13 +30,13 @@ public class TaskManagementController {
     @PatchMapping("/{orderId}")
     public ResponseEntity<ApiResponse<AssignTaskResponse>> assign(
             @PathVariable String orderId,
-            @RequestHeader(value = "X-Tenant-Code", required = false) String tenantCode,
+            AuthContext authContext,
             @RequestBody AssignTaskRequest request
     ) {
-        validateTenantCode(tenantCode);
+        String tenantId = resolveTenantId(authContext);
         AssignTaskService.AssignResult result = assignTaskService.assign(
                 orderId,
-                tenantCode,
+                tenantId,
                 request.getWorkerId(),
                 request.getAssignedByAccountId()
         );
@@ -50,9 +50,4 @@ public class TaskManagementController {
                         .build()));
     }
 
-    private void validateTenantCode(String tenantCode) {
-        if (tenantCode == null || tenantCode.isBlank()) {
-            throw new BusinessException(ErrorCode.TENANT_CODE_REQUIRED);
-        }
-    }
 }

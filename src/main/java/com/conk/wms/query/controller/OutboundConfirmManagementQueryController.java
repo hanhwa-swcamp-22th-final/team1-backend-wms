@@ -1,17 +1,17 @@
 package com.conk.wms.query.controller;
 
+import com.conk.wms.common.auth.AuthContext;
 import com.conk.wms.common.controller.ApiResponse;
-import com.conk.wms.common.exception.BusinessException;
-import com.conk.wms.common.exception.ErrorCode;
 import com.conk.wms.query.controller.dto.response.OutboundConfirmOrderResponse;
 import com.conk.wms.query.service.GetOutboundConfirmOrdersService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+
+import static com.conk.wms.common.auth.AuthContextSupport.resolveTenantId;
 
 /**
  * 출고 확정 대기/완료 목록을 조회하는 query API 컨트롤러다.
@@ -28,18 +28,12 @@ public class OutboundConfirmManagementQueryController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<OutboundConfirmOrderResponse>>> getOutboundConfirmOrders(
-            @RequestHeader(value = "X-Tenant-Code", required = false) String tenantCode
+            AuthContext authContext
     ) {
-        validateTenantCode(tenantCode);
+        String tenantId = resolveTenantId(authContext);
         return ResponseEntity.ok(ApiResponse.success(
                 "ok",
-                getOutboundConfirmOrdersService.getOutboundConfirmOrders(tenantCode)
+                getOutboundConfirmOrdersService.getOutboundConfirmOrders(tenantId)
         ));
-    }
-
-    private void validateTenantCode(String tenantCode) {
-        if (tenantCode == null || tenantCode.isBlank()) {
-            throw new BusinessException(ErrorCode.TENANT_CODE_REQUIRED);
-        }
     }
 }

@@ -1,7 +1,6 @@
 package com.conk.wms.command.controller;
 
-import com.conk.wms.common.exception.BusinessException;
-import com.conk.wms.common.exception.ErrorCode;
+import com.conk.wms.common.auth.AuthContext;
 import com.conk.wms.common.controller.ApiResponse;
 import com.conk.wms.command.service.RegisterAsnService;
 import com.conk.wms.command.dto.RegisterAsnCommand;
@@ -15,11 +14,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+
+import static com.conk.wms.common.auth.AuthContextSupport.resolveSellerId;
 
 /**
  * 셀러가 ASN을 등록할 때 사용하는 command API 컨트롤러다.
@@ -44,9 +44,9 @@ public class AsnController {
     // tenant header를 현재는 seller 식별값처럼 사용하고 있으므로 목록도 같은 기준으로 필터링한다.
     @GetMapping
     public ResponseEntity<ApiResponse<List<SellerAsnListItemResponse>>> getSellerAsns(
-            @RequestHeader(value = "X-Tenant-Code", required = false) String tenantCode
+            AuthContext authContext
     ) {
-        String sellerId = resolveSellerId(tenantCode);
+        String sellerId = resolveSellerId(authContext);
         List<SellerAsnListItemResponse> response = getSellerAsnListService.getSellerAsns(sellerId);
         return ResponseEntity.ok(ApiResponse.success("ok", response));
     }
@@ -56,10 +56,10 @@ public class AsnController {
     @PostMapping
     public ResponseEntity<ApiResponse<CreateSellerAsnResponse>> register(
             @RequestBody CreateSellerAsnRequest request,
-            @RequestHeader(value = "X-Tenant-Code", required = false) String tenantCode
+            AuthContext authContext
     ) {
         List<RegisterAsnItemCommand> items = toItemCommands(request);
-        String sellerId = resolveSellerId(tenantCode);
+        String sellerId = resolveSellerId(authContext);
 
         registerAsnService.register(new RegisterAsnCommand(
                 request.getAsnNo(),
@@ -88,15 +88,6 @@ public class AsnController {
                         item.getCartons()
                 ))
                 .toList();
-    }
-
-    // 아직 auth/security가 붙지 않은 상태라 seller 식별값은 임시로 X-Tenant-Code에서 꺼낸다.
-    // 이후 JWT/인증 연동 시 이 메서드가 security context 조회로 대체될 수 있다.
-    private String resolveSellerId(String tenantCode) {
-        if (tenantCode == null || tenantCode.isBlank()) {
-            throw new BusinessException(ErrorCode.TENANT_CODE_REQUIRED);
-        }
-        return tenantCode;
     }
 
 }

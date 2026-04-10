@@ -1,7 +1,7 @@
 package com.conk.wms.common.auth;
 
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.core.MethodParameter;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
@@ -14,13 +14,12 @@ import org.springframework.web.method.support.ModelAndViewContainer;
  * 컨트롤러 메서드에서 AuthContext를 직접 주입받을 수 있게 하는 MVC resolver다.
  */
 @Component
-@ConditionalOnBean(AuthContextResolver.class)
 public class AuthContextArgumentResolver implements HandlerMethodArgumentResolver {
 
-    private final AuthContextResolver authContextResolver;
+    private final ObjectProvider<AuthContextResolver> authContextResolverProvider;
 
-    public AuthContextArgumentResolver(AuthContextResolver authContextResolver) {
-        this.authContextResolver = authContextResolver;
+    public AuthContextArgumentResolver(ObjectProvider<AuthContextResolver> authContextResolverProvider) {
+        this.authContextResolverProvider = authContextResolverProvider;
     }
 
     @Override
@@ -37,6 +36,6 @@ public class AuthContextArgumentResolver implements HandlerMethodArgumentResolve
         if (request == null) {
             return null;
         }
-        return authContextResolver.resolve(request);
+        return authContextResolverProvider.getIfAvailable(() -> new AuthContextResolver(true)).resolve(request);
     }
 }

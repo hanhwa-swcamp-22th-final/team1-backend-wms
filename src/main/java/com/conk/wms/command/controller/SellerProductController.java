@@ -3,9 +3,8 @@ package com.conk.wms.command.controller;
 import com.conk.wms.command.controller.dto.request.SaveSellerProductRequest;
 import com.conk.wms.command.service.RegisterSellerProductService;
 import com.conk.wms.command.service.UpdateSellerProductService;
+import com.conk.wms.common.auth.AuthContext;
 import com.conk.wms.common.controller.ApiResponse;
-import com.conk.wms.common.exception.BusinessException;
-import com.conk.wms.common.exception.ErrorCode;
 import com.conk.wms.query.controller.dto.response.SellerProductListItemResponse;
 import com.conk.wms.query.controller.dto.response.SellerProductResponse;
 import com.conk.wms.query.service.GetSellerProductsService;
@@ -16,11 +15,12 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+
+import static com.conk.wms.common.auth.AuthContextSupport.resolveSellerId;
 
 /**
  * 셀러 상품 등록/조회/수정 API를 처리하는 컨트롤러다.
@@ -44,9 +44,9 @@ public class SellerProductController {
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<SellerProductResponse>> register(
             @RequestBody SaveSellerProductRequest request,
-            @RequestHeader(value = "X-Tenant-Code", required = false) String tenantCode
+            AuthContext authContext
     ) {
-        String sellerId = resolveSellerId(tenantCode);
+        String sellerId = resolveSellerId(authContext);
         String productId = registerSellerProductService.register(sellerId, request);
         SellerProductResponse response = getSellerProductsService.getSellerProduct(sellerId, productId);
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -55,18 +55,18 @@ public class SellerProductController {
 
     @GetMapping("/list")
     public ResponseEntity<ApiResponse<List<SellerProductListItemResponse>>> getSellerProducts(
-            @RequestHeader(value = "X-Tenant-Code", required = false) String tenantCode
+            AuthContext authContext
     ) {
-        String sellerId = resolveSellerId(tenantCode);
+        String sellerId = resolveSellerId(authContext);
         return ResponseEntity.ok(ApiResponse.success("ok", getSellerProductsService.getSellerProducts(sellerId)));
     }
 
     @GetMapping("/{productId}")
     public ResponseEntity<ApiResponse<SellerProductResponse>> getSellerProduct(
             @PathVariable String productId,
-            @RequestHeader(value = "X-Tenant-Code", required = false) String tenantCode
+            AuthContext authContext
     ) {
-        String sellerId = resolveSellerId(tenantCode);
+        String sellerId = resolveSellerId(authContext);
         return ResponseEntity.ok(ApiResponse.success("ok", getSellerProductsService.getSellerProduct(sellerId, productId)));
     }
 
@@ -74,18 +74,11 @@ public class SellerProductController {
     public ResponseEntity<ApiResponse<SellerProductResponse>> update(
             @PathVariable String productId,
             @RequestBody SaveSellerProductRequest request,
-            @RequestHeader(value = "X-Tenant-Code", required = false) String tenantCode
+            AuthContext authContext
     ) {
-        String sellerId = resolveSellerId(tenantCode);
+        String sellerId = resolveSellerId(authContext);
         String updatedProductId = updateSellerProductService.update(sellerId, productId, request);
         SellerProductResponse response = getSellerProductsService.getSellerProduct(sellerId, updatedProductId);
         return ResponseEntity.ok(ApiResponse.success("ok", response));
-    }
-
-    private String resolveSellerId(String tenantCode) {
-        if (tenantCode == null || tenantCode.isBlank()) {
-            throw new BusinessException(ErrorCode.TENANT_CODE_REQUIRED);
-        }
-        return tenantCode;
     }
 }
