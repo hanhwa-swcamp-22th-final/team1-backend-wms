@@ -2,7 +2,9 @@ package com.conk.wms.command.domain.repository;
 
 import com.conk.wms.command.domain.aggregate.Inventory;
 import com.conk.wms.command.domain.aggregate.InventoryId;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -25,6 +27,19 @@ public interface InventoryRepository extends JpaRepository<Inventory, InventoryI
     List<Inventory> findAllByIdTenantIdAndIdLocationIdInAndIdSku(String tenantId, Collection<String> locationIds, String sku);
 
     List<Inventory> findAllByIdSkuAndIdTenantId(String sku, String tenantId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select i
+            from Inventory i
+            where i.id.sku = :sku
+              and i.id.tenantId = :tenantId
+              and i.id.inventoryType = 'AVAILABLE'
+              and i.quantity > 0
+            order by i.quantity desc, i.id.locationId asc
+            """)
+    List<Inventory> findAllocatableAvailableBySkuAndTenantIdForUpdate(@Param("sku") String sku,
+                                                                      @Param("tenantId") String tenantId);
 
     Optional<Inventory> findByIdLocationIdAndIdSkuAndIdInventoryType(String locationId, String sku, String inventoryType);
 

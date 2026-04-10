@@ -14,7 +14,6 @@ import com.conk.wms.query.client.dto.OrderSummaryDto;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -117,11 +116,8 @@ public class DispatchPendingOrderService {
      * 같은 location/sku 조합의 ALLOCATED 재고와 할당 이력을 생성한다.
      */
     private int allocateItem(OrderSummaryDto order, OrderItemDto item, String tenantCode, String actorId) {
-        List<Inventory> availableInventories = inventoryRepository.findAllByIdSkuAndIdTenantId(item.getSkuId(), tenantCode).stream()
-                .filter(inventory -> "AVAILABLE".equals(inventory.getType()))
-                .filter(inventory -> inventory.getQuantity() > 0)
-                .sorted(Comparator.comparingInt(Inventory::getQuantity).reversed())
-                .toList();
+        List<Inventory> availableInventories = inventoryRepository
+                .findAllocatableAvailableBySkuAndTenantIdForUpdate(item.getSkuId(), tenantCode);
 
         int totalAvailable = availableInventories.stream().mapToInt(Inventory::getQuantity).sum();
         if (totalAvailable < item.getQuantity()) {

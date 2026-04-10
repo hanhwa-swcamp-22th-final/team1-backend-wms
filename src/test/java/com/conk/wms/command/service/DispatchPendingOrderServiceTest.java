@@ -75,7 +75,7 @@ class DispatchPendingOrderServiceTest {
                         .build()
         ));
         when(outboundPendingRepository.existsByIdOrderIdAndIdTenantId("ORD-001", "CONK")).thenReturn(false);
-        when(inventoryRepository.findAllByIdSkuAndIdTenantId("SKU-001", "CONK"))
+        when(inventoryRepository.findAllocatableAvailableBySkuAndTenantIdForUpdate("SKU-001", "CONK"))
                 .thenReturn(List.of(new Inventory("LOC-A-01-01", "SKU-001", "CONK", 10, "AVAILABLE")));
         when(inventoryRepository.findByIdLocationIdAndIdSkuAndIdTenantIdAndIdInventoryType(
                 "LOC-A-01-01", "SKU-001", "CONK", "ALLOCATED"))
@@ -129,7 +129,7 @@ class DispatchPendingOrderServiceTest {
                         .build()
         ));
         when(outboundPendingRepository.existsByIdOrderIdAndIdTenantId("ORD-001", "CONK")).thenReturn(false);
-        when(inventoryRepository.findAllByIdSkuAndIdTenantId("SKU-001", "CONK"))
+        when(inventoryRepository.findAllocatableAvailableBySkuAndTenantIdForUpdate("SKU-001", "CONK"))
                 .thenReturn(List.of(new Inventory("LOC-A-01-01", "SKU-001", "CONK", 2, "AVAILABLE")));
 
         BusinessException exception = assertThrows(BusinessException.class, () ->
