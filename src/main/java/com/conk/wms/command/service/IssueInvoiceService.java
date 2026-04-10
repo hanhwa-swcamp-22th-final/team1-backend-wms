@@ -79,7 +79,7 @@ public class IssueInvoiceService {
         }
         validateNotIssued(orderId, pendingRows);
         if (requirePacked) {
-            validatePacked(orderId);
+            validatePacked(orderId, tenantCode);
         }
 
         ShipmentInvoiceDto issued = integrationServiceClient.issueLabel(
@@ -146,8 +146,8 @@ public class IssueInvoiceService {
         }
     }
 
-    private void validatePacked(String orderId) {
-        List<WorkDetail> details = workDetailRepository.findAllByIdOrderIdOrderByIdLocationIdAscIdSkuIdAsc(orderId);
+    private void validatePacked(String orderId, String tenantCode) {
+        List<WorkDetail> details = workDetailRepository.findAllByIdOrderIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc(orderId, tenantCode);
         List<WorkDetail> packingDetails = details.stream()
                 .filter(WorkDetail::isPackingRelevantWork)
                 .toList();

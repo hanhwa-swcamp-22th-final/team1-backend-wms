@@ -65,7 +65,7 @@ class ConfirmOutboundOrderServiceTest {
 
         when(outboundCompletedRepository.existsByIdOrderIdAndIdTenantId("ORD-001", "CONK")).thenReturn(false);
         when(outboundPendingRepository.findAllByIdOrderIdAndIdTenantId("ORD-001", "CONK")).thenReturn(List.of(pending));
-        when(workDetailRepository.findAllByIdOrderIdOrderByIdLocationIdAscIdSkuIdAsc("ORD-001"))
+        when(workDetailRepository.findAllByIdOrderIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc("ORD-001", "CONK"))
                 .thenReturn(List.of(packedDetail()));
         when(allocatedInventoryRepository.findAllByIdOrderIdAndIdTenantId("ORD-001", "CONK"))
                 .thenReturn(List.of(allocated));
@@ -101,7 +101,7 @@ class ConfirmOutboundOrderServiceTest {
 
         when(outboundCompletedRepository.existsByIdOrderIdAndIdTenantId("ORD-001", "CONK")).thenReturn(false);
         when(outboundPendingRepository.findAllByIdOrderIdAndIdTenantId("ORD-001", "CONK")).thenReturn(List.of(pending));
-        when(workDetailRepository.findAllByIdOrderIdOrderByIdLocationIdAscIdSkuIdAsc("ORD-001"))
+        when(workDetailRepository.findAllByIdOrderIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc("ORD-001", "CONK"))
                 .thenReturn(List.of(splitPickedDetail(), splitPackedDetail()));
         when(allocatedInventoryRepository.findAllByIdOrderIdAndIdTenantId("ORD-001", "CONK"))
                 .thenReturn(List.of(allocated));
@@ -122,7 +122,7 @@ class ConfirmOutboundOrderServiceTest {
         OutboundPending pending = new OutboundPending("ORD-001", "SKU-001", "LOC-A-01-01", "CONK", "SYSTEM");
         when(outboundCompletedRepository.existsByIdOrderIdAndIdTenantId("ORD-001", "CONK")).thenReturn(false);
         when(outboundPendingRepository.findAllByIdOrderIdAndIdTenantId("ORD-001", "CONK")).thenReturn(List.of(pending));
-        when(workDetailRepository.findAllByIdOrderIdOrderByIdLocationIdAscIdSkuIdAsc("ORD-001"))
+        when(workDetailRepository.findAllByIdOrderIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc("ORD-001", "CONK"))
                 .thenReturn(List.of(new WorkDetail("WORK-OUT-CONK-ORD-001", "ORD-001", "SKU-001", "LOC-A-01-01", 3, "SYSTEM")));
 
         assertThatThrownBy(() -> confirmOutboundOrderService.confirm("ORD-001", "CONK", "MANAGER-001"))

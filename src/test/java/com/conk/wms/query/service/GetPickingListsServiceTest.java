@@ -54,7 +54,7 @@ class GetPickingListsServiceTest {
         WorkDetail second = new WorkDetail("WORK-OUT-CONK-ORD-001", "ORD-001", "SKU-002", "LOC-A-01-02", 1, "MANAGER-001");
 
         when(workAssignmentRepository.findAllByIdTenantId("CONK")).thenReturn(List.of(assignment));
-        when(workDetailRepository.findAllByIdWorkIdOrderByIdLocationIdAscIdSkuIdAsc("WORK-OUT-CONK-ORD-001"))
+        when(workDetailRepository.findAllByIdWorkIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc("WORK-OUT-CONK-ORD-001", "CONK"))
                 .thenReturn(List.of(first, second));
 
         List<PickingListResponse> response = getPickingListsService.getPickingLists("CONK");
@@ -78,7 +78,7 @@ class GetPickingListsServiceTest {
 
         when(workAssignmentRepository.findAllByIdWorkIdAndIdTenantId("WORK-OUT-CONK-ORD-001", "CONK"))
                 .thenReturn(List.of(assignment));
-        when(workDetailRepository.findAllByIdWorkIdOrderByIdLocationIdAscIdSkuIdAsc("WORK-OUT-CONK-ORD-001"))
+        when(workDetailRepository.findAllByIdWorkIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc("WORK-OUT-CONK-ORD-001", "CONK"))
                 .thenReturn(List.of(first, second));
         when(locationRepository.findById("LOC-A-01-01"))
                 .thenReturn(Optional.of(new Location("LOC-A-01-01", "A-01-01", "WH-001", "A", "01", 300, true)));

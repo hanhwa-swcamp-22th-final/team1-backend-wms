@@ -68,7 +68,7 @@ public class ConfirmOutboundOrderService {
             );
         }
 
-        validateReady(orderId, pendingRows);
+        validateReady(orderId, tenantCode, pendingRows);
 
         List<AllocatedInventory> allocatedRows = allocatedInventoryRepository.findAllByIdOrderIdAndIdTenantId(orderId, tenantCode);
         if (allocatedRows.isEmpty()) {
@@ -123,9 +123,9 @@ public class ConfirmOutboundOrderService {
         return new BulkConfirmResult(orderIds.size(), releasedRowCount, includeCsv);
     }
 
-    private void validateReady(String orderId, List<OutboundPending> pendingRows) {
+    private void validateReady(String orderId, String tenantCode, List<OutboundPending> pendingRows) {
         boolean invoiceIssued = pendingRows.stream().allMatch(pending -> pending.getInvoiceIssuedAt() != null);
-        List<WorkDetail> details = workDetailRepository.findAllByIdOrderIdOrderByIdLocationIdAscIdSkuIdAsc(orderId);
+        List<WorkDetail> details = workDetailRepository.findAllByIdOrderIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc(orderId, tenantCode);
         List<WorkDetail> packingDetails = details.stream()
                 .filter(WorkDetail::isPackingRelevantWork)
                 .toList();

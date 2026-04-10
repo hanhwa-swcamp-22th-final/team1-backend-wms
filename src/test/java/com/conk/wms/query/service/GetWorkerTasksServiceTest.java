@@ -81,7 +81,7 @@ class GetWorkerTasksServiceTest {
 
         when(workAssignmentRepository.findAllByIdTenantIdAndIdAccountId("CONK", "WORKER-001"))
                 .thenReturn(List.of(assignment));
-        when(workDetailRepository.findAllByIdWorkIdOrderByIdLocationIdAscIdSkuIdAsc("WORK-OUT-CONK-ORD-001"))
+        when(workDetailRepository.findAllByIdWorkIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc("WORK-OUT-CONK-ORD-001", "CONK"))
                 .thenReturn(List.of(detail));
         when(pickingPackingRepository.findAllByIdOrderIdAndIdTenantId("ORD-001", "CONK"))
                 .thenReturn(List.of(pickingPacking));
@@ -136,7 +136,7 @@ class GetWorkerTasksServiceTest {
 
         when(workAssignmentRepository.findAllByIdTenantIdAndIdAccountId("CONK", "WORKER-001"))
                 .thenReturn(List.of(assignment));
-        when(workDetailRepository.findAllByIdWorkIdOrderByIdLocationIdAscIdSkuIdAsc("WORK-OUT-CONK-ORD-001-PICK-WORKER-001"))
+        when(workDetailRepository.findAllByIdWorkIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc("WORK-OUT-CONK-ORD-001-PICK-WORKER-001", "CONK"))
                 .thenReturn(List.of(detail));
         when(pickingPackingRepository.findAllByIdOrderIdAndIdTenantId("ORD-001", "CONK"))
                 .thenReturn(List.of(pickingPacking));
@@ -185,7 +185,7 @@ class GetWorkerTasksServiceTest {
 
         when(workAssignmentRepository.findAllByIdTenantIdAndIdAccountId("CONK", "WORKER-003"))
                 .thenReturn(List.of(assignment));
-        when(workDetailRepository.findAllByIdWorkIdOrderByIdLocationIdAscIdSkuIdAsc("WORK-IN-CONK-ASN-001-WORKER-003"))
+        when(workDetailRepository.findAllByIdWorkIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc("WORK-IN-CONK-ASN-001-WORKER-003", "CONK"))
                 .thenReturn(List.of(detail));
         when(asnRepository.findByAsnId("ASN-001"))
                 .thenReturn(Optional.of(new Asn("ASN-001", "WH-001", "SELLER-001",

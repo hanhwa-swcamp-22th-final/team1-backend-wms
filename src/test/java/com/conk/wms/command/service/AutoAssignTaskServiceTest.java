@@ -67,7 +67,7 @@ class AutoAssignTaskServiceTest {
                         new AllocatedInventory("ORD-001", "SKU-001", "LOC-A-01-01", "CONK", 3, "SYSTEM"),
                         new AllocatedInventory("ORD-001", "SKU-002", "LOC-B-01-01", "CONK", 1, "SYSTEM")
                 ));
-        when(workDetailRepository.findAllByIdOrderIdOrderByIdLocationIdAscIdSkuIdAsc("ORD-001"))
+        when(workDetailRepository.findAllByIdOrderIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc("ORD-001", "CONK"))
                 .thenReturn(List.of());
         when(locationRepository.findById("LOC-A-01-01")).thenReturn(Optional.of(firstLocation));
         when(locationRepository.findById("LOC-B-01-01")).thenReturn(Optional.of(secondLocation));
@@ -100,7 +100,7 @@ class AutoAssignTaskServiceTest {
                         new AllocatedInventory("ORD-001", "SKU-001", "LOC-A-01-01", "CONK", 3, "SYSTEM"),
                         new AllocatedInventory("ORD-001", "SKU-002", "LOC-A-01-02", "CONK", 1, "SYSTEM")
                 ));
-        when(workDetailRepository.findAllByIdOrderIdOrderByIdLocationIdAscIdSkuIdAsc("ORD-001"))
+        when(workDetailRepository.findAllByIdOrderIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc("ORD-001", "CONK"))
                 .thenReturn(List.of());
         when(locationRepository.findById("LOC-A-01-01")).thenReturn(Optional.of(firstLocation));
         when(locationRepository.findById("LOC-A-01-02")).thenReturn(Optional.of(secondLocation));
@@ -129,7 +129,7 @@ class AutoAssignTaskServiceTest {
         );
         secondPicking.markPickingCompleted("WORKER-002", "", java.time.LocalDateTime.now());
 
-        when(workDetailRepository.findAllByIdOrderIdOrderByIdLocationIdAscIdSkuIdAsc("ORD-001"))
+        when(workDetailRepository.findAllByIdOrderIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc("ORD-001", "CONK"))
                 .thenReturn(List.of(firstPicking, secondPicking));
         when(workAssignmentRepository.findAllByIdWorkIdAndIdTenantId("WORK-OUT-CONK-ORD-001-PICK-WORKER-001", "CONK"))
                 .thenReturn(List.of(new WorkAssignment("WORK-OUT-CONK-ORD-001-PICK-WORKER-001", "CONK", "WORKER-001", "SYSTEM")));
@@ -158,7 +158,7 @@ class AutoAssignTaskServiceTest {
                 .thenReturn(List.of(new InspectionPutaway("ASN-001", "SKU-001", "CONK")));
         when(asnItemRepository.findAllByAsnId("ASN-001"))
                 .thenReturn(List.of(new AsnItem("ASN-001", "SKU-001", 5, "상품A", 1)));
-        when(workDetailRepository.findAllByAsnIdOrderByIdLocationIdAscIdSkuIdAsc("ASN-001"))
+        when(workDetailRepository.findAllByAsnIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc("ASN-001", "CONK"))
                 .thenReturn(List.of());
 
         InspectionPutaway row = new InspectionPutaway("ASN-001", "SKU-001", "CONK");

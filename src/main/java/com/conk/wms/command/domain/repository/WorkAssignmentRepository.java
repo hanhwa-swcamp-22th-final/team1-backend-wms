@@ -3,6 +3,9 @@ package com.conk.wms.command.domain.repository;
 import com.conk.wms.command.domain.aggregate.WorkAssignment;
 import com.conk.wms.command.domain.aggregate.WorkAssignmentId;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.Collection;
 import java.util.List;
@@ -20,5 +23,12 @@ public interface WorkAssignmentRepository extends JpaRepository<WorkAssignment, 
 
     List<WorkAssignment> findAllByIdTenantIdAndIdAccountId(String tenantId, String accountId);
 
-    void deleteAllByIdWorkIdAndIdTenantId(String workId, String tenantId);
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("""
+            delete
+            from WorkAssignment wa
+            where wa.id.workId = :workId
+              and wa.id.tenantId = :tenantId
+            """)
+    void deleteAllByIdWorkIdAndIdTenantId(@Param("workId") String workId, @Param("tenantId") String tenantId);
 }

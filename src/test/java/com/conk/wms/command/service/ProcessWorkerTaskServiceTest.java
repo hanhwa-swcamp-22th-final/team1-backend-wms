@@ -72,16 +72,16 @@ class ProcessWorkerTaskServiceTest {
 
         when(workAssignmentRepository.findAllByIdWorkIdAndIdTenantId("WORK-OUT-CONK-ORD-001", "CONK"))
                 .thenReturn(List.of(assignment));
-        when(workDetailRepository.findByIdWorkIdAndIdOrderIdAndIdSkuIdAndIdLocationId(
-                "WORK-OUT-CONK-ORD-001", "ORD-001", "SKU-001", "LOC-A-01-01"
+        when(workDetailRepository.findByIdWorkIdAndIdOrderIdAndIdSkuIdAndIdLocationIdAndTenantId(
+                "WORK-OUT-CONK-ORD-001", "ORD-001", "SKU-001", "LOC-A-01-01", "CONK"
         )).thenReturn(Optional.of(detail));
         when(pickingPackingRepository.findByIdOrderIdAndIdSkuIdAndIdLocationIdAndIdTenantId(
                 "ORD-001", "SKU-001", "LOC-A-01-01", "CONK"
         )).thenReturn(Optional.empty());
         when(pickingPackingNoteSupport.mergePicking(null, "수량 부족", "2개만 피킹"))
                 .thenReturn("PICK::수량 부족::2개만 피킹");
-        when(workDetailRepository.findAllByIdWorkIdOrderByIdLocationIdAscIdSkuIdAsc(
-                "WORK-OUT-CONK-ORD-001"
+        when(workDetailRepository.findAllByIdWorkIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc(
+                "WORK-OUT-CONK-ORD-001", "CONK"
         )).thenReturn(List.of(detail));
 
         ProcessWorkerTaskResponse response = processWorkerTaskService.process(
@@ -120,16 +120,16 @@ class ProcessWorkerTaskServiceTest {
 
         when(workAssignmentRepository.findAllByIdWorkIdAndIdTenantId("WORK-OUT-CONK-ORD-001-PICK-WORKER-001", "CONK"))
                 .thenReturn(List.of(assignment));
-        when(workDetailRepository.findByIdWorkIdAndIdOrderIdAndIdSkuIdAndIdLocationId(
-                "WORK-OUT-CONK-ORD-001-PICK-WORKER-001", "ORD-001", "SKU-001", "LOC-A-01-01"
+        when(workDetailRepository.findByIdWorkIdAndIdOrderIdAndIdSkuIdAndIdLocationIdAndTenantId(
+                "WORK-OUT-CONK-ORD-001-PICK-WORKER-001", "ORD-001", "SKU-001", "LOC-A-01-01", "CONK"
         )).thenReturn(Optional.of(detail));
         when(pickingPackingRepository.findByIdOrderIdAndIdSkuIdAndIdLocationIdAndIdTenantId(
                 "ORD-001", "SKU-001", "LOC-A-01-01", "CONK"
         )).thenReturn(Optional.empty());
         when(pickingPackingNoteSupport.mergePicking(null, "", ""))
                 .thenReturn("");
-        when(workDetailRepository.findAllByIdWorkIdOrderByIdLocationIdAscIdSkuIdAsc(
-                "WORK-OUT-CONK-ORD-001-PICK-WORKER-001"
+        when(workDetailRepository.findAllByIdWorkIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc(
+                "WORK-OUT-CONK-ORD-001-PICK-WORKER-001", "CONK"
         )).thenReturn(List.of(detail));
         when(autoAssignTaskService.assignPackingIfReady("ORD-001", "CONK", "WORKER-001"))
                 .thenReturn(true);
@@ -167,16 +167,16 @@ class ProcessWorkerTaskServiceTest {
 
         when(workAssignmentRepository.findAllByIdWorkIdAndIdTenantId("WORK-OUT-CONK-ORD-001", "CONK"))
                 .thenReturn(List.of(assignment));
-        when(workDetailRepository.findByIdWorkIdAndIdOrderIdAndIdSkuIdAndIdLocationId(
-                "WORK-OUT-CONK-ORD-001", "ORD-001", "SKU-001", "LOC-A-01-01"
+        when(workDetailRepository.findByIdWorkIdAndIdOrderIdAndIdSkuIdAndIdLocationIdAndTenantId(
+                "WORK-OUT-CONK-ORD-001", "ORD-001", "SKU-001", "LOC-A-01-01", "CONK"
         )).thenReturn(Optional.of(detail));
         when(pickingPackingRepository.findByIdOrderIdAndIdSkuIdAndIdLocationIdAndIdTenantId(
                 "ORD-001", "SKU-001", "LOC-A-01-01", "CONK"
         )).thenReturn(Optional.of(pickingPacking));
         when(pickingPackingNoteSupport.mergePacking("PICK::정상::", "", ""))
                 .thenReturn("PICK::정상::||PACK::::");
-        when(workDetailRepository.findAllByIdWorkIdOrderByIdLocationIdAscIdSkuIdAsc(
-                "WORK-OUT-CONK-ORD-001"
+        when(workDetailRepository.findAllByIdWorkIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc(
+                "WORK-OUT-CONK-ORD-001", "CONK"
         )).thenReturn(List.of(detail));
 
         ProcessWorkerTaskResponse response = processWorkerTaskService.process(
@@ -210,8 +210,8 @@ class ProcessWorkerTaskServiceTest {
 
         when(workAssignmentRepository.findAllByIdWorkIdAndIdTenantId("WORK-OUT-CONK-ORD-001", "CONK"))
                 .thenReturn(List.of(assignment));
-        when(workDetailRepository.findByIdWorkIdAndIdOrderIdAndIdSkuIdAndIdLocationId(
-                "WORK-OUT-CONK-ORD-001", "ORD-001", "SKU-001", "LOC-A-01-01"
+        when(workDetailRepository.findByIdWorkIdAndIdOrderIdAndIdSkuIdAndIdLocationIdAndTenantId(
+                "WORK-OUT-CONK-ORD-001", "ORD-001", "SKU-001", "LOC-A-01-01", "CONK"
         )).thenReturn(Optional.of(detail));
         when(pickingPackingRepository.findByIdOrderIdAndIdSkuIdAndIdLocationIdAndIdTenantId(
                 "ORD-001", "SKU-001", "LOC-A-01-01", "CONK"
@@ -248,14 +248,14 @@ class ProcessWorkerTaskServiceTest {
 
         when(workAssignmentRepository.findAllByIdWorkIdAndIdTenantId("WORK-IN-CONK-ASN-001-WORKER-003", "CONK"))
                 .thenReturn(List.of(assignment));
-        when(workDetailRepository.findByIdWorkIdAndAsnIdAndIdSkuIdAndIdLocationId(
-                "WORK-IN-CONK-ASN-001-WORKER-003", "ASN-001", "SKU-001", "LOC-C-01-01"
+        when(workDetailRepository.findByIdWorkIdAndAsnIdAndIdSkuIdAndIdLocationIdAndTenantId(
+                "WORK-IN-CONK-ASN-001-WORKER-003", "ASN-001", "SKU-001", "LOC-C-01-01", "CONK"
         )).thenReturn(Optional.of(detail));
         when(inspectionPutawayRepository.findByAsnIdAndSkuId("ASN-001", "SKU-001"))
                 .thenReturn(Optional.of(row));
         when(inspectionPutawayNoteSupport.mergeInspection("수량 불일치", "2박스 확인"))
                 .thenReturn("INSP::수량 불일치::2박스 확인");
-        when(workDetailRepository.findAllByIdWorkIdOrderByIdLocationIdAscIdSkuIdAsc("WORK-IN-CONK-ASN-001-WORKER-003"))
+        when(workDetailRepository.findAllByIdWorkIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc("WORK-IN-CONK-ASN-001-WORKER-003", "CONK"))
                 .thenReturn(List.of(detail));
 
         ProcessWorkerTaskResponse response = processWorkerTaskService.process(
@@ -293,8 +293,8 @@ class ProcessWorkerTaskServiceTest {
 
         when(workAssignmentRepository.findAllByIdWorkIdAndIdTenantId("WORK-IN-CONK-ASN-001-WORKER-003", "CONK"))
                 .thenReturn(List.of(assignment));
-        when(workDetailRepository.findByIdWorkIdAndAsnIdAndIdSkuIdAndIdLocationId(
-                "WORK-IN-CONK-ASN-001-WORKER-003", "ASN-001", "SKU-001", "LOC-C-01-01"
+        when(workDetailRepository.findByIdWorkIdAndAsnIdAndIdSkuIdAndIdLocationIdAndTenantId(
+                "WORK-IN-CONK-ASN-001-WORKER-003", "ASN-001", "SKU-001", "LOC-C-01-01", "CONK"
         )).thenReturn(Optional.of(detail));
         when(inspectionPutawayRepository.findByAsnIdAndSkuId("ASN-001", "SKU-001"))
                 .thenReturn(Optional.of(row));
@@ -302,7 +302,7 @@ class ProcessWorkerTaskServiceTest {
                 .thenReturn("PUT::C-01-01::::");
         when(locationRepository.findByBinId("C-01-01"))
                 .thenReturn(Optional.empty());
-        when(workDetailRepository.findAllByIdWorkIdOrderByIdLocationIdAscIdSkuIdAsc("WORK-IN-CONK-ASN-001-WORKER-003"))
+        when(workDetailRepository.findAllByIdWorkIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc("WORK-IN-CONK-ASN-001-WORKER-003", "CONK"))
                 .thenReturn(List.of(detail));
 
         ProcessWorkerTaskResponse response = processWorkerTaskService.process(

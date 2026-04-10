@@ -85,8 +85,9 @@ public class GetWorkerTasksService {
     }
 
     private WorkerTaskResponse toWorkerTask(String tenantCode, WorkAssignment assignment) {
-        List<WorkDetail> details = workDetailRepository.findAllByIdWorkIdOrderByIdLocationIdAscIdSkuIdAsc(
-                assignment.getId().getWorkId()
+        List<WorkDetail> details = workDetailRepository.findAllByIdWorkIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc(
+                assignment.getId().getWorkId(),
+                tenantCode
         );
         if (details.isEmpty()) {
             return null;

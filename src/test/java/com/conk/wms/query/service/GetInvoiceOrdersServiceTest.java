@@ -54,11 +54,11 @@ class GetInvoiceOrdersServiceTest {
 
         when(outboundPendingRepository.findAllByIdTenantId("CONK")).thenReturn(List.of(notIssued, issued, notPacked));
 
-        when(workDetailRepository.findAllByIdOrderIdOrderByIdLocationIdAscIdSkuIdAsc("ORD-001"))
+        when(workDetailRepository.findAllByIdOrderIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc("ORD-001", "CONK"))
                 .thenReturn(List.of(packedDetail("WORK-OUT-CONK-ORD-001", "ORD-001", "SKU-001", "LOC-A-01-01", 3)));
-        when(workDetailRepository.findAllByIdOrderIdOrderByIdLocationIdAscIdSkuIdAsc("ORD-002"))
+        when(workDetailRepository.findAllByIdOrderIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc("ORD-002", "CONK"))
                 .thenReturn(List.of(packedDetail("WORK-OUT-CONK-ORD-002", "ORD-002", "SKU-002", "LOC-A-01-02", 1)));
-        when(workDetailRepository.findAllByIdOrderIdOrderByIdLocationIdAscIdSkuIdAsc("ORD-003"))
+        when(workDetailRepository.findAllByIdOrderIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc("ORD-003", "CONK"))
                 .thenReturn(List.of(waitingDetail("WORK-OUT-CONK-ORD-003", "ORD-003", "SKU-003", "LOC-A-01-03", 2)));
 
         when(orderServiceClient.getPendingOrder("CONK", "ORD-001")).thenReturn(Optional.of(order(

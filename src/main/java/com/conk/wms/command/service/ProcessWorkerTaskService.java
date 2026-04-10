@@ -92,6 +92,7 @@ public class ProcessWorkerTaskService {
 
         if (STAGE_INSPECTION.equals(stage) || STAGE_PUTAWAY.equals(stage)) {
             detail = processInboundTask(
+                    tenantCode,
                     workId,
                     workerAccountId,
                     stage,
@@ -120,7 +121,7 @@ public class ProcessWorkerTaskService {
             );
         }
 
-        List<WorkDetail> workDetails = workDetailRepository.findAllByIdWorkIdOrderByIdLocationIdAscIdSkuIdAsc(workId);
+        List<WorkDetail> workDetails = workDetailRepository.findAllByIdWorkIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc(workId, tenantCode);
         boolean workCompleted = !workDetails.isEmpty() && workDetails.stream().allMatch(item -> item.getCompletedAt() != null);
         if (workCompleted) {
             assignment.markCompleted(workerAccountId, now);
@@ -143,7 +144,8 @@ public class ProcessWorkerTaskService {
                 .build();
     }
 
-    private WorkDetail processInboundTask(String workId,
+    private WorkDetail processInboundTask(String tenantCode,
+                                          String workId,
                                           String workerAccountId,
                                           String stage,
                                           String asnId,
@@ -159,7 +161,7 @@ public class ProcessWorkerTaskService {
         }
 
         WorkDetail detail = workDetailRepository
-                .findByIdWorkIdAndAsnIdAndIdSkuIdAndIdLocationId(workId, asnId, skuId, locationId)
+                .findByIdWorkIdAndAsnIdAndIdSkuIdAndIdLocationIdAndTenantId(workId, asnId, skuId, locationId, tenantCode)
                 .orElseThrow(() -> new BusinessException(
                         ErrorCode.ASN_WORK_DETAIL_NOT_FOUND,
                         ErrorCode.ASN_WORK_DETAIL_NOT_FOUND.getMessage() + ": " + workId
@@ -222,7 +224,7 @@ public class ProcessWorkerTaskService {
                                            String issueNote,
                                            LocalDateTime now) {
         WorkDetail detail = workDetailRepository
-                .findByIdWorkIdAndIdOrderIdAndIdSkuIdAndIdLocationId(workId, orderId, skuId, locationId)
+                .findByIdWorkIdAndIdOrderIdAndIdSkuIdAndIdLocationIdAndTenantId(workId, orderId, skuId, locationId, tenantCode)
                 .orElseThrow(() -> new BusinessException(
                         ErrorCode.OUTBOUND_WORK_DETAIL_NOT_FOUND,
                         ErrorCode.OUTBOUND_WORK_DETAIL_NOT_FOUND.getMessage() + ": " + workId
