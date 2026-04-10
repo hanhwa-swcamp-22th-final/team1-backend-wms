@@ -11,7 +11,7 @@ import com.conk.wms.query.client.dto.IssueLabelRequestDto;
 import com.conk.wms.query.client.dto.ShipmentInvoiceDto;
 import com.conk.wms.query.client.dto.ShipmentRecommendationDto;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -28,19 +28,21 @@ public class IssueInvoiceService {
     private final OutboundPendingRepository outboundPendingRepository;
     private final WorkDetailRepository workDetailRepository;
     private final IntegrationServiceClient integrationServiceClient;
+    private final TransactionTemplate transactionTemplate;
 
     public IssueInvoiceService(OutboundPendingRepository outboundPendingRepository,
                                WorkDetailRepository workDetailRepository,
-                               IntegrationServiceClient integrationServiceClient) {
+                               IntegrationServiceClient integrationServiceClient,
+                               TransactionTemplate transactionTemplate) {
         this.outboundPendingRepository = outboundPendingRepository;
         this.workDetailRepository = workDetailRepository;
         this.integrationServiceClient = integrationServiceClient;
+        this.transactionTemplate = transactionTemplate;
     }
 
     /**
      * 패킹이 끝난 주문 한 건에 대해 송장 발행을 요청하고 invoice_issued_at을 반영한다.
      */
-    @Transactional
     public IssueResult issue(String orderId,
                              String tenantCode,
                              String carrier,
@@ -53,7 +55,6 @@ public class IssueInvoiceService {
     /**
      * 출고 지시 시점에 패킹 완료 검증 없이 송장을 자동 발행한다.
      */
-    @Transactional
     public IssueResult issueOnDispatch(String orderId,
                                        String tenantCode,
                                        String carrier,
@@ -70,17 +71,20 @@ public class IssueInvoiceService {
                                       String labelFormat,
                                       String actorId,
                                       boolean requirePacked) {
-        List<OutboundPending> pendingRows = outboundPendingRepository.findAllByIdOrderIdAndIdTenantId(orderId, tenantCode);
-        if (pendingRows.isEmpty()) {
-            throw new BusinessException(
-                    ErrorCode.OUTBOUND_INVOICE_SOURCE_NOT_FOUND,
-                    ErrorCode.OUTBOUND_INVOICE_SOURCE_NOT_FOUND.getMessage() + ": " + orderId
-            );
-        }
-        validateNotIssued(orderId, pendingRows);
-        if (requirePacked) {
-            validatePacked(orderId, tenantCode);
-        }
+        executeInTransaction(() -> {
+            List<OutboundPending> pendingRows = outboundPendingRepository.findAllByIdOrderIdAndIdTenantId(orderId, tenantCode);
+            if (pendingRows.isEmpty()) {
+                throw new BusinessException(
+                        ErrorCode.OUTBOUND_INVOICE_SOURCE_NOT_FOUND,
+                        ErrorCode.OUTBOUND_INVOICE_SOURCE_NOT_FOUND.getMessage() + ": " + orderId
+                );
+            }
+            validateNotIssued(orderId, pendingRows);
+            if (requirePacked) {
+                validatePacked(orderId, tenantCode);
+            }
+            return Boolean.TRUE;
+        });
 
         ShipmentInvoiceDto issued = integrationServiceClient.issueLabel(
                 tenantCode,
@@ -92,27 +96,37 @@ public class IssueInvoiceService {
                         .build()
         );
 
-        LocalDateTime issuedAt = issued.getIssuedAt() == null ? LocalDateTime.now() : issued.getIssuedAt();
-        String actor = actorId == null || actorId.isBlank() ? "SYSTEM" : actorId;
-        pendingRows.forEach(pending -> {
-            pending.markInvoiceIssued(actor, issuedAt);
-            outboundPendingRepository.save(pending);
-        });
+        return executeInTransaction(() -> {
+            List<OutboundPending> pendingRows = outboundPendingRepository.findAllByIdOrderIdAndIdTenantId(orderId, tenantCode);
+            if (pendingRows.isEmpty()) {
+                throw new BusinessException(
+                        ErrorCode.OUTBOUND_INVOICE_SOURCE_NOT_FOUND,
+                        ErrorCode.OUTBOUND_INVOICE_SOURCE_NOT_FOUND.getMessage() + ": " + orderId
+                );
+            }
+            validateNotIssued(orderId, pendingRows);
 
-        return new IssueResult(
-                orderId,
-                issued.getTrackingCode(),
-                issued.getCarrierType(),
-                issued.getService(),
-                issued.getLabelFileUrl(),
-                issuedAt
-        );
+            LocalDateTime issuedAt = issued.getIssuedAt() == null ? LocalDateTime.now() : issued.getIssuedAt();
+            String actor = actorId == null || actorId.isBlank() ? "SYSTEM" : actorId;
+            pendingRows.forEach(pending -> {
+                pending.markInvoiceIssued(actor, issuedAt);
+                outboundPendingRepository.save(pending);
+            });
+
+            return new IssueResult(
+                    orderId,
+                    issued.getTrackingCode(),
+                    issued.getCarrierType(),
+                    issued.getService(),
+                    issued.getLabelFileUrl(),
+                    issuedAt
+            );
+        });
     }
 
     /**
      * 여러 주문을 순차적으로 송장 발행한다. 현재는 fail-fast 방식으로 단순화했다.
      */
-    @Transactional
     public BulkIssueResult issueBulk(List<String> orderIds,
                                      String tenantCode,
                                      String carrier,
@@ -134,6 +148,14 @@ public class IssueInvoiceService {
         }
 
         return new BulkIssueResult(orderIds.size());
+    }
+
+    private <T> T executeInTransaction(java.util.function.Supplier<T> supplier) {
+        T result = transactionTemplate.execute(status -> supplier.get());
+        if (result == null) {
+            throw new IllegalStateException("transaction callback returned null");
+        }
+        return result;
     }
 
     private void validateNotIssued(String orderId, List<OutboundPending> pendingRows) {

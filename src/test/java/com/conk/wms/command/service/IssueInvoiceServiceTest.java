@@ -14,6 +14,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.support.SimpleTransactionStatus;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -37,8 +40,18 @@ class IssueInvoiceServiceTest {
     @Mock
     private IntegrationServiceClient integrationServiceClient;
 
+    @Mock
+    private TransactionTemplate transactionTemplate;
+
     @InjectMocks
     private IssueInvoiceService issueInvoiceService;
+
+    @org.junit.jupiter.api.BeforeEach
+    void setUp() {
+        when(transactionTemplate.execute(any(TransactionCallback.class)))
+                .thenAnswer(invocation -> ((TransactionCallback<?>) invocation.getArgument(0))
+                        .doInTransaction(new SimpleTransactionStatus()));
+    }
 
     @Test
     @DisplayName("개별 송장 발행 성공 시 integration-service 응답을 받고 outbound_pending에 발행 시각을 반영한다")

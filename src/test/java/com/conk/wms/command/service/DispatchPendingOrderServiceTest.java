@@ -18,6 +18,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.support.SimpleTransactionStatus;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -52,8 +55,18 @@ class DispatchPendingOrderServiceTest {
     @Mock
     private AutoAssignTaskService autoAssignTaskService;
 
+    @Mock
+    private TransactionTemplate transactionTemplate;
+
     @InjectMocks
     private DispatchPendingOrderService dispatchPendingOrderService;
+
+    @org.junit.jupiter.api.BeforeEach
+    void setUp() {
+        when(transactionTemplate.execute(any(TransactionCallback.class)))
+                .thenAnswer(invocation -> ((TransactionCallback<?>) invocation.getArgument(0))
+                        .doInTransaction(new SimpleTransactionStatus()));
+    }
 
     @Test
     @DisplayName("개별 출고 지시 성공: AVAILABLE 재고를 ALLOCATED로 이동하고 할당 이력을 저장한다")
