@@ -6,7 +6,16 @@ spring:
     password:
   kafka:
     bootstrap-servers: localhost:9094
+    consumer:
+      group-id: test-wms-billing
   jpa:
     hibernate:
       ddl-auto: create-drop
     database-platform: org.hibernate.dialect.H2Dialect
+
+app:
+  kafka:
+    topics:
+      billing-monthly-result: billing.monthly.result.v1
+    consumer:
+      billing-monthly-result-auto-startup: false

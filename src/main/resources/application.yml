@@ -19,23 +19,16 @@ spring:
         format_sql: true
 
   kafka:
-    # Docker: SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-    # 로컬 직접 실행: localhost:9094
-    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9094}
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9094}
+    consumer:
+      group-id: ${KAFKA_CONSUMER_GROUP_ID:wms-billing}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
-mybatis:
-  mapper-locations: classpath:mapper/*.xml
-  configuration:
-    map-underscore-to-camel-case: true
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info
-  endpoint:
-    health:
-      show-details: always
+app:
+  kafka:
+    topics:
+      billing-monthly-result: billing.monthly.result.v1
+    consumer:
+      billing-monthly-result-auto-startup: true
