@@ -80,6 +80,27 @@ class OutboundConfirmManagementControllerTest {
     }
 
     @Test
+    @DisplayName("프론트 kebab-case bulk-confirm 경로로도 일괄 출고 확정을 처리한다")
+    void confirmBulk_withKebabCaseAlias_success() throws Exception {
+        when(confirmOutboundOrderService.confirmBulk(java.util.List.of("ORD-001", "ORD-002"), "CONK", "SYSTEM", true))
+                .thenReturn(new ConfirmOutboundOrderService.BulkConfirmResult(2, 3, true));
+
+        mockMvc.perform(post("/wms/manager/outbound-confirm-orders/bulk-confirm")
+                        .header("X-Tenant-Code", "CONK")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "orderIds", java.util.List.of("ORD-001", "ORD-002"),
+                                "includeCsv", true
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("bulk outbound confirmed"))
+                .andExpect(jsonPath("$.data.confirmedOrderCount").value(2))
+                .andExpect(jsonPath("$.data.releasedRowCount").value(3))
+                .andExpect(jsonPath("$.data.includeCsv").value(true));
+    }
+
+    @Test
     @DisplayName("송장/패킹 준비 전 출고 확정 시 409를 반환한다")
     void confirmSingle_whenNotReady_thenReturn409() throws Exception {
         doThrow(new BusinessException(ErrorCode.OUTBOUND_CONFIRM_NOT_READY))

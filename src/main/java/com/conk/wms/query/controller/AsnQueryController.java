@@ -2,17 +2,23 @@ package com.conk.wms.query.controller;
 
 import com.conk.wms.common.auth.AuthContext;
 import com.conk.wms.common.controller.ApiResponse;
-import com.conk.wms.query.service.GetAsnDetailService;
-import com.conk.wms.query.service.GetAsnKpiService;
 import com.conk.wms.query.controller.dto.response.AsnDetailResponse;
 import com.conk.wms.query.controller.dto.response.AsnKpiResponse;
+import com.conk.wms.query.controller.dto.response.MasterAsnListItemResponse;
+import com.conk.wms.query.service.GetAsnDetailService;
+import com.conk.wms.query.service.GetAsnKpiService;
+import com.conk.wms.query.service.GetMasterAsnListService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 import static com.conk.wms.common.auth.AuthContextSupport.resolveSellerId;
+import static com.conk.wms.common.auth.AuthContextSupport.resolveTenantId;
 
 /**
  * 셀러와 공용 ASN 조회 API를 제공하는 컨트롤러다.
@@ -26,10 +32,23 @@ public class AsnQueryController {
 
     private final GetAsnDetailService getAsnDetailService;
     private final GetAsnKpiService getAsnKpiService;
+    private final GetMasterAsnListService getMasterAsnListService;
 
-    public AsnQueryController(GetAsnDetailService getAsnDetailService, GetAsnKpiService getAsnKpiService) {
+    public AsnQueryController(GetAsnDetailService getAsnDetailService,
+                              GetAsnKpiService getAsnKpiService,
+                              GetMasterAsnListService getMasterAsnListService) {
         this.getAsnDetailService = getAsnDetailService;
         this.getAsnKpiService = getAsnKpiService;
+        this.getMasterAsnListService = getMasterAsnListService;
+    }
+
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<MasterAsnListItemResponse>>> getAsns(
+            AuthContext authContext,
+            @RequestParam(value = "status", required = false) String status
+    ) {
+        resolveTenantId(authContext);
+        return ResponseEntity.ok(ApiResponse.success("ok", getMasterAsnListService.getAsns(status)));
     }
 
     // ASN 목록 화면 상단 KPI.

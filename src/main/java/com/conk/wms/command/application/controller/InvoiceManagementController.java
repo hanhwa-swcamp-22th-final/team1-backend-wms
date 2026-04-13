@@ -56,7 +56,7 @@ public class InvoiceManagementController {
                         .build()));
     }
 
-    @PostMapping({"/bulk", "/bulk_label"})
+    @PostMapping({"/bulk", "/bulk_label", "/bulk-label"})
     public ResponseEntity<ApiResponse<BulkIssueInvoiceResponse>> issueBulk(
             AuthContext authContext,
             @RequestBody BulkIssueLabelsRequest request

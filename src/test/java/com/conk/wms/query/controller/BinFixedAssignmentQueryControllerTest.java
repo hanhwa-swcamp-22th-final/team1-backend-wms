@@ -30,7 +30,7 @@ class BinFixedAssignmentQueryControllerTest {
     private GetBinFixedAssignmentsService getBinFixedAssignmentsService;
 
     @Test
-    @DisplayName("Bin 고정 배정 목록 조회 성공 시 raw 배열을 반환한다")
+    @DisplayName("Bin 고정 배정 목록 조회 성공 시 ApiResponse 배열을 반환한다")
     void getAssignments_success() throws Exception {
         when(getBinFixedAssignmentsService.getAssignments("CONK"))
                 .thenReturn(List.of(BinFixedAssignmentResponse.builder()
@@ -44,9 +44,10 @@ class BinFixedAssignmentQueryControllerTest {
         mockMvc.perform(get("/wh_bin_fixed_assignments")
                         .header("X-Tenant-Code", "CONK"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].bin").value("A-01-01"))
-                .andExpect(jsonPath("$[0].workerId").value("WORKER-001"))
-                .andExpect(jsonPath("$[0].workerName").value("김피커"));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data[0].bin").value("A-01-01"))
+                .andExpect(jsonPath("$.data[0].workerId").value("WORKER-001"))
+                .andExpect(jsonPath("$.data[0].workerName").value("김피커"));
     }
 
     @Test

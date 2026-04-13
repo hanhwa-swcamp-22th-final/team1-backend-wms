@@ -29,7 +29,7 @@ class WorkerTaskQueryControllerTest {
     private GetWorkerTasksService getWorkerTasksService;
 
     @Test
-    @DisplayName("작업자 작업 목록 조회 성공 시 200과 목록을 반환한다")
+    @DisplayName("작업자 작업 목록 조회 성공 시 200과 raw 목록을 반환한다")
     void getTasks_success() throws Exception {
         when(getWorkerTasksService.getTasks("CONK", "WORKER-001"))
                 .thenReturn(List.of(WorkerTaskResponse.builder()
@@ -49,9 +49,8 @@ class WorkerTaskQueryControllerTest {
                         .header("X-Tenant-Code", "CONK")
                         .param("workerAccountId", "WORKER-001"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data[0].id").value("WORK-OUT-CONK-ORD-001"))
-                .andExpect(jsonPath("$.data[0].category").value("OUTBOUND"));
+                .andExpect(jsonPath("$[0].id").value("WORK-OUT-CONK-ORD-001"))
+                .andExpect(jsonPath("$[0].category").value("OUTBOUND"));
     }
 
     @Test

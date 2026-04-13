@@ -4,6 +4,7 @@ import com.conk.wms.command.application.dto.request.CreateWorkerAccountRequest;
 import com.conk.wms.command.application.dto.request.UpdateWorkerAccountRequest;
 import com.conk.wms.command.application.service.ManageWorkerAccountService;
 import com.conk.wms.common.auth.AuthContext;
+import com.conk.wms.common.controller.ApiResponse;
 import com.conk.wms.query.controller.dto.response.WorkerAccountResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -29,20 +30,26 @@ public class WorkerAccountManagementController {
     }
 
     @PostMapping
-    public ResponseEntity<WorkerAccountResponse> createWorkerAccount(
+    public ResponseEntity<ApiResponse<WorkerAccountResponse>> createWorkerAccount(
             AuthContext authContext,
             @RequestBody CreateWorkerAccountRequest request
     ) {
-        return ResponseEntity.ok(manageWorkerAccountService.create(resolveTenantId(authContext), request));
+        return ResponseEntity.ok(ApiResponse.success(
+                "ok",
+                manageWorkerAccountService.create(resolveTenantId(authContext), request)
+        ));
     }
 
     @PatchMapping("/{workerId}")
-    public ResponseEntity<WorkerAccountResponse> updateWorkerAccount(
+    public ResponseEntity<ApiResponse<WorkerAccountResponse>> updateWorkerAccount(
             @PathVariable String workerId,
             AuthContext authContext,
             @RequestBody UpdateWorkerAccountRequest request
     ) {
-        return ResponseEntity.ok(manageWorkerAccountService.update(resolveTenantId(authContext), workerId, request));
+        return ResponseEntity.ok(ApiResponse.success(
+                "ok",
+                manageWorkerAccountService.update(resolveTenantId(authContext), workerId, request)
+        ));
     }
 }
 

@@ -4,7 +4,9 @@ import com.conk.wms.common.exception.BusinessException;
 import com.conk.wms.common.exception.ErrorCode;
 import com.conk.wms.common.controller.GlobalExceptionHandler;
 import com.conk.wms.command.application.service.RegisterAsnService;
+import com.conk.wms.query.controller.dto.response.SellerAsnOptionsResponse;
 import com.conk.wms.query.service.GetSellerAsnListService;
+import com.conk.wms.query.service.GetSellerAsnOptionsService;
 import com.conk.wms.query.controller.dto.response.SellerAsnListItemResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
@@ -47,6 +49,9 @@ class AsnControllerTest {
 
     @MockitoBean
     private GetSellerAsnListService getSellerAsnListService;
+
+    @MockitoBean
+    private GetSellerAsnOptionsService getSellerAsnOptionsService;
 
     @Test
     @DisplayName("Seller ASN 목록 조회 API 호출 시 200 OK와 목록을 반환한다")
@@ -110,6 +115,23 @@ class AsnControllerTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value("created"))
                 .andExpect(jsonPath("$.data.id").value("ASN-20260329-001"));
+    }
+
+    @Test
+    @DisplayName("Seller ASN 옵션 조회 API 호출 시 200과 옵션 응답을 반환한다")
+    void getSellerAsnOptions_success() throws Exception {
+        when(getSellerAsnOptionsService.getOptions("SELLER-001"))
+                .thenReturn(SellerAsnOptionsResponse.builder()
+                        .nextAsnNo("ASN-20260413-001")
+                        .warehouses(List.of())
+                        .skus(List.of())
+                        .build());
+
+        mockMvc.perform(get("/wms/seller/asns/options")
+                        .header("X-Tenant-Code", "SELLER-001"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.nextAsnNo").value("ASN-20260413-001"));
     }
 
     @Test

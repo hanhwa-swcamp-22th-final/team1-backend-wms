@@ -22,6 +22,8 @@ public interface InventoryRepository extends JpaRepository<Inventory, InventoryI
 
     List<Inventory> findAllByIdTenantId(String tenantId);
 
+    List<Inventory> findAllByQuantityGreaterThan(int quantity);
+
     List<Inventory> findAllByIdTenantIdAndIdLocationIdIn(String tenantId, Collection<String> locationIds);
 
     List<Inventory> findAllByIdTenantIdAndIdLocationIdInAndIdSku(String tenantId, Collection<String> locationIds, String sku);

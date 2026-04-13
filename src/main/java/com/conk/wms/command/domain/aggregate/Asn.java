@@ -163,4 +163,17 @@ public class Asn {
         this.updatedAt = confirmedAt;
         this.updatedBy = updatedBy;
     }
+
+    public void cancel(String updatedBy) {
+        if (!"REGISTERED".equals(this.status)) {
+            throw new BusinessException(
+                    ErrorCode.ASN_CANCEL_NOT_ALLOWED,
+                    ErrorCode.ASN_CANCEL_NOT_ALLOWED.getMessage() + ": " + this.status
+            );
+        }
+
+        this.status = "CANCELLED";
+        this.updatedAt = LocalDateTime.now();
+        this.updatedBy = updatedBy;
+    }
 }

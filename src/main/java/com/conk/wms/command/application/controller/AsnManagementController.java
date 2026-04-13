@@ -2,6 +2,8 @@ package com.conk.wms.command.application.controller;
 
 import com.conk.wms.common.auth.AuthContext;
 import com.conk.wms.common.controller.ApiResponse;
+import com.conk.wms.common.exception.BusinessException;
+import com.conk.wms.common.exception.ErrorCode;
 import com.conk.wms.command.application.dto.request.AssignAsnPutawayRequest;
 import com.conk.wms.command.application.dto.request.ConfirmAsnArrivalRequest;
 import com.conk.wms.command.application.dto.request.SaveAsnInspectionRequest;
@@ -17,13 +19,17 @@ import com.conk.wms.command.application.dto.ConfirmAsnArrivalCommand;
 import com.conk.wms.command.application.dto.ConfirmAsnInventoryCommand;
 import com.conk.wms.command.application.dto.SaveAsnInspectionCommand;
 import com.conk.wms.command.application.service.AssignAsnPutawayService;
+import com.conk.wms.command.application.service.CancelSellerAsnService;
 import com.conk.wms.command.application.service.CompleteAsnInspectionService;
 import com.conk.wms.command.application.service.ConfirmAsnArrivalService;
 import com.conk.wms.command.application.service.ConfirmAsnInventoryService;
 import com.conk.wms.command.application.service.SaveAsnInspectionService;
+import com.conk.wms.command.domain.aggregate.Location;
+import com.conk.wms.command.domain.repository.LocationRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -31,6 +37,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 import static com.conk.wms.common.auth.AuthContextSupport.resolveActorId;
+import static com.conk.wms.common.auth.AuthContextSupport.resolveSellerId;
 
 /**
  * 창고 관리자 기준 ASN command API를 모아둔 컨트롤러다.
@@ -47,17 +54,23 @@ public class AsnManagementController {
     private final SaveAsnInspectionService saveAsnInspectionService;
     private final CompleteAsnInspectionService completeAsnInspectionService;
     private final ConfirmAsnInventoryService confirmAsnInventoryService;
+    private final CancelSellerAsnService cancelSellerAsnService;
+    private final LocationRepository locationRepository;
 
     public AsnManagementController(ConfirmAsnArrivalService confirmAsnArrivalService,
                                    AssignAsnPutawayService assignAsnPutawayService,
                                    SaveAsnInspectionService saveAsnInspectionService,
                                    CompleteAsnInspectionService completeAsnInspectionService,
-                                   ConfirmAsnInventoryService confirmAsnInventoryService) {
+                                   ConfirmAsnInventoryService confirmAsnInventoryService,
+                                   CancelSellerAsnService cancelSellerAsnService,
+                                   LocationRepository locationRepository) {
         this.confirmAsnArrivalService = confirmAsnArrivalService;
         this.assignAsnPutawayService = assignAsnPutawayService;
         this.saveAsnInspectionService = saveAsnInspectionService;
         this.completeAsnInspectionService = completeAsnInspectionService;
         this.confirmAsnInventoryService = confirmAsnInventoryService;
+        this.cancelSellerAsnService = cancelSellerAsnService;
+        this.locationRepository = locationRepository;
     }
 
     // 아직 인증이 없어 manager 식별값도 임시로 tenant 헤더에서 꺼낸다.
@@ -108,6 +121,29 @@ public class AsnManagementController {
 
         AssignAsnPutawayResponse response = new AssignAsnPutawayResponse(asnId, assignedCount);
         return ResponseEntity.ok(ApiResponse.success("putaway assigned", response));
+    }
+
+    @PostMapping("/{asnId}/bin-assignments")
+    public ResponseEntity<ApiResponse<AssignAsnPutawayResponse>> saveBinAssignments(
+            @PathVariable String asnId,
+            @RequestBody BinAssignmentsRequest request,
+            AuthContext authContext
+    ) {
+        String actorId = resolveActorId(authContext);
+        List<AssignAsnPutawayCommand.ItemCommand> items = request != null && request.getAssignments() != null
+                ? request.getAssignments().stream()
+                .map(item -> new AssignAsnPutawayCommand.ItemCommand(
+                        item.getSku(),
+                        resolveLocationId(item.getBin())
+                ))
+                .toList()
+                : List.of();
+
+        int assignedCount = assignAsnPutawayService.assign(new AssignAsnPutawayCommand(asnId, actorId, items));
+        return ResponseEntity.ok(ApiResponse.success(
+                "putaway assigned",
+                new AssignAsnPutawayResponse(asnId, assignedCount)
+        ));
     }
 
     // 검수와 적재 위치/수량을 한 번에 저장한다.
@@ -184,6 +220,66 @@ public class AsnManagementController {
                 result.getReflectedInventoryCount()
         );
         return ResponseEntity.ok(ApiResponse.success("inventory confirmed", response));
+    }
+
+    @PostMapping("/{asnId}/cancel")
+    public ResponseEntity<ApiResponse<Void>> cancelAsn(
+            @PathVariable String asnId,
+            AuthContext authContext
+    ) {
+        cancelSellerAsnService.cancel(resolveSellerId(authContext), asnId);
+        return ResponseEntity.ok(ApiResponse.success("cancelled", null));
+    }
+
+    private String resolveLocationId(String bin) {
+        Location location = locationRepository.findByBinId(bin)
+                .orElseThrow(() -> new BusinessException(
+                        ErrorCode.BIN_ASSIGNMENT_LOCATION_NOT_FOUND,
+                        ErrorCode.BIN_ASSIGNMENT_LOCATION_NOT_FOUND.getMessage() + ": " + bin
+                ));
+        return location.getLocationId();
+    }
+
+    public static class BinAssignmentsRequest {
+        private List<ItemRequest> assignments;
+
+        public List<ItemRequest> getAssignments() {
+            return assignments;
+        }
+
+        public void setAssignments(List<ItemRequest> assignments) {
+            this.assignments = assignments;
+        }
+    }
+
+    public static class ItemRequest {
+        private String sku;
+        private String bin;
+        private Boolean isNewSku;
+
+        public String getSku() {
+            return sku;
+        }
+
+        public void setSku(String sku) {
+            this.sku = sku;
+        }
+
+        public String getBin() {
+            return bin;
+        }
+
+        public void setBin(String bin) {
+            this.bin = bin;
+        }
+
+        public Boolean getIsNewSku() {
+            return isNewSku;
+        }
+
+        public void setIsNewSku(Boolean isNewSku) {
+            this.isNewSku = isNewSku;
+        }
     }
 
 }

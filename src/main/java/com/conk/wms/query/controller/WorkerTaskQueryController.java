@@ -1,7 +1,6 @@
 package com.conk.wms.query.controller;
 
 import com.conk.wms.common.auth.AuthContext;
-import com.conk.wms.common.controller.ApiResponse;
 import com.conk.wms.common.exception.BusinessException;
 import com.conk.wms.common.exception.ErrorCode;
 import com.conk.wms.query.controller.dto.response.WorkerTaskResponse;
@@ -30,13 +29,13 @@ public class WorkerTaskQueryController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<WorkerTaskResponse>>> getTasks(
+    public ResponseEntity<List<WorkerTaskResponse>> getTasks(
             AuthContext authContext,
             @RequestParam(value = "workerAccountId", required = false) String workerAccountId,
             @RequestParam(value = "workerUserId", required = false) String workerUserId
     ) {
         String accountId = resolveWorkerAccountId(workerAccountId, workerUserId);
-        return ResponseEntity.ok(ApiResponse.success("ok", getWorkerTasksService.getTasks(resolveTenantId(authContext), accountId)));
+        return ResponseEntity.ok(getWorkerTasksService.getTasks(resolveTenantId(authContext), accountId));
     }
 
     private String resolveWorkerAccountId(String workerAccountId, String workerUserId) {

@@ -2,6 +2,7 @@ package com.conk.wms.query.controller;
 
 import com.conk.wms.common.auth.AuthContext;
 import com.conk.wms.common.controller.ApiResponse;
+import com.conk.wms.query.controller.dto.response.AsnBinCandidatesResponse;
 import com.conk.wms.query.controller.dto.response.AsnBinMatchesResponse;
 import com.conk.wms.query.controller.dto.response.AsnInspectionResponse;
 import com.conk.wms.query.controller.dto.response.AsnRecommendedBinsResponse;
@@ -14,6 +15,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import static com.conk.wms.common.auth.AuthContextSupport.resolveTenantId;
 
@@ -57,6 +62,27 @@ public class AsnManagementQueryController {
         String tenantId = resolveTenantId(authContext);
         AsnRecommendedBinsResponse response = getAsnRecommendedBinsService.getRecommendedBins(asnId, tenantId, skuId);
         return ResponseEntity.ok(ApiResponse.success("ok", response));
+    }
+
+    @GetMapping("/{asnId}/bin-candidates")
+    public ResponseEntity<ApiResponse<AsnBinCandidatesResponse>> getBinCandidates(
+            @PathVariable String asnId,
+            AuthContext authContext
+    ) {
+        String tenantId = resolveTenantId(authContext);
+        AsnRecommendedBinsResponse response = getAsnRecommendedBinsService.getRecommendedBins(asnId, tenantId, null);
+        Map<String, List<AsnBinCandidatesResponse.CandidateResponse>> candidatesBySku = response.getItems().stream()
+                .collect(Collectors.toMap(
+                        AsnRecommendedBinsResponse.ItemResponse::getSkuId,
+                        item -> item.getRecommendedBins().stream()
+                                .map(bin -> new AsnBinCandidatesResponse.CandidateResponse(bin.getBin()))
+                                .toList()
+                ));
+
+        return ResponseEntity.ok(ApiResponse.success(
+                "ok",
+                AsnBinCandidatesResponse.builder().candidatesBySku(candidatesBySku).build()
+        ));
     }
 
     @GetMapping("/{asnId}/inspection")

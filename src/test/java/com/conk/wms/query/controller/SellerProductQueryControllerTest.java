@@ -5,7 +5,9 @@ import com.conk.wms.common.exception.BusinessException;
 import com.conk.wms.common.exception.ErrorCode;
 import com.conk.wms.query.controller.dto.response.SellerProductDetailInfoResponse;
 import com.conk.wms.query.controller.dto.response.SellerProductListItemResponse;
+import com.conk.wms.query.controller.dto.response.SellerProductOptionsResponse;
 import com.conk.wms.query.controller.dto.response.SellerProductResponse;
+import com.conk.wms.query.service.GetSellerProductOptionsService;
 import com.conk.wms.query.service.GetSellerProductsService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -33,6 +35,9 @@ class SellerProductQueryControllerTest {
 
     @MockitoBean
     private GetSellerProductsService getSellerProductsService;
+
+    @MockitoBean
+    private GetSellerProductOptionsService getSellerProductOptionsService;
 
     @Test
     @DisplayName("셀러 상품 목록 조회 API 호출 시 200과 목록을 반환한다")
@@ -107,6 +112,23 @@ class SellerProductQueryControllerTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value("ok"))
                 .andExpect(jsonPath("$.data.sku").value("SKU-001"));
+    }
+
+    @Test
+    @DisplayName("셀러 상품 옵션 조회 API 호출 시 200과 옵션 응답을 반환한다")
+    void getSellerProductOptions_success() throws Exception {
+        when(getSellerProductOptionsService.getOptions("SELLER-001"))
+                .thenReturn(SellerProductOptionsResponse.builder()
+                        .categories(List.of())
+                        .hsCodes(List.of())
+                        .originCountries(List.of())
+                        .build());
+
+        mockMvc.perform(get("/wms/products/seller/options")
+                        .header("X-Tenant-Code", "SELLER-001"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("ok"));
     }
 
     private SellerProductResponse sampleResponse() {

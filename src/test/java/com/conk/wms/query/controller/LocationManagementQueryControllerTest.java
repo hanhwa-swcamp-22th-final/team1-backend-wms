@@ -32,7 +32,7 @@ class LocationManagementQueryControllerTest {
     private GetLocationsService getLocationsService;
 
     @Test
-    @DisplayName("location 트리 조회 성공 시 raw 배열을 반환한다")
+    @DisplayName("location 트리 조회 성공 시 ApiResponse 배열을 반환한다")
     void getLocations_success() throws Exception {
         when(getLocationsService.getLocations("CONK"))
                 .thenReturn(List.of(LocationZoneResponse.builder()
@@ -52,10 +52,11 @@ class LocationManagementQueryControllerTest {
         mockMvc.perform(get("/wh_locations")
                         .header("X-Tenant-Code", "CONK"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].zone").value("A"))
-                .andExpect(jsonPath("$[0].racks[0].rack").value("01"))
-                .andExpect(jsonPath("$[0].racks[0].bins[0].bin").value("A-01-01"))
-                .andExpect(jsonPath("$[0].racks[0].bins[0].status").value("occupied"));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data[0].zone").value("A"))
+                .andExpect(jsonPath("$.data[0].racks[0].rack").value("01"))
+                .andExpect(jsonPath("$.data[0].racks[0].bins[0].bin").value("A-01-01"))
+                .andExpect(jsonPath("$.data[0].racks[0].bins[0].status").value("occupied"));
     }
 
     @Test

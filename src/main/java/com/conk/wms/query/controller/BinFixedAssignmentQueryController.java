@@ -1,6 +1,7 @@
 package com.conk.wms.query.controller;
 
 import com.conk.wms.common.auth.AuthContext;
+import com.conk.wms.common.controller.ApiResponse;
 import com.conk.wms.query.controller.dto.response.BinFixedAssignmentResponse;
 import com.conk.wms.query.service.GetBinFixedAssignmentsService;
 import org.springframework.http.ResponseEntity;
@@ -26,9 +27,12 @@ public class BinFixedAssignmentQueryController {
     }
 
     @GetMapping
-    public ResponseEntity<List<BinFixedAssignmentResponse>> getAssignments(
+    public ResponseEntity<ApiResponse<List<BinFixedAssignmentResponse>>> getAssignments(
             AuthContext authContext
     ) {
-        return ResponseEntity.ok(getBinFixedAssignmentsService.getAssignments(resolveTenantId(authContext)));
+        return ResponseEntity.ok(ApiResponse.success(
+                "ok",
+                getBinFixedAssignmentsService.getAssignments(resolveTenantId(authContext))
+        ));
     }
 }

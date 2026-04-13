@@ -7,8 +7,10 @@ import com.conk.wms.command.application.dto.RegisterAsnCommand;
 import com.conk.wms.command.application.dto.RegisterAsnItemCommand;
 import com.conk.wms.command.application.dto.request.CreateSellerAsnRequest;
 import com.conk.wms.command.application.dto.response.CreateSellerAsnResponse;
-import com.conk.wms.query.service.GetSellerAsnListService;
+import com.conk.wms.query.controller.dto.response.SellerAsnOptionsResponse;
 import com.conk.wms.query.controller.dto.response.SellerAsnListItemResponse;
+import com.conk.wms.query.service.GetSellerAsnListService;
+import com.conk.wms.query.service.GetSellerAsnOptionsService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,10 +36,14 @@ public class AsnController {
 
     private final RegisterAsnService registerAsnService;
     private final GetSellerAsnListService getSellerAsnListService;
+    private final GetSellerAsnOptionsService getSellerAsnOptionsService;
 
-    public AsnController(RegisterAsnService registerAsnService, GetSellerAsnListService getSellerAsnListService) {
+    public AsnController(RegisterAsnService registerAsnService,
+                         GetSellerAsnListService getSellerAsnListService,
+                         GetSellerAsnOptionsService getSellerAsnOptionsService) {
         this.registerAsnService = registerAsnService;
         this.getSellerAsnListService = getSellerAsnListService;
+        this.getSellerAsnOptionsService = getSellerAsnOptionsService;
     }
 
     // Seller ASN 목록 화면의 row shape를 그대로 내려준다.
@@ -49,6 +55,14 @@ public class AsnController {
         String sellerId = resolveSellerId(authContext);
         List<SellerAsnListItemResponse> response = getSellerAsnListService.getSellerAsns(sellerId);
         return ResponseEntity.ok(ApiResponse.success("ok", response));
+    }
+
+    @GetMapping("/options")
+    public ResponseEntity<ApiResponse<SellerAsnOptionsResponse>> getSellerAsnOptions(
+            AuthContext authContext
+    ) {
+        String sellerId = resolveSellerId(authContext);
+        return ResponseEntity.ok(ApiResponse.success("ok", getSellerAsnOptionsService.getOptions(sellerId)));
     }
 
     // 프론트 create 화면 payload를 command 모델로 변환하는 경계.

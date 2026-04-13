@@ -33,7 +33,7 @@ class WhManagerDashboardQueryControllerTest {
     private GetWhManagerDashboardService getWhManagerDashboardService;
 
     @Test
-    @DisplayName("창고 관리자 대시보드 조회 성공 시 raw 응답을 반환한다")
+    @DisplayName("창고 관리자 대시보드 조회 성공 시 ApiResponse를 반환한다")
     void getDashboard_success() throws Exception {
         when(getWhManagerDashboardService.getDashboard("CONK"))
                 .thenReturn(WhManagerDashboardResponse.builder()
@@ -77,9 +77,10 @@ class WhManagerDashboardQueryControllerTest {
         mockMvc.perform(get("/whm_dashboard")
                         .header("X-Tenant-Code", "CONK"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.kpi.todayAsn").value(3))
-                .andExpect(jsonPath("$.todoItems[0].text").value("ASN 처리 대기 5건"))
-                .andExpect(jsonPath("$.recentAsns[0].id").value("ASN-001"))
-                .andExpect(jsonPath("$.lowStockAlerts[0].sku").value("SKU-001"));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.kpi.todayAsn").value(3))
+                .andExpect(jsonPath("$.data.todoItems[0].text").value("ASN 처리 대기 5건"))
+                .andExpect(jsonPath("$.data.recentAsns[0].id").value("ASN-001"))
+                .andExpect(jsonPath("$.data.lowStockAlerts[0].sku").value("SKU-001"));
     }
 }

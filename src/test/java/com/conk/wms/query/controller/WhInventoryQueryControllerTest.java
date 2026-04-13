@@ -32,7 +32,7 @@ class WhInventoryQueryControllerTest {
     private GetWhInventoriesService getWhInventoriesService;
 
     @Test
-    @DisplayName("창고 재고 목록 조회 성공 시 raw 목록을 반환한다")
+    @DisplayName("창고 재고 목록 조회 성공 시 ApiResponse 목록을 반환한다")
     void getInventories_success() throws Exception {
         when(getWhInventoriesService.getInventories("CONK"))
                 .thenReturn(List.of(
@@ -68,13 +68,14 @@ class WhInventoryQueryControllerTest {
         mockMvc.perform(get("/wh_inventories")
                         .header("X-Tenant-Code", "CONK"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].sku").value("SKU-001"))
-                .andExpect(jsonPath("$[0].name").value("앰플"))
-                .andExpect(jsonPath("$[0].locations[0].bin").value("A-01-01"));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data[0].sku").value("SKU-001"))
+                .andExpect(jsonPath("$.data[0].name").value("앰플"))
+                .andExpect(jsonPath("$.data[0].locations[0].bin").value("A-01-01"));
     }
 
     @Test
-    @DisplayName("창고 재고 상세 조회 성공 시 raw 객체를 반환한다")
+    @DisplayName("창고 재고 상세 조회 성공 시 ApiResponse 객체를 반환한다")
     void getInventory_success() throws Exception {
         when(getWhInventoriesService.getInventory("CONK", "SKU-001"))
                 .thenReturn(WhInventoryItemResponse.builder()
@@ -94,8 +95,9 @@ class WhInventoryQueryControllerTest {
         mockMvc.perform(get("/wh_inventories/SKU-001")
                         .header("X-Tenant-Code", "CONK"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.sku").value("SKU-001"))
-                .andExpect(jsonPath("$.totalQty").value(15));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.sku").value("SKU-001"))
+                .andExpect(jsonPath("$.data.totalQty").value(15));
     }
 
     @Test

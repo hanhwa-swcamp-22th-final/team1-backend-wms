@@ -47,7 +47,7 @@ public class OutboundConfirmManagementController {
                         .build()));
     }
 
-    @PostMapping({"/bulk", "/bulk_confirm"})
+    @PostMapping({"/bulk", "/bulk_confirm", "/bulk-confirm"})
     public ResponseEntity<ApiResponse<BulkConfirmOutboundOrdersResponse>> confirmBulk(
             AuthContext authContext,
             @RequestBody BulkConfirmOutboundOrdersRequest request

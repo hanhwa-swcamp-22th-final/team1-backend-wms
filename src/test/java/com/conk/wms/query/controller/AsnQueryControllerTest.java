@@ -7,6 +7,8 @@ import com.conk.wms.query.service.GetAsnDetailService;
 import com.conk.wms.query.service.GetAsnKpiService;
 import com.conk.wms.query.controller.dto.response.AsnDetailResponse;
 import com.conk.wms.query.controller.dto.response.AsnKpiResponse;
+import com.conk.wms.query.controller.dto.response.MasterAsnListItemResponse;
+import com.conk.wms.query.service.GetMasterAsnListService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +40,32 @@ class AsnQueryControllerTest {
 
     @MockitoBean
     private GetAsnKpiService getAsnKpiService;
+
+    @MockitoBean
+    private GetMasterAsnListService getMasterAsnListService;
+
+    @Test
+    @DisplayName("ASN 목록 조회 API 호출 시 200 OK와 목록을 반환한다")
+    void getAsns_success() throws Exception {
+        when(getMasterAsnListService.getAsns(null))
+                .thenReturn(List.of(MasterAsnListItemResponse.builder()
+                        .id("ASN-001")
+                        .company("SELLER-001")
+                        .warehouse("서울 창고")
+                        .skuCount(2)
+                        .plannedQty(150)
+                        .expectedDate("2026-04-13")
+                        .registeredDate("2026-04-12")
+                        .status("SUBMITTED")
+                        .build()));
+
+        mockMvc.perform(get("/wms/asns")
+                        .header("X-Tenant-Code", "CONK"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data[0].id").value("ASN-001"))
+                .andExpect(jsonPath("$.data[0].company").value("SELLER-001"));
+    }
 
     @Test
     @DisplayName("ASN KPI 조회 API 호출 시 200 OK와 상태별 집계를 반환한다")

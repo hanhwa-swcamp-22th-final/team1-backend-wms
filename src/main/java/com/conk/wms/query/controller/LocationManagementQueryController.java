@@ -1,6 +1,7 @@
 package com.conk.wms.query.controller;
 
 import com.conk.wms.common.auth.AuthContext;
+import com.conk.wms.common.controller.ApiResponse;
 import com.conk.wms.query.controller.dto.response.LocationZoneResponse;
 import com.conk.wms.query.service.GetLocationsService;
 import org.springframework.http.ResponseEntity;
@@ -26,9 +27,12 @@ public class LocationManagementQueryController {
     }
 
     @GetMapping
-    public ResponseEntity<List<LocationZoneResponse>> getLocations(
+    public ResponseEntity<ApiResponse<List<LocationZoneResponse>>> getLocations(
             AuthContext authContext
     ) {
-        return ResponseEntity.ok(getLocationsService.getLocations(resolveTenantId(authContext)));
+        return ResponseEntity.ok(ApiResponse.success(
+                "ok",
+                getLocationsService.getLocations(resolveTenantId(authContext))
+        ));
     }
 }
