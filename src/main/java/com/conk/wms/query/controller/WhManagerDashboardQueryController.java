@@ -1,6 +1,7 @@
 package com.conk.wms.query.controller;
 
 import com.conk.wms.common.auth.AuthContext;
+import com.conk.wms.common.controller.ApiResponse;
 import com.conk.wms.query.controller.dto.response.WhManagerDashboardResponse;
 import com.conk.wms.query.service.GetWhManagerDashboardService;
 import org.springframework.http.ResponseEntity;
@@ -24,9 +25,12 @@ public class WhManagerDashboardQueryController {
     }
 
     @GetMapping
-    public ResponseEntity<WhManagerDashboardResponse> getDashboard(
+    public ResponseEntity<ApiResponse<WhManagerDashboardResponse>> getDashboard(
             AuthContext authContext
     ) {
-        return ResponseEntity.ok(getWhManagerDashboardService.getDashboard(resolveTenantId(authContext)));
+        return ResponseEntity.ok(ApiResponse.success(
+                "ok",
+                getWhManagerDashboardService.getDashboard(resolveTenantId(authContext))
+        ));
     }
 }

@@ -38,7 +38,7 @@ class BinFixedAssignmentManagementControllerTest {
     private ManageBinFixedAssignmentService manageBinFixedAssignmentService;
 
     @Test
-    @DisplayName("Bin 고정 배정 생성 성공 시 raw 객체를 반환한다")
+    @DisplayName("Bin 고정 배정 생성 성공 시 ApiResponse 객체를 반환한다")
     void createAssignment_success() throws Exception {
         when(manageBinFixedAssignmentService.create(eq("CONK"), any()))
                 .thenReturn(BinFixedAssignmentResponse.builder()
@@ -57,13 +57,14 @@ class BinFixedAssignmentManagementControllerTest {
                                 "workerId", "WORKER-001"
                         ))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.bin").value("A-01-01"))
-                .andExpect(jsonPath("$.workerId").value("WORKER-001"))
-                .andExpect(jsonPath("$.workerName").value("김피커"));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.bin").value("A-01-01"))
+                .andExpect(jsonPath("$.data.workerId").value("WORKER-001"))
+                .andExpect(jsonPath("$.data.workerName").value("김피커"));
     }
 
     @Test
-    @DisplayName("Bin 고정 배정 수정 성공 시 raw 객체를 반환한다")
+    @DisplayName("Bin 고정 배정 수정 성공 시 ApiResponse 객체를 반환한다")
     void updateAssignment_success() throws Exception {
         when(manageBinFixedAssignmentService.update(eq("CONK"), eq("A-01-01"), any()))
                 .thenReturn(BinFixedAssignmentResponse.builder()
@@ -81,9 +82,10 @@ class BinFixedAssignmentManagementControllerTest {
                                 "workerId", "WORKER-002"
                         ))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.bin").value("A-01-01"))
-                .andExpect(jsonPath("$.workerId").value("WORKER-002"))
-                .andExpect(jsonPath("$.workerName").value("박패커"));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.bin").value("A-01-01"))
+                .andExpect(jsonPath("$.data.workerId").value("WORKER-002"))
+                .andExpect(jsonPath("$.data.workerName").value("박패커"));
     }
 
     @Test

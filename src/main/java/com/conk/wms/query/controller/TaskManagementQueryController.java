@@ -28,6 +28,13 @@ public class TaskManagementQueryController {
         this.getPickingListsService = getPickingListsService;
     }
 
+    @GetMapping("/tasks")
+    public ResponseEntity<ApiResponse<List<PickingListResponse>>> getTasks(
+            AuthContext authContext
+    ) {
+        return ResponseEntity.ok(ApiResponse.success("ok", getPickingListsService.getPickingLists(resolveTenantId(authContext))));
+    }
+
     @GetMapping("/picking-lists")
     public ResponseEntity<ApiResponse<List<PickingListResponse>>> getPickingLists(
             AuthContext authContext

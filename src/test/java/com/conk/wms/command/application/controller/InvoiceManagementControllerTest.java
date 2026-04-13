@@ -85,6 +85,27 @@ class InvoiceManagementControllerTest {
     }
 
     @Test
+    @DisplayName("프론트 kebab-case bulk-label 경로로도 일괄 송장 발행을 처리한다")
+    void issueBulk_withKebabCaseAlias_success() throws Exception {
+        when(issueInvoiceService.issueBulk(java.util.List.of("ORD-001", "ORD-002"), "CONK", "UPS", "Ground", "4x6 PDF", "SYSTEM"))
+                .thenReturn(new IssueInvoiceService.BulkIssueResult(2));
+
+        mockMvc.perform(post("/wms/manager/invoice-orders/bulk-label")
+                        .header("X-Tenant-Code", "CONK")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "orderIds", java.util.List.of("ORD-001", "ORD-002"),
+                                "carrier", "UPS",
+                                "service", "Ground",
+                                "labelFormat", "4x6 PDF"
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("bulk invoice issued"))
+                .andExpect(jsonPath("$.data.issuedOrderCount").value(2));
+    }
+
+    @Test
     @DisplayName("패킹 완료 전 송장 발행 시 409를 반환한다")
     void issue_whenNotReady_thenReturn409() throws Exception {
         doThrow(new BusinessException(ErrorCode.OUTBOUND_INVOICE_NOT_READY))

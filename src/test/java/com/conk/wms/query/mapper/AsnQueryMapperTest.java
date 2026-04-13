@@ -3,16 +3,21 @@ package com.conk.wms.query.mapper;
 import com.conk.wms.command.domain.aggregate.Asn;
 import com.conk.wms.command.domain.aggregate.AsnItem;
 import com.conk.wms.command.domain.aggregate.InspectionPutaway;
+import com.conk.wms.command.domain.aggregate.Product;
 import com.conk.wms.query.controller.dto.response.AsnDetailResponse;
 import com.conk.wms.query.controller.dto.response.AsnInspectionResponse;
 import com.conk.wms.query.controller.dto.response.AsnKpiResponse;
 import com.conk.wms.query.controller.dto.response.SellerAsnListItemResponse;
+import com.conk.wms.query.controller.dto.response.WhManagerInboundAsnResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -111,6 +116,39 @@ class AsnQueryMapperTest {
         assertEquals(0, result.getItems().get(1).getPutawayQuantity());
     }
 
+    @Test
+    @DisplayName("창고 관리자 ASN 목록 응답으로 변환할 때 목록 row와 신규 SKU를 함께 채운다")
+    void toWhManagerInboundAsnResponse_success() {
+        Asn asn = createAsn("ASN-20260329-001", "INSPECTING_PUTAWAY");
+        List<AsnItem> items = List.of(
+                new AsnItem("ASN-20260329-001", "SKU-001", 100, "상품A", 3),
+                new AsnItem("ASN-20260329-001", "SKU-002", 50, "상품B", 2)
+        );
+        InspectionPutaway row = new InspectionPutaway("ASN-20260329-001", "SKU-001", "CONK");
+        row.saveProgress("LOC-A-01-01", 97, 3, "박스 파손", 94);
+
+        WhManagerInboundAsnResponse result = asnQueryMapper.toWhManagerInboundAsnResponse(
+                asn,
+                items,
+                List.of(row),
+                Map.of(
+                        "SKU-001", createProduct("SKU-001", "정식 상품명A"),
+                        "SKU-002", createProduct("SKU-002", "정식 상품명B")
+                ),
+                Set.of("SKU-001")
+        );
+
+        assertEquals("ASN-20260329-001", result.getId());
+        assertEquals("SELLER-001", result.getSeller());
+        assertEquals("SKU-001 외 1", result.getSku());
+        assertEquals(150, result.getPlannedQty());
+        assertEquals(97, result.getActualQty());
+        assertEquals("MISMATCH", result.getStatus());
+        assertEquals(1, result.getNewSkus().size());
+        assertEquals("SKU-002", result.getNewSkus().get(0).getCode());
+        assertEquals("정식 상품명B", result.getNewSkus().get(0).getName());
+    }
+
     private Asn createAsn(String asnId, String status) {
         return new Asn(
                 asnId,
@@ -122,6 +160,24 @@ class AsnQueryMapperTest {
                 5,
                 LocalDateTime.of(2026, 3, 29, 10, 0),
                 LocalDateTime.of(2026, 3, 29, 10, 0),
+                "SELLER-001",
+                "SELLER-001"
+        );
+    }
+
+    private Product createProduct(String skuId, String productName) {
+        return new Product(
+                skuId,
+                productName,
+                "뷰티",
+                10000,
+                7000,
+                BigDecimal.ONE,
+                BigDecimal.ONE,
+                BigDecimal.ONE,
+                BigDecimal.ONE,
+                10,
+                "ACTIVE",
                 "SELLER-001",
                 "SELLER-001"
         );

@@ -58,6 +58,30 @@ class TaskManagementQueryControllerTest {
     }
 
     @Test
+    @DisplayName("작업 목록 조회 성공 시 200과 피킹 리스트 요약 목록을 반환한다")
+    void getTasks_success() throws Exception {
+        when(getPickingListsService.getPickingLists("CONK"))
+                .thenReturn(List.of(PickingListResponse.builder()
+                        .id("WORK-OUT-CONK-ORD-001")
+                        .assignedWorker("WORKER-001")
+                        .orderCount(1)
+                        .itemCount(4)
+                        .completedBins(0)
+                        .totalBins(2)
+                        .issuedAt("09:30")
+                        .status("WAITING")
+                        .build()));
+
+        mockMvc.perform(get("/wms/manager/tasks")
+                        .header("X-Tenant-Code", "CONK"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("ok"))
+                .andExpect(jsonPath("$.data[0].id").value("WORK-OUT-CONK-ORD-001"))
+                .andExpect(jsonPath("$.data[0].assignedWorker").value("WORKER-001"));
+    }
+
+    @Test
     @DisplayName("피킹 리스트 목록 조회 시 tenant 헤더가 없으면 400을 반환한다")
     void getPickingLists_whenTenantHeaderMissing_thenReturn400() throws Exception {
         mockMvc.perform(get("/wms/manager/picking-lists"))

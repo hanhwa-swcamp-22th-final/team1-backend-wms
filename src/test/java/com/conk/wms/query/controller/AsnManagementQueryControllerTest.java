@@ -99,6 +99,34 @@ class AsnManagementQueryControllerTest {
     }
 
     @Test
+    @DisplayName("프론트 Bin 후보 조회 경로 호출 시 200과 candidatesBySku를 반환한다")
+    void getBinCandidates_success() throws Exception {
+        when(getAsnRecommendedBinsService.getRecommendedBins(eq("ASN-001"), eq("CONK"), eq(null)))
+                .thenReturn(AsnRecommendedBinsResponse.builder()
+                        .asnId("ASN-001")
+                        .items(List.of(
+                                AsnRecommendedBinsResponse.ItemResponse.builder()
+                                        .skuId("SKU-001")
+                                        .recommendedBins(List.of(
+                                                AsnRecommendedBinsResponse.RecommendedBinResponse.builder()
+                                                        .locationId("LOC-A-01-01")
+                                                        .bin("A-01-01")
+                                                        .recommendReason("SAME_SKU")
+                                                        .availableCapacity(120)
+                                                        .build()
+                                        ))
+                                        .build()
+                        ))
+                        .build());
+
+        mockMvc.perform(get("/wms/asns/ASN-001/bin-candidates")
+                        .header("X-Tenant-Code", "CONK"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.candidatesBySku.SKU-001[0].bin").value("A-01-01"));
+    }
+
+    @Test
     @DisplayName("검수/적재 조회 성공 시 200과 inspection 응답을 반환한다")
     void getInspection_success() throws Exception {
         when(getAsnInspectionService.getInspection(eq("ASN-001")))

@@ -56,6 +56,7 @@ public enum ErrorCode {
     ASN_PUTAWAY_NOT_READY(HttpStatus.CONFLICT, "ASN-036", "검수가 완료되지 않아 적재를 진행할 수 없습니다."),
     ASN_SELLER_WAREHOUSE_MISMATCH(HttpStatus.BAD_REQUEST, "ASN-037", "셀러가 이용할 수 없는 창고입니다."),
     ASN_WORK_QUANTITY_EXCEEDED(HttpStatus.BAD_REQUEST, "ASN-038", "실제 처리 수량이 허용 수량을 초과할 수 없습니다."),
+    ASN_CANCEL_NOT_ALLOWED(HttpStatus.CONFLICT, "ASN-039", "현재 상태에서는 ASN 취소를 진행할 수 없습니다."),
 
     OUTBOUND_ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "OUTBOUND-001", "출고 대상 주문을 찾을 수 없습니다."),
     OUTBOUND_DISPATCH_NOT_ALLOWED(HttpStatus.CONFLICT, "OUTBOUND-002", "현재 상태에서는 출고 지시를 진행할 수 없습니다."),
@@ -90,6 +91,8 @@ public enum ErrorCode {
     BIN_ASSIGNMENT_BIN_REQUIRED(HttpStatus.BAD_REQUEST, "WORKER-006", "배정할 Bin은 필수입니다."),
     BIN_ASSIGNMENT_LOCATION_NOT_FOUND(HttpStatus.NOT_FOUND, "WORKER-007", "배정 대상 Bin을 찾을 수 없습니다."),
     BIN_ASSIGNMENT_WORKER_NOT_FOUND(HttpStatus.NOT_FOUND, "WORKER-008", "배정 대상 작업자를 찾을 수 없습니다."),
+
+    INVENTORY_NOT_FOUND(HttpStatus.NOT_FOUND, "INVENTORY-001", "재고를 찾을 수 없습니다."),
 
     PRODUCT_SKU_REQUIRED(HttpStatus.BAD_REQUEST, "PRODUCT-001", "SKU는 필수입니다."),
     PRODUCT_NAME_REQUIRED(HttpStatus.BAD_REQUEST, "PRODUCT-002", "상품명은 필수입니다."),

@@ -38,7 +38,7 @@ class WorkerAccountManagementControllerTest {
     private ManageWorkerAccountService manageWorkerAccountService;
 
     @Test
-    @DisplayName("작업자 계정 생성 성공 시 raw 객체를 반환한다")
+    @DisplayName("작업자 계정 생성 성공 시 ApiResponse 객체를 반환한다")
     void create_success() throws Exception {
         when(manageWorkerAccountService.create(eq("CONK"), any()))
                 .thenReturn(WorkerAccountResponse.builder()
@@ -58,12 +58,13 @@ class WorkerAccountManagementControllerTest {
                                 "zones", List.of("A")
                         ))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value("WORKER-010"))
-                .andExpect(jsonPath("$.name").value("신규작업자"));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.id").value("WORKER-010"))
+                .andExpect(jsonPath("$.data.name").value("신규작업자"));
     }
 
     @Test
-    @DisplayName("작업자 계정 수정 성공 시 raw 객체를 반환한다")
+    @DisplayName("작업자 계정 수정 성공 시 ApiResponse 객체를 반환한다")
     void update_success() throws Exception {
         when(manageWorkerAccountService.update(eq("CONK"), eq("WORKER-001"), any()))
                 .thenReturn(WorkerAccountResponse.builder()
@@ -81,8 +82,9 @@ class WorkerAccountManagementControllerTest {
                                 "zones", List.of("A", "B")
                         ))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value("WORKER-001"))
-                .andExpect(jsonPath("$.zones[1]").value("B"));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.id").value("WORKER-001"))
+                .andExpect(jsonPath("$.data.zones[1]").value("B"));
     }
 }
 

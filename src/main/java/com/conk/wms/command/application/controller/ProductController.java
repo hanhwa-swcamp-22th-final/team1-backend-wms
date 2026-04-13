@@ -24,7 +24,7 @@ public class ProductController {
         this.productCommandService = productCommandService;
     }
 
-    @PatchMapping("/{sku}/status")
+    @PatchMapping({"/{sku}/status", "/seller/{sku}/status"})
     public ResponseEntity<Void> changeStatus(@PathVariable String sku,
                                              @RequestBody ChangeProductStatusRequest request) {
         productCommandService.changeStatus(new ChangeProductStatusCommand(sku, request.getStatus()));

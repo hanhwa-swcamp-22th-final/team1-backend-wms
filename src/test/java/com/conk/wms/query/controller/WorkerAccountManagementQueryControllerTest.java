@@ -1,6 +1,7 @@
 package com.conk.wms.query.controller;
 
 import com.conk.wms.common.controller.GlobalExceptionHandler;
+import com.conk.wms.common.controller.ApiResponse;
 import com.conk.wms.query.controller.dto.response.WorkerAccountResponse;
 import com.conk.wms.query.service.GetWorkerAccountsService;
 import org.junit.jupiter.api.DisplayName;
@@ -29,7 +30,7 @@ class WorkerAccountManagementQueryControllerTest {
     private GetWorkerAccountsService getWorkerAccountsService;
 
     @Test
-    @DisplayName("작업자 계정 목록 조회 성공 시 raw 배열을 반환한다")
+    @DisplayName("작업자 계정 목록 조회 성공 시 ApiResponse를 반환한다")
     void getWorkerAccounts_success() throws Exception {
         when(getWorkerAccountsService.getWorkerAccounts("CONK"))
                 .thenReturn(List.of(WorkerAccountResponse.builder()
@@ -41,7 +42,25 @@ class WorkerAccountManagementQueryControllerTest {
         mockMvc.perform(get("/wh_worker_accounts")
                         .header("X-Tenant-Code", "CONK"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value("WORKER-001"))
-                .andExpect(jsonPath("$[0].name").value("김피커"));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data[0].id").value("WORKER-001"))
+                .andExpect(jsonPath("$.data[0].name").value("김피커"));
+    }
+
+    @Test
+    @DisplayName("작업자 목록 별칭 조회 성공 시 ApiResponse를 반환한다")
+    void getWorkersAlias_success() throws Exception {
+        when(getWorkerAccountsService.getWorkerAccounts("CONK"))
+                .thenReturn(List.of(WorkerAccountResponse.builder()
+                        .id("WORKER-001")
+                        .name("김피커")
+                        .accountStatus("ACTIVE")
+                        .build()));
+
+        mockMvc.perform(get("/wms/manager/workers")
+                        .header("X-Tenant-Code", "CONK"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data[0].id").value("WORKER-001"));
     }
 }

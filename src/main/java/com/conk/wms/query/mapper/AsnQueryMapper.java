@@ -3,14 +3,18 @@ package com.conk.wms.query.mapper;
 import com.conk.wms.command.domain.aggregate.Asn;
 import com.conk.wms.command.domain.aggregate.AsnItem;
 import com.conk.wms.command.domain.aggregate.InspectionPutaway;
+import com.conk.wms.command.domain.aggregate.Product;
 import com.conk.wms.query.controller.dto.response.AsnDetailResponse;
 import com.conk.wms.query.controller.dto.response.AsnInspectionResponse;
 import com.conk.wms.query.controller.dto.response.AsnKpiResponse;
 import com.conk.wms.query.controller.dto.response.SellerAsnListItemResponse;
+import com.conk.wms.query.controller.dto.response.WhManagerInboundAsnResponse;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -162,6 +166,44 @@ public class AsnQueryMapper {
                 .build();
     }
 
+    public WhManagerInboundAsnResponse toWhManagerInboundAsnResponse(Asn asn,
+                                                                     List<AsnItem> items,
+                                                                     List<InspectionPutaway> inspectionRows,
+                                                                     Map<String, Product> productBySku,
+                                                                     Set<String> knownSkuIds) {
+        int plannedQuantity = items.stream()
+                .mapToInt(AsnItem::getQuantity)
+                .sum();
+        Integer actualQuantity = toActualQuantity(inspectionRows);
+
+        List<String> skuIds = items.stream()
+                .map(AsnItem::getSkuId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        List<WhManagerInboundAsnResponse.NewSkuResponse> newSkus = skuIds.stream()
+                .filter(skuId -> !knownSkuIds.contains(skuId))
+                .map(skuId -> WhManagerInboundAsnResponse.NewSkuResponse.builder()
+                        .code(skuId)
+                        .name(resolveProductName(items, productBySku, skuId))
+                        .build())
+                .toList();
+
+        return WhManagerInboundAsnResponse.builder()
+                .id(asn.getAsnId())
+                .seller(asn.getSellerId())
+                .company(asn.getSellerId())
+                .sku(formatSkuLabel(skuIds))
+                .plannedQty(plannedQuantity)
+                .actualQty(actualQuantity)
+                .expectedDate(asn.getExpectedArrivalDate() == null ? null : asn.getExpectedArrivalDate().toString())
+                .registeredDate(asn.getCreatedAt() == null ? null : asn.getCreatedAt().toLocalDate().toString())
+                .status(toWhManagerInboundStatus(asn.getStatus(), plannedQuantity, actualQuantity))
+                .newSkus(newSkus)
+                .build();
+    }
+
     // DB 운영 상태를 seller 화면에서 사용하는 상태 배지 값으로 맞춘다.
     private String toSellerStatus(String status) {
         if (status == null || status.isBlank()) {
@@ -182,5 +224,70 @@ public class AsnQueryMapper {
         }
         int startIndex = Math.max(0, asnId.length() - 6);
         return "REF-" + asnId.substring(startIndex);
+    }
+
+    private Integer toActualQuantity(List<InspectionPutaway> inspectionRows) {
+        if (inspectionRows == null || inspectionRows.isEmpty()) {
+            return null;
+        }
+
+        boolean hasMeasuredQuantity = inspectionRows.stream().anyMatch(row ->
+                row.getInspectedQuantity() > 0
+                        || row.getPutawayQuantity() > 0
+                        || row.getDefectiveQuantity() > 0
+                        || row.isCompleted()
+        );
+        if (!hasMeasuredQuantity) {
+            return null;
+        }
+
+        return inspectionRows.stream()
+                .mapToInt(row -> row.getInspectedQuantity() > 0
+                        ? row.getInspectedQuantity()
+                        : row.getPutawayQuantity() + row.getDefectiveQuantity())
+                .sum();
+    }
+
+    private String toWhManagerInboundStatus(String status, int plannedQuantity, Integer actualQuantity) {
+        if (status == null || status.isBlank()) {
+            return "PENDING";
+        }
+
+        if (actualQuantity != null && actualQuantity != plannedQuantity) {
+            return "MISMATCH";
+        }
+
+        return switch (status) {
+            case "REGISTERED" -> "PENDING";
+            case "ARRIVED" -> "TRANSIT";
+            case "INSPECTING_PUTAWAY" -> "MISMATCH";
+            case "STORED", "RECEIVED" -> "RECEIVED";
+            default -> "PENDING";
+        };
+    }
+
+    private String resolveProductName(List<AsnItem> items, Map<String, Product> productBySku, String skuId) {
+        Product product = productBySku.get(skuId);
+        if (product != null && product.getProductName() != null && !product.getProductName().isBlank()) {
+            return product.getProductName();
+        }
+
+        return items.stream()
+                .filter(item -> skuId.equals(item.getSkuId()))
+                .map(AsnItem::getProductNameSnapshot)
+                .filter(Objects::nonNull)
+                .filter(name -> !name.isBlank())
+                .findFirst()
+                .orElse(skuId);
+    }
+
+    private String formatSkuLabel(List<String> skuIds) {
+        if (skuIds == null || skuIds.isEmpty()) {
+            return "-";
+        }
+        if (skuIds.size() == 1) {
+            return skuIds.getFirst();
+        }
+        return skuIds.getFirst() + " 외 " + (skuIds.size() - 1);
     }
 }

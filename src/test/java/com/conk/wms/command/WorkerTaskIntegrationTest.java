@@ -92,8 +92,8 @@ class WorkerTaskIntegrationTest {
                         .header("X-Tenant-Code", "CONK")
                         .param("workerAccountId", "WORKER-001"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[0].id").value("WORK-OUT-CONK-ORD-001"))
-                .andExpect(jsonPath("$.data[0].bins[0].sku").value("SKU-001"));
+                .andExpect(jsonPath("$[0].id").value("WORK-OUT-CONK-ORD-001"))
+                .andExpect(jsonPath("$[0].bins[0].sku").value("SKU-001"));
 
         mockMvc.perform(patch("/wms/worker/tasks/WORK-OUT-CONK-ORD-001")
                         .header("X-Tenant-Code", "CONK")
@@ -174,9 +174,9 @@ class WorkerTaskIntegrationTest {
                         .header("X-Tenant-Code", "CONK")
                         .param("workerAccountId", "WORKER-003"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[0].category").value("INBOUND"))
-                .andExpect(jsonPath("$.data[0].refNo").value("ASN-WORK-001"))
-                .andExpect(jsonPath("$.data[0].bins[0].sku").value("SKU-003"));
+                .andExpect(jsonPath("$[0].category").value("INBOUND"))
+                .andExpect(jsonPath("$[0].refNo").value("ASN-WORK-001"))
+                .andExpect(jsonPath("$[0].bins[0].sku").value("SKU-003"));
 
         mockMvc.perform(patch("/wms/worker/tasks/WORK-IN-CONK-ASN-WORK-001-WORKER-003")
                         .header("X-Tenant-Code", "CONK")

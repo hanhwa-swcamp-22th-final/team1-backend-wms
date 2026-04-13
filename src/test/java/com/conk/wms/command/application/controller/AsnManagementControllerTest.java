@@ -2,10 +2,13 @@ package com.conk.wms.command.application.controller;
 
 import com.conk.wms.command.domain.aggregate.Asn;
 import com.conk.wms.command.application.service.AssignAsnPutawayService;
+import com.conk.wms.command.application.service.CancelSellerAsnService;
 import com.conk.wms.command.application.service.CompleteAsnInspectionService;
 import com.conk.wms.command.application.service.ConfirmAsnArrivalService;
 import com.conk.wms.command.application.service.ConfirmAsnInventoryService;
 import com.conk.wms.command.application.service.SaveAsnInspectionService;
+import com.conk.wms.command.domain.aggregate.Location;
+import com.conk.wms.command.domain.repository.LocationRepository;
 import com.conk.wms.common.controller.GlobalExceptionHandler;
 import com.conk.wms.common.exception.BusinessException;
 import com.conk.wms.common.exception.ErrorCode;
@@ -25,8 +28,10 @@ import java.util.List;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -58,6 +63,12 @@ class AsnManagementControllerTest {
 
     @MockitoBean
     private ConfirmAsnInventoryService confirmAsnInventoryService;
+
+    @MockitoBean
+    private CancelSellerAsnService cancelSellerAsnService;
+
+    @MockitoBean
+    private LocationRepository locationRepository;
 
     @Test
     @DisplayName("도착 확인 성공 시 200과 변경된 ASN 상태를 반환한다")
@@ -240,6 +251,53 @@ class AsnManagementControllerTest {
                 .andExpect(jsonPath("$.message").value("putaway assigned"))
                 .andExpect(jsonPath("$.data.asnId").value("ASN-001"))
                 .andExpect(jsonPath("$.data.assignedItemCount").value(2));
+    }
+
+    @Test
+    @DisplayName("프론트 Bin 배정 저장 경로 호출 시 200과 저장 건수를 반환한다")
+    void saveBinAssignments_success() throws Exception {
+        when(locationRepository.findByBinId("A-01-01")).thenReturn(java.util.Optional.of(new Location(
+                "LOC-A-01-01", "A-01-01", "WH-001", "A", "01", 100, true
+        )));
+        when(assignAsnPutawayService.assign(any())).thenReturn(1);
+
+        mockMvc.perform(post("/wms/asns/ASN-001/bin-assignments")
+                        .header("X-Tenant-Code", "CONK")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "assignments", List.of(Map.of(
+                                        "sku", "SKU-001",
+                                        "bin", "A-01-01",
+                                        "isNewSku", true
+                                ))
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.assignedItemCount").value(1));
+    }
+
+    @Test
+    @DisplayName("셀러 ASN 취소 성공 시 200을 반환한다")
+    void cancelAsn_success() throws Exception {
+        when(cancelSellerAsnService.cancel("SELLER-001", "ASN-001")).thenReturn(new Asn(
+                "ASN-001",
+                "WH-001",
+                "SELLER-001",
+                LocalDate.of(2026, 4, 2),
+                "CANCELLED",
+                "메모",
+                3,
+                LocalDateTime.of(2026, 4, 1, 9, 0),
+                LocalDateTime.of(2026, 4, 2, 10, 30),
+                "SELLER-001",
+                "SELLER-001"
+        ));
+
+        mockMvc.perform(post("/wms/asns/ASN-001/cancel")
+                        .header("X-Tenant-Code", "SELLER-001"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("cancelled"));
     }
 
     @Test

@@ -3,6 +3,7 @@ package com.conk.wms.command.domain.repository;
 import com.conk.wms.command.domain.aggregate.InspectionPutaway;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -13,10 +14,16 @@ public interface InspectionPutawayRepository extends JpaRepository<InspectionPut
 
     List<InspectionPutaway> findAllByAsnId(String asnId);
 
+    List<InspectionPutaway> findAllByAsnIdIn(List<String> asnIds);
+
     Optional<InspectionPutaway> findByAsnIdAndSkuId(String asnId, String skuId);
 
     List<InspectionPutaway> findAllByTenantIdAndCompletedTrueAndLocationIdIsNotNullOrderByCompletedAtDescUpdatedAtDesc(
             String tenantId
+    );
+
+    List<InspectionPutaway> findAllBySkuIdInAndTenantIdAndCompletedTrueAndLocationIdIsNotNullOrderByCompletedAtDescUpdatedAtDesc(
+            Collection<String> skuIds, String tenantId
     );
 
     List<InspectionPutaway> findAllBySkuIdAndTenantIdAndCompletedTrueAndLocationIdIsNotNullOrderByCompletedAtDescUpdatedAtDesc(
