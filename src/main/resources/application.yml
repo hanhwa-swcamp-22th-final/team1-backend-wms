@@ -1,6 +1,23 @@
 spring:
   application:
     name: team1-backend-wms
+
+  datasource:
+    # Docker: SPRING_DATASOURCE_URL 환경변수로 주입 (wms-db:3306)
+    # 로컬 직접 실행: 기본값 localhost:3311 사용
+    url: ${SPRING_DATASOURCE_URL:jdbc:mariadb://localhost:3311/wms_db?useSSL=false&serverTimezone=Asia/Seoul}
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:temp_password}
+    driver-class-name: org.mariadb.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9094}
     consumer:
