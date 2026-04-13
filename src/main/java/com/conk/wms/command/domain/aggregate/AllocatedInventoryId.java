@@ -12,16 +12,16 @@ import java.util.Objects;
 @Embeddable
 public class AllocatedInventoryId implements Serializable {
 
-    @Column(name = "sku_id", nullable = false)
+    @Column(name = "sku_id", nullable = false, length = 200)
     private String skuId;
 
-    @Column(name = "location_id", nullable = false)
+    @Column(name = "location_id", nullable = false, length = 150)
     private String locationId;
 
-    @Column(name = "tenant_id", nullable = false)
+    @Column(name = "tenant_id", nullable = false, length = 100)
     private String tenantId;
 
-    @Column(name = "order_id", nullable = false)
+    @Column(name = "order_id", nullable = false, length = 100)
     private String orderId;
 
     protected AllocatedInventoryId() {
