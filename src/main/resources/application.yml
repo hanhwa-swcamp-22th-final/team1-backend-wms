@@ -2,7 +2,16 @@ spring:
   application:
     name: team1-backend-wms
   kafka:
-    bootstrap-servers: localhost:9094
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9094}
+    consumer:
+      group-id: ${KAFKA_CONSUMER_GROUP_ID:wms-billing}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+app:
+  kafka:
+    topics:
+      billing-monthly-result: billing.monthly.result.v1
+    consumer:
+      billing-monthly-result-auto-startup: true
