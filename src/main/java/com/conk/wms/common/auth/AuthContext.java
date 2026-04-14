@@ -88,6 +88,31 @@ public final class AuthContext {
         requireTenantId();
     }
 
+    public void requireMasterAdminAccess() {
+        AuthRole requiredRole = requireRole();
+        if (requiredRole != AuthRole.MASTER_ADMIN) {
+            throw new BusinessException(ErrorCode.AUTH_ROLE_FORBIDDEN);
+        }
+        requireUserId();
+        requireTenantId();
+    }
+
+    public void requireWorkerAccess() {
+        AuthRole requiredRole = requireRole();
+        if (requiredRole != AuthRole.WM_WORKER) {
+            throw new BusinessException(ErrorCode.AUTH_ROLE_FORBIDDEN);
+        }
+        requireUserId();
+        requireTenantId();
+    }
+
+    public void requireSameUser(String requestedUserId) {
+        String normalizedRequestedUserId = normalize(requestedUserId);
+        if (normalizedRequestedUserId != null && !requireUserId().equals(normalizedRequestedUserId)) {
+            throw new BusinessException(ErrorCode.AUTH_ROLE_FORBIDDEN);
+        }
+    }
+
     private String normalize(String value) {
         if (value == null) {
             return null;

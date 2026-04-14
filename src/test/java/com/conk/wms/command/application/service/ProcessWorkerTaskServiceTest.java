@@ -73,9 +73,9 @@ class ProcessWorkerTaskServiceTest {
     @DisplayName("작업 시작 성공: 작업자를 배정하고 상태를 IN_PROGRESS로 변경한다")
     void start_success() {
         Work work = new Work("WORK-001", "TENANT-001", "INSPECTION_PUTAWAY", "READY");
-        when(workRepository.findByWorkId("WORK-001")).thenReturn(Optional.of(work));
+        when(workRepository.findByWorkIdAndTenantId("WORK-001", "TENANT-001")).thenReturn(Optional.of(work));
 
-        processWorkerTaskService.start("WORK-001", "WORKER-001");
+        processWorkerTaskService.start("TENANT-001", "WORK-001", "WORKER-001");
 
         assertEquals("IN_PROGRESS", work.getStatus());
         verify(workRepository).save(work);
@@ -84,10 +84,10 @@ class ProcessWorkerTaskServiceTest {
     @Test
     @DisplayName("작업 시작 실패: 존재하지 않는 작업이면 예외가 발생한다")
     void start_whenWorkNotFound_thenThrow() {
-        when(workRepository.findByWorkId("WORK-999")).thenReturn(Optional.empty());
+        when(workRepository.findByWorkIdAndTenantId("WORK-999", "TENANT-001")).thenReturn(Optional.empty());
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
-                processWorkerTaskService.start("WORK-999", "WORKER-001")
+                processWorkerTaskService.start("TENANT-001", "WORK-999", "WORKER-001")
         );
 
         assertEquals("작업을 찾을 수 없습니다: WORK-999", exception.getMessage());

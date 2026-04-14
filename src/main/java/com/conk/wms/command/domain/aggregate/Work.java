@@ -57,6 +57,10 @@ public class Work {
         this.status = "COMPLETED";
     }
 
+    public String getAssignedWorkerId() {
+        return assignedWorkerId;
+    }
+
     public String getStatus() {
         return status;
     }

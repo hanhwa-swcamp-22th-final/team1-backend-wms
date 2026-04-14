@@ -45,6 +45,9 @@ class WhManagerBillingQueryControllerTest {
                 ));
 
         mockMvc.perform(get("/wms/manager/billing/monthly-results")
+                        .header("X-Role", "MASTER_ADMIN")
+                        .header("X-User-Id", "MASTER-001")
+                        .header("X-Tenant-Id", "TENANT-001")
                         .param("billingMonth", "2026-03"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))

@@ -65,9 +65,13 @@ public class ProcessWorkerTaskService {
     }
 
     @Transactional
-    public void start(String workId, String workerId) {
-        Work work = workRepository.findByWorkId(workId)
+    public void start(String tenantId, String workId, String workerId) {
+        Work work = workRepository.findByWorkIdAndTenantId(workId, tenantId)
                 .orElseThrow(() -> new IllegalArgumentException("작업을 찾을 수 없습니다: " + workId));
+
+        if (work.getAssignedWorkerId() != null && !workerId.equals(work.getAssignedWorkerId())) {
+            throw new BusinessException(ErrorCode.AUTH_ROLE_FORBIDDEN, "배정된 작업자만 작업을 시작할 수 있습니다.");
+        }
 
         work.assignWorker(workerId);
         work.start();
