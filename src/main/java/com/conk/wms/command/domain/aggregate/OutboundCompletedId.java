@@ -12,10 +12,10 @@ import java.util.Objects;
 @Embeddable
 public class OutboundCompletedId implements Serializable {
 
-    @Column(name = "order_id")
+    @Column(name = "order_id", length = 100)
     private String orderId;
 
-    @Column(name = "tenant_id")
+    @Column(name = "tenant_id", length = 100)
     private String tenantId;
 
     protected OutboundCompletedId() {

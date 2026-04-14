@@ -12,10 +12,10 @@ import java.util.Objects;
 @Embeddable
 public class SellerWarehouseId implements Serializable {
 
-    @Column(name = "seller_id", nullable = false)
+    @Column(name = "seller_id", nullable = false, length = 100)
     private String sellerId;
 
-    @Column(name = "warehouse_id", nullable = false)
+    @Column(name = "warehouse_id", nullable = false, length = 100)
     private String warehouseId;
 
     protected SellerWarehouseId() {

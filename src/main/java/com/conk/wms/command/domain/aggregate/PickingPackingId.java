@@ -12,16 +12,16 @@ import java.util.Objects;
 @Embeddable
 public class PickingPackingId implements Serializable {
 
-    @Column(name = "sku_id")
+    @Column(name = "sku_id", length = 200)
     private String skuId;
 
-    @Column(name = "location_id")
+    @Column(name = "location_id", length = 150)
     private String locationId;
 
-    @Column(name = "tenant_id")
+    @Column(name = "tenant_id", length = 100)
     private String tenantId;
 
-    @Column(name = "order_id")
+    @Column(name = "order_id", length = 100)
     private String orderId;
 
     protected PickingPackingId() {
