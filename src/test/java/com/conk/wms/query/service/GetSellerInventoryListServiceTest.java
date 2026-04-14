@@ -11,6 +11,7 @@ import com.conk.wms.command.domain.repository.InventoryRepository;
 import com.conk.wms.command.domain.repository.LocationRepository;
 import com.conk.wms.command.domain.repository.ProductRepository;
 import com.conk.wms.query.controller.dto.response.SellerInventoryListItemResponse;
+import com.conk.wms.query.controller.dto.response.SellerInventoryListResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -113,6 +114,45 @@ class GetSellerInventoryListServiceTest {
         List<SellerInventoryListItemResponse> responses = getSellerInventoryListService.getSellerInventories("SELLER-001");
 
         assertThat(responses).isEmpty();
+    }
+
+    @Test
+    @DisplayName("셀러 재고 목록 조회 시 query param 기준으로 필터링과 페이징을 적용한다")
+    void getSellerInventories_withQueryParams_success() {
+        Product normalProduct = product("SKU-NORMAL", "앰플", 5);
+        Product lowProduct = product("SKU-LOW", "세럼", 5);
+        Product outProduct = product("SKU-OUT", "크림", 5);
+
+        when(productRepository.findAllBySellerIdOrderByCreatedAtDesc("SELLER-001"))
+                .thenReturn(List.of(normalProduct, lowProduct, outProduct));
+        when(inventoryRepository.findAllByIdTenantId("SELLER-001"))
+                .thenReturn(List.of(
+                        Inventory.createAvailable("LOC-001", "SKU-NORMAL", "SELLER-001", 12, LocalDateTime.of(2026, 4, 7, 10, 0)),
+                        Inventory.createAvailable("LOC-002", "SKU-LOW", "SELLER-001", 2, LocalDateTime.of(2026, 4, 6, 10, 0))
+                ));
+        when(locationRepository.findAllByLocationIdIn(anyCollection()))
+                .thenReturn(List.of(
+                        new Location("LOC-001", "A-01-01", "WH-001", "A", "01", 100, true),
+                        new Location("LOC-002", "B-01-01", "WH-002", "B", "01", 100, true)
+                ));
+        when(asnRepository.findAllBySellerIdOrderByCreatedAtDesc("SELLER-001")).thenReturn(List.of());
+
+        SellerInventoryListResponse response = getSellerInventoryListService.getSellerInventories(
+                "SELLER-001",
+                0,
+                1,
+                "LOW",
+                "WH-002",
+                "세럼"
+        );
+
+        assertThat(response.getTotal()).isEqualTo(1);
+        assertThat(response.getPage()).isEqualTo(0);
+        assertThat(response.getSize()).isEqualTo(1);
+        assertThat(response.getItems()).hasSize(1);
+        assertThat(response.getItems().get(0).getSku()).isEqualTo("SKU-LOW");
+        assertThat(response.getItems().get(0).getWarehouseName()).isEqualTo("WH-002");
+        assertThat(response.getItems().get(0).getStatus()).isEqualTo("LOW");
     }
 
     private Product product(String skuId, String productName, int safetyStockQuantity) {

@@ -12,6 +12,7 @@ import com.conk.wms.command.domain.repository.LocationRepository;
 import com.conk.wms.command.domain.repository.ProductRepository;
 import com.conk.wms.query.controller.dto.response.SellerInventoryDetailResponse;
 import com.conk.wms.query.controller.dto.response.SellerInventoryListItemResponse;
+import com.conk.wms.query.controller.dto.response.SellerInventoryListResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -55,6 +56,36 @@ public class GetSellerInventoryListService {
     }
 
     public List<SellerInventoryListItemResponse> getSellerInventories(String sellerId) {
+        return buildSellerInventories(sellerId);
+    }
+
+    public SellerInventoryListResponse getSellerInventories(String sellerId,
+                                                            int page,
+                                                            int size,
+                                                            String stockStatus,
+                                                            String warehouseId,
+                                                            String search) {
+        List<SellerInventoryListItemResponse> filteredRows = applyFilters(
+                buildSellerInventories(sellerId),
+                stockStatus,
+                warehouseId,
+                search
+        );
+
+        int safePage = Math.max(page, 0);
+        int safeSize = size <= 0 ? filteredRows.size() == 0 ? 1 : filteredRows.size() : size;
+        int fromIndex = Math.min(safePage * safeSize, filteredRows.size());
+        int toIndex = Math.min(fromIndex + safeSize, filteredRows.size());
+
+        return SellerInventoryListResponse.builder()
+                .items(filteredRows.subList(fromIndex, toIndex))
+                .total(filteredRows.size())
+                .page(page)
+                .size(size)
+                .build();
+    }
+
+    private List<SellerInventoryListItemResponse> buildSellerInventories(String sellerId) {
         List<Product> products = productRepository.findAllBySellerIdOrderByCreatedAtDesc(sellerId);
         if (products.isEmpty()) {
             return List.of();
@@ -110,6 +141,40 @@ public class GetSellerInventoryListService {
         }
 
         return rows;
+    }
+
+    private List<SellerInventoryListItemResponse> applyFilters(List<SellerInventoryListItemResponse> rows,
+                                                               String stockStatus,
+                                                               String warehouseId,
+                                                               String search) {
+        String normalizedStockStatus = normalize(stockStatus);
+        String normalizedWarehouseId = normalize(warehouseId);
+        String normalizedSearch = normalize(search);
+
+        return rows.stream()
+                .filter(item -> normalizedStockStatus == null || normalizedStockStatus.equals(normalize(item.getStatus())))
+                .filter(item -> normalizedWarehouseId == null || normalizedWarehouseId.equals(normalize(item.getWarehouseName())))
+                .filter(item -> normalizedSearch == null || containsSearchKeyword(item, normalizedSearch))
+                .toList();
+    }
+
+    private boolean containsSearchKeyword(SellerInventoryListItemResponse item, String normalizedSearch) {
+        return normalize(item.getId()) != null && normalize(item.getId()).contains(normalizedSearch)
+                || normalize(item.getSku()) != null && normalize(item.getSku()).contains(normalizedSearch)
+                || normalize(item.getProductName()) != null && normalize(item.getProductName()).contains(normalizedSearch)
+                || normalize(item.getWarehouseName()) != null && normalize(item.getWarehouseName()).contains(normalizedSearch)
+                || item.getDetail() != null
+                && normalize(item.getDetail().getLocationCode()) != null
+                && normalize(item.getDetail().getLocationCode()).contains(normalizedSearch);
+    }
+
+    private String normalize(String value) {
+        if (value == null) {
+            return null;
+        }
+
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed.toLowerCase();
     }
 
     private Map<String, Location> loadLocations(List<Inventory> inventories) {

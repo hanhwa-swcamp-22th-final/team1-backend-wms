@@ -2,14 +2,14 @@ package com.conk.wms.query.controller;
 
 import com.conk.wms.common.auth.AuthContext;
 import com.conk.wms.common.controller.ApiResponse;
-import com.conk.wms.query.controller.dto.response.SellerInventoryListItemResponse;
+import com.conk.wms.query.controller.dto.request.GetSellerInventoriesRequest;
+import com.conk.wms.query.controller.dto.response.SellerInventoryListResponse;
 import com.conk.wms.query.service.GetSellerInventoryListService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 import static com.conk.wms.common.auth.AuthContextSupport.resolveSellerId;
 
@@ -27,10 +27,21 @@ public class SellerInventoryQueryController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<SellerInventoryListItemResponse>>> getSellerInventories(
-            AuthContext authContext
+    public ResponseEntity<ApiResponse<SellerInventoryListResponse>> getSellerInventories(
+            AuthContext authContext,
+            @ModelAttribute GetSellerInventoriesRequest request
     ) {
         String sellerId = resolveSellerId(authContext);
-        return ResponseEntity.ok(ApiResponse.success("ok", getSellerInventoryListService.getSellerInventories(sellerId)));
+        return ResponseEntity.ok(ApiResponse.success(
+                "ok",
+                getSellerInventoryListService.getSellerInventories(
+                        sellerId,
+                        request.getPage(),
+                        request.getSize(),
+                        request.getStockStatus(),
+                        request.getWarehouseId(),
+                        request.getSearch()
+                )
+        ));
     }
 }
