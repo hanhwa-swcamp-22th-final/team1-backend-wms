@@ -14,4 +14,6 @@ public interface WorkRepository extends JpaRepository<Work, Long> {
     List<Work> findAllByTenantIdAndStatus(String tenantId, String status);
 
     Optional<Work> findByWorkId(String workId);
+
+    Optional<Work> findByWorkIdAndTenantId(String workId, String tenantId);
 }

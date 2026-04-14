@@ -65,7 +65,9 @@ class WorkerTaskControllerTest {
                 .build());
 
         mockMvc.perform(patch("/wms/worker/tasks/WORK-OUT-CONK-ORD-001")
-                        .header("X-Tenant-Code", "CONK")
+                        .header("X-Role", "WM_WORKER")
+                        .header("X-User-Id", "WORKER-001")
+                        .header("X-Tenant-Id", "CONK")
                         .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "workerAccountId", "WORKER-001",
@@ -89,7 +91,9 @@ class WorkerTaskControllerTest {
                 .when(processWorkerTaskService).process(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
 
         mockMvc.perform(patch("/wms/worker/tasks/WORK-OUT-CONK-ORD-001")
-                        .header("X-Tenant-Code", "CONK")
+                        .header("X-Role", "WM_WORKER")
+                        .header("X-User-Id", "WORKER-001")
+                        .header("X-Tenant-Id", "CONK")
                         .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "workerAccountId", "WORKER-001",
@@ -107,6 +111,9 @@ class WorkerTaskControllerTest {
     @DisplayName("작업 시작 성공 시 200을 반환한다")
     void start_success() throws Exception {
         mockMvc.perform(patch("/wms/tasks/WORK-001/start")
+                        .header("X-Role", "WM_WORKER")
+                        .header("X-User-Id", "WORKER-001")
+                        .header("X-Tenant-Id", "TENANT-001")
                         .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of("workerId", "WORKER-001"))))
                 .andExpect(status().isOk());
@@ -116,9 +123,12 @@ class WorkerTaskControllerTest {
     @DisplayName("작업 시작 실패 시 400을 반환한다")
     void start_whenWorkNotFound_thenReturn400() throws Exception {
         doThrow(new IllegalArgumentException("작업을 찾을 수 없습니다: WORK-999"))
-                .when(processWorkerTaskService).start(eq("WORK-999"), eq("WORKER-001"));
+                .when(processWorkerTaskService).start(eq("TENANT-001"), eq("WORK-999"), eq("WORKER-001"));
 
         mockMvc.perform(patch("/wms/tasks/WORK-999/start")
+                        .header("X-Role", "WM_WORKER")
+                        .header("X-User-Id", "WORKER-001")
+                        .header("X-Tenant-Id", "TENANT-001")
                         .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of("workerId", "WORKER-001"))))
                 .andExpect(status().isBadRequest());
