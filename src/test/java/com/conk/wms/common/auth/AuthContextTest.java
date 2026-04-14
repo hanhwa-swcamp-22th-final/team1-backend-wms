@@ -23,7 +23,7 @@ class AuthContextTest {
     @Test
     @DisplayName("창고 권한 컨텍스트는 warehouse 접근 검증을 통과한다")
     void requireWarehouseAccess_withWarehouseContext_succeeds() {
-        AuthContext context = new AuthContext("user-002", "Manager User", AuthRole.WM_MANAGER, "tenant-001", null);
+        AuthContext context = new AuthContext("user-002", "Manager User", AuthRole.WH_MANAGER, "tenant-001", null);
 
         context.requireWarehouseAccess();
 

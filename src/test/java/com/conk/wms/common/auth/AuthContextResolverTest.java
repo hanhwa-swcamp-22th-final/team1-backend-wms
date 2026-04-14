@@ -37,14 +37,14 @@ class AuthContextResolverTest {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader(AuthHeaders.USER_ID, "user-002");
         request.addHeader(AuthHeaders.USER_NAME, "Manager User");
-        request.addHeader(AuthHeaders.ROLE, "WM_MANAGER");
+        request.addHeader(AuthHeaders.ROLE, "WH_MANAGER");
         request.addHeader(AuthHeaders.TENANT_ID, "tenant-001");
 
         AuthContext context = resolver.resolve(request);
 
         assertThat(context.getUserId()).isEqualTo("user-002");
         assertThat(context.getUserName()).isEqualTo("Manager User");
-        assertThat(context.getRole()).isEqualTo(AuthRole.WM_MANAGER);
+        assertThat(context.getRole()).isEqualTo(AuthRole.WH_MANAGER);
         assertThat(context.getTenantId()).isEqualTo("tenant-001");
         assertThat(context.getSellerId()).isNull();
     }

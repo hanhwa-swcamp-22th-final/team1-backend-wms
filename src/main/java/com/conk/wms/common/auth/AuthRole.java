@@ -11,8 +11,8 @@ import java.util.Locale;
 public enum AuthRole {
     SELLER,
     MASTER_ADMIN,
-    WM_MANAGER,
-    WM_WORKER;
+    WH_MANAGER,
+    WH_WORKER;
 
     public static AuthRole fromHeaderValue(String value) {
         if (value == null || value.isBlank()) {
@@ -34,6 +34,6 @@ public enum AuthRole {
     }
 
     public boolean isWarehouseRole() {
-        return this == MASTER_ADMIN || this == WM_MANAGER || this == WM_WORKER;
+        return this == MASTER_ADMIN || this == WH_MANAGER || this == WH_WORKER;
     }
 }
