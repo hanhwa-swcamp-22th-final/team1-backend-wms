@@ -12,7 +12,7 @@ import java.util.Map;
  */
 public interface IntegrationServiceClient {
 
-    ShipmentRecommendationDto recommendShipment(String tenantCode, String orderId);
+    ShipmentRecommendationDto recommendShipment(String tenantCode, IssueLabelRequestDto request);
 
     ShipmentInvoiceDto issueLabel(String tenantCode, IssueLabelRequestDto request);
 

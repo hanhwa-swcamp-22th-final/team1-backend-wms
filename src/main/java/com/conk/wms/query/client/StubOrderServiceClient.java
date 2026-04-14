@@ -1,7 +1,9 @@
 package com.conk.wms.query.client;
 
 import com.conk.wms.query.client.dto.OrderItemDto;
+import com.conk.wms.query.client.dto.OrderShipmentDto;
 import com.conk.wms.query.client.dto.OrderSummaryDto;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -13,6 +15,7 @@ import java.util.Optional;
  * order-service 실연동 전 주문유입과 출고 화면 개발을 위해 사용하는 임시 stub 구현이다.
  */
 @Component
+@ConditionalOnProperty(name = "wms.stub-clients.enabled", havingValue = "true")
 // order-service 실제 명세가 확정되기 전까지 주문 유입 화면을 먼저 개발하기 위한 임시 stub.
 // 이후 Feign/WebClient 기반 구현이 준비되면 이 컴포넌트를 교체하면 된다.
 public class StubOrderServiceClient implements OrderServiceClient {
@@ -92,6 +95,25 @@ public class StubOrderServiceClient implements OrderServiceClient {
         return getPendingOrders(tenantCode).stream()
                 .filter(order -> orderId.equals(order.getOrderId()))
                 .findFirst();
+    }
+
+    @Override
+    public Optional<OrderShipmentDto> getOrderShipment(String tenantCode, String orderId) {
+        return getPendingOrder(tenantCode, orderId)
+                .map(order -> OrderShipmentDto.builder()
+                        .orderId(order.getOrderId())
+                        .sellerId(order.getSellerId())
+                        .warehouseId(order.getWarehouseId())
+                        .recipientName(order.getRecipientName())
+                        .street1(order.getStreet1())
+                        .street2(order.getStreet2())
+                        .city(order.getCityName())
+                        .state(order.getState())
+                        .zip(order.getZip())
+                        .country(order.getCountry())
+                        .phone(order.getPhone())
+                        .email(order.getEmail())
+                        .build());
     }
 
     @Override

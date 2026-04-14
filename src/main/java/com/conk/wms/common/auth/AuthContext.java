@@ -99,7 +99,7 @@ public final class AuthContext {
 
     public void requireWorkerAccess() {
         AuthRole requiredRole = requireRole();
-        if (requiredRole != AuthRole.WM_WORKER) {
+        if (requiredRole != AuthRole.WH_WORKER) {
             throw new BusinessException(ErrorCode.AUTH_ROLE_FORBIDDEN);
         }
         requireUserId();

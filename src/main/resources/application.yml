@@ -32,3 +32,14 @@ app:
       billing-monthly-result: billing.monthly.result.v1
     consumer:
       billing-monthly-result-auto-startup: true
+
+wms:
+  stub-clients:
+    enabled: false
+  clients:
+    member:
+      base-url: ${MEMBER_SERVICE_URL:http://localhost:8081}
+    order:
+      base-url: ${ORDER_SERVICE_URL:http://localhost:8082}
+    integration:
+      base-url: ${INTEGRATION_SERVICE_URL:http://localhost:8084}

@@ -6,10 +6,14 @@ import com.conk.wms.command.application.dto.RegisterAsnCommand;
 import com.conk.wms.command.application.dto.RegisterAsnItemCommand;
 import com.conk.wms.command.domain.aggregate.Asn;
 import com.conk.wms.command.domain.aggregate.AsnItem;
+import com.conk.wms.command.domain.aggregate.WarehouseManagerAssignment;
 import com.conk.wms.command.domain.repository.AsnItemRepository;
 import com.conk.wms.command.domain.repository.AsnRepository;
 import com.conk.wms.command.domain.repository.SellerWarehouseRepository;
 import com.conk.wms.command.domain.repository.WarehouseRepository;
+import com.conk.wms.command.domain.repository.WarehouseManagerAssignmentRepository;
+import com.conk.wms.command.infrastructure.kafka.event.AsnCreatedEvent;
+import com.conk.wms.command.infrastructure.kafka.publisher.NotificationEventKafkaPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,14 +34,20 @@ public class RegisterAsnService {
     private final AsnItemRepository asnItemRepository;
     private final WarehouseRepository warehouseRepository;
     private final SellerWarehouseRepository sellerWarehouseRepository;
+    private final WarehouseManagerAssignmentRepository warehouseManagerAssignmentRepository;
+    private final NotificationEventKafkaPublisher notificationEventKafkaPublisher;
 
     public RegisterAsnService(AsnRepository asnRepository, AsnItemRepository asnItemRepository,
                               WarehouseRepository warehouseRepository,
-                              SellerWarehouseRepository sellerWarehouseRepository) {
+                              SellerWarehouseRepository sellerWarehouseRepository,
+                              WarehouseManagerAssignmentRepository warehouseManagerAssignmentRepository,
+                              NotificationEventKafkaPublisher notificationEventKafkaPublisher) {
         this.asnRepository = asnRepository;
         this.asnItemRepository = asnItemRepository;
         this.warehouseRepository = warehouseRepository;
         this.sellerWarehouseRepository = sellerWarehouseRepository;
+        this.warehouseManagerAssignmentRepository = warehouseManagerAssignmentRepository;
+        this.notificationEventKafkaPublisher = notificationEventKafkaPublisher;
     }
 
     /**
@@ -103,16 +113,23 @@ public class RegisterAsnService {
                         item.getBoxQuantity()
                 ))
         );
-
-        // Kafka 알림 이벤트 연결 가이드:
-        //   실제 발행 로직을 붙일 때는 ASN 헤더 / 품목 저장이 모두 끝난 뒤
-        //   NotificationEventKafkaPublisher.publishAsnCreated(...)를 호출한다.
-        //   payload 권장값:
-        //     - asnId: command.getAsnId()
-        //     - managerId: WarehouseManagerAssignmentRepository에서 창고별 담당 관리자 accountId 조회
-        //     - asnCount: 현재 단건 등록 흐름에서는 1
-        //     - expectedDate: command.getExpectedDate().toString()
-        //     - timestamp: LocalDateTime.now()
+        warehouseRepository.findById(command.getWarehouseId())
+                .map(warehouse -> warehouseManagerAssignmentRepository.findByWarehouseIdAndTenantId(
+                        command.getWarehouseId(),
+                        warehouse.getTenantId()
+                ))
+                .flatMap(java.util.function.Function.identity())
+                .map(WarehouseManagerAssignment::getManagerAccountId)
+                .filter(this::isBlankNegated)
+                .ifPresent(managerId -> {
+                    AsnCreatedEvent event = new AsnCreatedEvent();
+                    event.setAsnId(command.getAsnId());
+                    event.setManagerId(managerId);
+                    event.setAsnCount(1);
+                    event.setExpectedDate(command.getExpectedDate().toString());
+                    event.setTimestamp(LocalDateTime.now());
+                    notificationEventKafkaPublisher.publishAsnCreated(event);
+                });
     }
 
     // 서비스 레벨 사전 검증.
@@ -154,6 +171,10 @@ public class RegisterAsnService {
 
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
+    }
+
+    private boolean isBlankNegated(String value) {
+        return !isBlank(value);
     }
 
     private void assertSellerUsesWarehouse(String sellerId, String warehouseId) {

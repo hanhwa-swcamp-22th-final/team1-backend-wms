@@ -4,8 +4,10 @@ import com.conk.wms.command.domain.aggregate.OutboundPending;
 import com.conk.wms.command.domain.aggregate.WorkDetail;
 import com.conk.wms.command.domain.repository.OutboundPendingRepository;
 import com.conk.wms.command.domain.repository.WorkDetailRepository;
+import com.conk.wms.command.application.service.ShipmentPayloadResolver;
 import com.conk.wms.query.client.IntegrationServiceClient;
 import com.conk.wms.query.client.OrderServiceClient;
+import com.conk.wms.query.client.dto.IssueLabelRequestDto;
 import com.conk.wms.query.client.dto.OrderSummaryDto;
 import com.conk.wms.query.client.dto.ShipmentInvoiceDto;
 import com.conk.wms.query.client.dto.ShipmentRecommendationDto;
@@ -31,15 +33,18 @@ public class GetInvoiceOrdersService {
     private final WorkDetailRepository workDetailRepository;
     private final OrderServiceClient orderServiceClient;
     private final IntegrationServiceClient integrationServiceClient;
+    private final ShipmentPayloadResolver shipmentPayloadResolver;
 
     public GetInvoiceOrdersService(OutboundPendingRepository outboundPendingRepository,
                                    WorkDetailRepository workDetailRepository,
                                    OrderServiceClient orderServiceClient,
-                                   IntegrationServiceClient integrationServiceClient) {
+                                   IntegrationServiceClient integrationServiceClient,
+                                   ShipmentPayloadResolver shipmentPayloadResolver) {
         this.outboundPendingRepository = outboundPendingRepository;
         this.workDetailRepository = workDetailRepository;
         this.orderServiceClient = orderServiceClient;
         this.integrationServiceClient = integrationServiceClient;
+        this.shipmentPayloadResolver = shipmentPayloadResolver;
     }
 
     /**
@@ -68,7 +73,8 @@ public class GetInvoiceOrdersService {
         }
 
         OrderSummaryDto order = optionalOrder.get();
-        ShipmentRecommendationDto recommendation = integrationServiceClient.recommendShipment(tenantCode, orderId);
+        IssueLabelRequestDto request = shipmentPayloadResolver.build(tenantCode, orderId, null, null, "4x6 PDF");
+        ShipmentRecommendationDto recommendation = integrationServiceClient.recommendShipment(tenantCode, request);
         List<OutboundPending> pendingRows = outboundPendingRepository.findAllByIdOrderIdAndIdTenantId(orderId, tenantCode);
         LocalDateTime invoiceIssuedAt = pendingRows.stream()
                 .map(OutboundPending::getInvoiceIssuedAt)
@@ -85,7 +91,7 @@ public class GetInvoiceOrdersService {
                 .sellerName(order.getSellerName())
                 .itemSummary(itemSummary)
                 .shipState(order.getCityName())
-                .shipCountry("KR")
+                .shipCountry(order.getCountry())
                 .recommendedCarrier(carrier)
                 .recommendedService(service)
                 .estimatedRate(recommendation.getEstimatedRate())

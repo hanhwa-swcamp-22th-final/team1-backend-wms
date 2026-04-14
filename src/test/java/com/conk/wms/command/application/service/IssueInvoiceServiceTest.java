@@ -6,6 +6,7 @@ import com.conk.wms.command.domain.repository.WorkDetailRepository;
 import com.conk.wms.common.exception.BusinessException;
 import com.conk.wms.common.exception.ErrorCode;
 import com.conk.wms.query.client.IntegrationServiceClient;
+import com.conk.wms.query.client.dto.IssueLabelRequestDto;
 import com.conk.wms.query.client.dto.ShipmentInvoiceDto;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -41,6 +42,9 @@ class IssueInvoiceServiceTest {
     private IntegrationServiceClient integrationServiceClient;
 
     @Mock
+    private ShipmentPayloadResolver shipmentPayloadResolver;
+
+    @Mock
     private TransactionTemplate transactionTemplate;
 
     @InjectMocks
@@ -61,6 +65,9 @@ class IssueInvoiceServiceTest {
                 .thenReturn(List.of(pending));
         when(workDetailRepository.findAllByIdOrderIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc("ORD-001", "CONK"))
                 .thenReturn(List.of(issueInvoiceServiceTestSupportPackedDetail()));
+        IssueLabelRequestDto request = IssueLabelRequestDto.builder().orderId("ORD-001").carrier("UPS").service("Ground").labelFormat("4x6 PDF").build();
+        when(shipmentPayloadResolver.build("CONK", "ORD-001", "UPS", "Ground", "4x6 PDF"))
+                .thenReturn(request);
         when(integrationServiceClient.issueLabel(eq("CONK"), any()))
                 .thenReturn(ShipmentInvoiceDto.builder()
                         .orderId("ORD-001")
@@ -99,6 +106,9 @@ class IssueInvoiceServiceTest {
         OutboundPending pending = new OutboundPending("ORD-001", "SKU-001", "LOC-A-01-01", "CONK", "SYSTEM");
         when(outboundPendingRepository.findAllByIdOrderIdAndIdTenantId("ORD-001", "CONK"))
                 .thenReturn(List.of(pending));
+        IssueLabelRequestDto request = IssueLabelRequestDto.builder().orderId("ORD-001").carrier("UPS").service("Ground").labelFormat("4x6 PDF").build();
+        when(shipmentPayloadResolver.build("CONK", "ORD-001", "UPS", "Ground", "4x6 PDF"))
+                .thenReturn(request);
         when(integrationServiceClient.issueLabel(eq("CONK"), any()))
                 .thenReturn(ShipmentInvoiceDto.builder()
                         .orderId("ORD-001")
