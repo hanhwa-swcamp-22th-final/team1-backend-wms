@@ -3,6 +3,8 @@ package com.conk.wms.query.controller.dto.response;
 import lombok.Builder;
 import lombok.Getter;
 
+import java.util.List;
+
 /**
  * SellerAsnListItemResponse 조회 응답 모델을 표현하는 DTO다.
  */
@@ -14,10 +16,26 @@ public class SellerAsnListItemResponse {
     private String asnNo;
     private String warehouseName;
     private String expectedDate;
-    private String createdAt;
     private int skuCount;
     private int totalQuantity;
-    private String status;
     private String referenceNo;
+    private String createdAt;
+    private String status;
     private String note;
+    private DetailResponse detail;
+
+    @Getter
+    @Builder
+    public static class DetailResponse {
+        private List<ItemResponse> items;
+    }
+
+    @Getter
+    @Builder
+    public static class ItemResponse {
+        private String sku;
+        private String productName;
+        private int quantity;
+        private int cartons;
+    }
 }

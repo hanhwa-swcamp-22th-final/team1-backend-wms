@@ -6,6 +6,7 @@ import com.conk.wms.command.domain.aggregate.Warehouse;
 import com.conk.wms.command.domain.repository.AsnItemRepository;
 import com.conk.wms.command.domain.repository.AsnRepository;
 import com.conk.wms.command.domain.repository.WarehouseRepository;
+import com.conk.wms.query.controller.dto.response.SellerAsnListResponse;
 import com.conk.wms.query.mapper.AsnQueryMapper;
 import com.conk.wms.query.controller.dto.response.SellerAsnListItemResponse;
 import org.junit.jupiter.api.DisplayName;
@@ -15,6 +16,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -46,6 +50,7 @@ class GetSellerAsnListServiceTest {
     @Test
     @DisplayName("셀러 ASN 목록 조회 시 창고명과 품목 집계가 포함된 목록을 반환한다")
     void getSellerAsns_success() {
+        PageRequest pageRequest = PageRequest.of(1, 20, Sort.by("createdAt").descending());
         Asn firstAsn = createAsn(
                 "ASN-20260329-001",
                 "WH-001",
@@ -65,8 +70,8 @@ class GetSellerAsnListServiceTest {
                 "선적 취소"
         );
 
-        when(asnRepository.findAllBySellerIdOrderByCreatedAtDesc("SELLER-001"))
-                .thenReturn(List.of(firstAsn, secondAsn));
+        when(asnRepository.findBySellerId("SELLER-001", pageRequest))
+                .thenReturn(new PageImpl<>(List.of(firstAsn, secondAsn), pageRequest, 2));
         when(warehouseRepository.findAllById(List.of("WH-001", "WH-002")))
                 .thenReturn(List.of(
                         new Warehouse("WH-001", "NJ Warehouse", "SELLER-001"),
@@ -79,11 +84,14 @@ class GetSellerAsnListServiceTest {
                         new AsnItem("ASN-20260328-001", "SKU-003", 20, "상품C", 1)
                 ));
 
-        List<SellerAsnListItemResponse> result = getSellerAsnListService.getSellerAsns("SELLER-001");
+        SellerAsnListResponse result = getSellerAsnListService.getSellerAsns("SELLER-001", 1, 20);
 
-        assertEquals(2, result.size());
+        assertEquals(2, result.getItems().size());
+        assertEquals(2L, result.getTotal());
+        assertEquals(1, result.getPage());
+        assertEquals(20, result.getSize());
 
-        SellerAsnListItemResponse first = result.get(0);
+        SellerAsnListItemResponse first = result.getItems().get(0);
         assertEquals("ASN-20260329-001", first.getId());
         assertEquals("ASN-20260329-001", first.getAsnNo());
         assertEquals("NJ Warehouse", first.getWarehouseName());
@@ -91,24 +99,28 @@ class GetSellerAsnListServiceTest {
         assertEquals("2026-03-29", first.getCreatedAt());
         assertEquals(2, first.getSkuCount());
         assertEquals(150, first.getTotalQuantity());
-        assertEquals("SUBMITTED", first.getStatus());
-        assertEquals("REF-29-001", first.getReferenceNo());
+        assertEquals("REGISTERED", first.getStatus());
+        assertEquals(null, first.getReferenceNo());
         assertEquals("온도 민감 상품 포함", first.getNote());
 
-        SellerAsnListItemResponse second = result.get(1);
-        assertEquals("CANCELLED", second.getStatus());
+        SellerAsnListItemResponse second = result.getItems().get(1);
+        assertEquals("CANCELED", second.getStatus());
         assertEquals("LA Warehouse", second.getWarehouseName());
     }
 
     @Test
     @DisplayName("셀러 ASN 이 없으면 빈 목록을 반환한다")
     void getSellerAsns_whenNoData_thenReturnEmpty() {
-        when(asnRepository.findAllBySellerIdOrderByCreatedAtDesc("SELLER-001"))
-                .thenReturn(List.of());
+        PageRequest pageRequest = PageRequest.of(0, 10, Sort.by("createdAt").descending());
+        when(asnRepository.findBySellerId("SELLER-001", pageRequest))
+                .thenReturn(new PageImpl<>(List.of(), pageRequest, 0));
 
-        List<SellerAsnListItemResponse> result = getSellerAsnListService.getSellerAsns("SELLER-001");
+        SellerAsnListResponse result = getSellerAsnListService.getSellerAsns("SELLER-001", 0, 10);
 
-        assertTrue(result.isEmpty());
+        assertTrue(result.getItems().isEmpty());
+        assertEquals(0L, result.getTotal());
+        assertEquals(0, result.getPage());
+        assertEquals(10, result.getSize());
     }
 
     private Asn createAsn(String asnId, String warehouseId, String sellerId, LocalDate expectedDate,

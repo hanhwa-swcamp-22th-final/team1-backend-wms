@@ -145,18 +145,23 @@ class RegisterAsnIntegrationTest {
         asnItemRepository.save(new AsnItem("ASN-20260328-001", "SKU-003", 20, "다른 셀러 상품", 1));
 
         mockMvc.perform(get("/wms/seller/asns")
+                        .param("page", "0")
+                        .param("size", "20")
                         .header("X-Tenant-Code", "SELLER-001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.length()").value(1))
-                .andExpect(jsonPath("$.data[0].id").value("ASN-20260329-001"))
-                .andExpect(jsonPath("$.data[0].asnNo").value("ASN-20260329-001"))
-                .andExpect(jsonPath("$.data[0].warehouseName").value("서울 창고"))
-                .andExpect(jsonPath("$.data[0].skuCount").value(2))
-                .andExpect(jsonPath("$.data[0].totalQuantity").value(150))
-                .andExpect(jsonPath("$.data[0].status").value("SUBMITTED"))
-                .andExpect(jsonPath("$.data[0].referenceNo").value("REF-29-001"))
-                .andExpect(jsonPath("$.data[0].note").value("온도 민감 상품 포함"));
+                .andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.items[0].id").value("ASN-20260329-001"))
+                .andExpect(jsonPath("$.data.items[0].asnNo").value("ASN-20260329-001"))
+                .andExpect(jsonPath("$.data.items[0].warehouseName").value("서울 창고"))
+                .andExpect(jsonPath("$.data.items[0].skuCount").value(2))
+                .andExpect(jsonPath("$.data.items[0].totalQuantity").value(150))
+                .andExpect(jsonPath("$.data.items[0].status").value("REGISTERED"))
+                .andExpect(jsonPath("$.data.items[0].referenceNo").isEmpty())
+                .andExpect(jsonPath("$.data.items[0].note").value("온도 민감 상품 포함"))
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.page").value(0))
+                .andExpect(jsonPath("$.data.size").value(20));
     }
 
     @Test

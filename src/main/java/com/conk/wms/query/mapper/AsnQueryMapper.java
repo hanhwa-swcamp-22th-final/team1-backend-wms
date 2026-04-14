@@ -35,6 +35,14 @@ public class AsnQueryMapper {
         int totalQuantity = items.stream()
                 .mapToInt(AsnItem::getQuantity)
                 .sum();
+        List<SellerAsnListItemResponse.ItemResponse> detailItems = items.stream()
+                .map(item -> SellerAsnListItemResponse.ItemResponse.builder()
+                        .sku(item.getSkuId())
+                        .productName(item.getProductNameSnapshot())
+                        .quantity(item.getQuantity())
+                        .cartons(item.getBoxQuantity())
+                        .build())
+                .toList();
 
         return SellerAsnListItemResponse.builder()
                 .id(asn.getAsnId())
@@ -47,6 +55,9 @@ public class AsnQueryMapper {
                 .status(toSellerStatus(asn.getStatus()))
                 .referenceNo(buildReferenceNo(asn.getAsnId()))
                 .note(asn.getSellerMemo())
+                .detail(SellerAsnListItemResponse.DetailResponse.builder()
+                        .items(detailItems)
+                        .build())
                 .build();
     }
 

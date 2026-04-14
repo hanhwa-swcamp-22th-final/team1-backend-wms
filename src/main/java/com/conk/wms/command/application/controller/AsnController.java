@@ -7,6 +7,7 @@ import com.conk.wms.command.application.dto.RegisterAsnCommand;
 import com.conk.wms.command.application.dto.RegisterAsnItemCommand;
 import com.conk.wms.command.application.dto.request.CreateSellerAsnRequest;
 import com.conk.wms.command.application.dto.response.CreateSellerAsnResponse;
+import com.conk.wms.query.controller.dto.response.SellerAsnListResponse;
 import com.conk.wms.query.controller.dto.response.SellerAsnOptionsResponse;
 import com.conk.wms.query.controller.dto.response.SellerAsnListItemResponse;
 import com.conk.wms.query.service.GetSellerAsnListService;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -49,11 +51,11 @@ public class AsnController {
     // Seller ASN 목록 화면의 row shape를 그대로 내려준다.
     // tenant header를 현재는 seller 식별값처럼 사용하고 있으므로 목록도 같은 기준으로 필터링한다.
     @GetMapping
-    public ResponseEntity<ApiResponse<List<SellerAsnListItemResponse>>> getSellerAsns(
-            AuthContext authContext
+    public ResponseEntity<ApiResponse<SellerAsnListResponse>> getSellerAsns(
+            AuthContext authContext, @RequestParam("page") int page, @RequestParam("size") int size
     ) {
         String sellerId = resolveSellerId(authContext);
-        List<SellerAsnListItemResponse> response = getSellerAsnListService.getSellerAsns(sellerId);
+        SellerAsnListResponse response = getSellerAsnListService.getSellerAsns(sellerId, page, size);
         return ResponseEntity.ok(ApiResponse.success("ok", response));
     }
 

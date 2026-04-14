@@ -1,6 +1,9 @@
 package com.conk.wms.command.domain.repository;
 
 import com.conk.wms.command.domain.aggregate.Asn;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Collection;
@@ -19,6 +22,8 @@ public interface AsnRepository extends JpaRepository<Asn, Long> {
     List<Asn> findAllByWarehouseIdIn(Collection<String> warehouseIds);
 
     List<Asn> findAllBySellerIdOrderByCreatedAtDesc(String sellerId);
+
+    Page<Asn> findBySellerId(String sellerId, Pageable pageable);
 
     boolean existsByAsnId(String asnId);
 

@@ -4,6 +4,7 @@ import com.conk.wms.common.exception.BusinessException;
 import com.conk.wms.common.exception.ErrorCode;
 import com.conk.wms.common.controller.GlobalExceptionHandler;
 import com.conk.wms.command.application.service.RegisterAsnService;
+import com.conk.wms.query.controller.dto.response.SellerAsnListResponse;
 import com.conk.wms.query.controller.dto.response.SellerAsnOptionsResponse;
 import com.conk.wms.query.service.GetSellerAsnListService;
 import com.conk.wms.query.service.GetSellerAsnOptionsService;
@@ -56,30 +57,42 @@ class AsnControllerTest {
     @Test
     @DisplayName("Seller ASN 목록 조회 API 호출 시 200 OK와 목록을 반환한다")
     void getSellerAsns_success() throws Exception {
-        when(getSellerAsnListService.getSellerAsns(eq("SELLER-001"))).thenReturn(List.of(
-                SellerAsnListItemResponse.builder()
-                        .id("ASN-20260329-001")
-                        .asnNo("ASN-20260329-001")
-                        .warehouseName("NJ Warehouse")
-                        .expectedDate("2026-03-30")
-                        .createdAt("2026-03-29") // string으로 넣어도 되는건가?
-                        .skuCount(2)
-                        .totalQuantity(150)
-                        .status("SUBMITTED")
-                        .referenceNo("REF-29-001")
-                        .note("온도 민감 상품 포함")
+        when(getSellerAsnListService.getSellerAsns(eq("SELLER-001"), eq(0), eq(20))).thenReturn(
+                SellerAsnListResponse.builder()
+                        .items(List.of(
+                                SellerAsnListItemResponse.builder()
+                                        .id("ASN-20260329-001")
+                                        .asnNo("ASN-20260329-001")
+                                        .warehouseName("NJ Warehouse")
+                                        .expectedDate("2026-03-30")
+                                        .createdAt("2026-03-29")
+                                        .skuCount(2)
+                                        .totalQuantity(150)
+                                        .status("REGISTERED")
+                                        .referenceNo(null)
+                                        .note("온도 민감 상품 포함")
+                                        .build()
+                        ))
+                        .total(1)
+                        .page(0)
+                        .size(20)
                         .build()
-        ));
+        );
 
         mockMvc.perform(get("/wms/seller/asns")
+                        .param("page", "0")
+                        .param("size", "20")
                         .header("X-Tenant-Code", "SELLER-001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value("ok"))
-                .andExpect(jsonPath("$.data[0].id").value("ASN-20260329-001"))
-                .andExpect(jsonPath("$.data[0].asnNo").value("ASN-20260329-001"))
-                .andExpect(jsonPath("$.data[0].warehouseName").value("NJ Warehouse"))
-                .andExpect(jsonPath("$.data[0].status").value("SUBMITTED"));
+                .andExpect(jsonPath("$.data.items[0].id").value("ASN-20260329-001"))
+                .andExpect(jsonPath("$.data.items[0].asnNo").value("ASN-20260329-001"))
+                .andExpect(jsonPath("$.data.items[0].warehouseName").value("NJ Warehouse"))
+                .andExpect(jsonPath("$.data.items[0].status").value("REGISTERED"))
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.page").value(0))
+                .andExpect(jsonPath("$.data.size").value(20));
     }
 
     @Test
@@ -172,7 +185,9 @@ class AsnControllerTest {
     @Test
     @DisplayName("Seller ASN 목록 조회 시 tenant 헤더가 없으면 400을 반환한다")
     void getSellerAsns_whenTenantHeaderMissing_thenReturn400() throws Exception {
-        mockMvc.perform(get("/wms/seller/asns"))
+        mockMvc.perform(get("/wms/seller/asns")
+                        .param("page", "0")
+                        .param("size", "20"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.code").value("COMMON-001"))
@@ -239,10 +254,12 @@ class AsnControllerTest {
     @Test
     @DisplayName("Seller ASN 등록 시 JSON 형식이 잘못되면 400을 반환한다")
     void registerAsn_whenMalformedJson_thenReturn400() throws Exception {
+        String malformedJson = "{";
+
         mockMvc.perform(post("/wms/seller/asns")
                         .header("X-Tenant-Code", "SELLER-001")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"asnNo\":"))
+                        .content(malformedJson))
                 .andExpect(status().isBadRequest());
 
         verifyNoInteractions(registerAsnService);
