@@ -96,7 +96,9 @@ class WorkerTaskIntegrationTest {
                 .andExpect(jsonPath("$[0].bins[0].sku").value("SKU-001"));
 
         mockMvc.perform(patch("/wms/worker/tasks/WORK-OUT-CONK-ORD-001")
-                        .header("X-Tenant-Code", "CONK")
+                        .header("X-Role", "WM_WORKER")
+                        .header("X-User-Id", "WORKER-001")
+                        .header("X-Tenant-Id", "CONK")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "workerAccountId", "WORKER-001",
@@ -112,7 +114,9 @@ class WorkerTaskIntegrationTest {
                 .andExpect(jsonPath("$.data.detailStatus").value("PICKED"));
 
         mockMvc.perform(patch("/wms/worker/tasks/WORK-OUT-CONK-ORD-001")
-                        .header("X-Tenant-Code", "CONK")
+                        .header("X-Role", "WM_WORKER")
+                        .header("X-User-Id", "WORKER-001")
+                        .header("X-Tenant-Id", "CONK")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "workerAccountId", "WORKER-001",
@@ -179,7 +183,9 @@ class WorkerTaskIntegrationTest {
                 .andExpect(jsonPath("$[0].bins[0].sku").value("SKU-003"));
 
         mockMvc.perform(patch("/wms/worker/tasks/WORK-IN-CONK-ASN-WORK-001-WORKER-003")
-                        .header("X-Tenant-Code", "CONK")
+                        .header("X-Role", "WM_WORKER")
+                        .header("X-User-Id", "WORKER-003")
+                        .header("X-Tenant-Id", "CONK")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "workerAccountId", "WORKER-003",
@@ -195,7 +201,9 @@ class WorkerTaskIntegrationTest {
                 .andExpect(jsonPath("$.data.detailStatus").value("INSPECTED"));
 
         mockMvc.perform(patch("/wms/worker/tasks/WORK-IN-CONK-ASN-WORK-001-WORKER-003")
-                        .header("X-Tenant-Code", "CONK")
+                        .header("X-Role", "WM_WORKER")
+                        .header("X-User-Id", "WORKER-003")
+                        .header("X-Tenant-Id", "CONK")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "workerAccountId", "WORKER-003",

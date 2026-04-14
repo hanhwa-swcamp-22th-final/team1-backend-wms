@@ -70,7 +70,9 @@ class InvoiceIssueIntegrationTest {
                 .andExpect(status().isOk());
 
         mockMvc.perform(patch("/wms/worker/tasks/WORK-OUT-CONK-ORD-001")
-                        .header("X-Tenant-Code", "CONK")
+                        .header("X-Role", "WM_WORKER")
+                        .header("X-User-Id", "WORKER-001")
+                        .header("X-Tenant-Id", "CONK")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "workerAccountId", "WORKER-001",
@@ -85,7 +87,9 @@ class InvoiceIssueIntegrationTest {
                 .andExpect(status().isOk());
 
         mockMvc.perform(patch("/wms/worker/tasks/WORK-OUT-CONK-ORD-001")
-                        .header("X-Tenant-Code", "CONK")
+                        .header("X-Role", "WM_WORKER")
+                        .header("X-User-Id", "WORKER-001")
+                        .header("X-Tenant-Id", "CONK")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "workerAccountId", "WORKER-001",
