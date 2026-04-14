@@ -33,11 +33,14 @@ public class WorkerTaskController {
             AuthContext authContext,
             @RequestBody ProcessWorkerTaskRequest request
     ) {
+        authContext.requireWorkerAccess();
+        authContext.requireSameUser(request.getWorkerAccountId());
         String tenantId = resolveTenantId(authContext);
+        String workerAccountId = authContext.requireUserId();
         ProcessWorkerTaskResponse response = processWorkerTaskService.process(
                 tenantId,
                 workId,
-                request.getWorkerAccountId(),
+                workerAccountId,
                 request.getStage(),
                 request.getOrderId(),
                 request.getAsnId(),
@@ -54,9 +57,16 @@ public class WorkerTaskController {
     @PatchMapping({"/wms/tasks/{workId}/start", "/wms/worker/tasks/{workId}/start"})
     public ResponseEntity<Void> start(
             @PathVariable String workId,
+            AuthContext authContext,
             @RequestBody StartWorkRequest request
     ) {
-        processWorkerTaskService.start(workId, request.getWorkerId());
+        authContext.requireWorkerAccess();
+        authContext.requireSameUser(request.getWorkerId());
+        processWorkerTaskService.start(
+                resolveTenantId(authContext),
+                workId,
+                authContext.requireUserId()
+        );
         return ResponseEntity.ok().build();
     }
 

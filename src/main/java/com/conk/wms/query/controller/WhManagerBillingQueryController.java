@@ -1,5 +1,6 @@
 package com.conk.wms.query.controller;
 
+import com.conk.wms.common.auth.AuthContext;
 import com.conk.wms.common.controller.ApiResponse;
 import com.conk.wms.query.controller.dto.response.MonthlyBillingResultResponse;
 import com.conk.wms.query.service.GetMonthlyBillingResultsService;
@@ -25,8 +26,10 @@ public class WhManagerBillingQueryController {
 
     @GetMapping("/monthly-results")
     public ResponseEntity<ApiResponse<List<MonthlyBillingResultResponse>>> getMonthlyResults(
+            AuthContext authContext,
             @RequestParam String billingMonth
     ) {
+        authContext.requireMasterAdminAccess();
         return ResponseEntity.ok(ApiResponse.success(
                 "월 정산 결과를 조회했습니다.",
                 getMonthlyBillingResultsService.getMonthlyResults(billingMonth)

@@ -43,6 +43,9 @@ class StartWorkIntegrationTest {
     void start_success() throws Exception {
         // when
         mockMvc.perform(patch("/wms/tasks/WORK-001/start")
+                        .header("X-Role", "WM_WORKER")
+                        .header("X-User-Id", "WORKER-001")
+                        .header("X-Tenant-Id", "TENANT-001")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of("workerId", "WORKER-001"))))
                 .andExpect(status().isOk());
@@ -56,6 +59,9 @@ class StartWorkIntegrationTest {
     @DisplayName("존재하지 않는 작업 ID면 400을 반환한다")
     void start_whenWorkNotFound_thenReturn400() throws Exception {
         mockMvc.perform(patch("/wms/tasks/WORK-999/start")
+                        .header("X-Role", "WM_WORKER")
+                        .header("X-User-Id", "WORKER-001")
+                        .header("X-Tenant-Id", "TENANT-001")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of("workerId", "WORKER-001"))))
                 .andExpect(status().isBadRequest());

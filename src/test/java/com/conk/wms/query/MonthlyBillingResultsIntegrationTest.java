@@ -39,6 +39,9 @@ class MonthlyBillingResultsIntegrationTest {
     @DisplayName("총괄관리자 월 정산 결과 조회 API는 기준월 결과 목록을 반환한다")
     void getMonthlyResults_success() throws Exception {
         mockMvc.perform(get("/wms/manager/billing/monthly-results")
+                        .header("X-Role", "MASTER_ADMIN")
+                        .header("X-User-Id", "MASTER-001")
+                        .header("X-Tenant-Id", "TENANT-001")
                         .param("billingMonth", "2026-03"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
