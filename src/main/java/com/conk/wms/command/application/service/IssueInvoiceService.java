@@ -28,15 +28,18 @@ public class IssueInvoiceService {
     private final OutboundPendingRepository outboundPendingRepository;
     private final WorkDetailRepository workDetailRepository;
     private final IntegrationServiceClient integrationServiceClient;
+    private final ShipmentPayloadResolver shipmentPayloadResolver;
     private final TransactionTemplate transactionTemplate;
 
     public IssueInvoiceService(OutboundPendingRepository outboundPendingRepository,
                                WorkDetailRepository workDetailRepository,
                                IntegrationServiceClient integrationServiceClient,
+                               ShipmentPayloadResolver shipmentPayloadResolver,
                                TransactionTemplate transactionTemplate) {
         this.outboundPendingRepository = outboundPendingRepository;
         this.workDetailRepository = workDetailRepository;
         this.integrationServiceClient = integrationServiceClient;
+        this.shipmentPayloadResolver = shipmentPayloadResolver;
         this.transactionTemplate = transactionTemplate;
     }
 
@@ -86,15 +89,14 @@ public class IssueInvoiceService {
             return Boolean.TRUE;
         });
 
-        ShipmentInvoiceDto issued = integrationServiceClient.issueLabel(
+        IssueLabelRequestDto request = shipmentPayloadResolver.build(
                 tenantCode,
-                IssueLabelRequestDto.builder()
-                        .orderId(orderId)
-                        .carrier(carrier)
-                        .service(service)
-                        .labelFormat(labelFormat)
-                        .build()
+                orderId,
+                carrier,
+                service,
+                labelFormat
         );
+        ShipmentInvoiceDto issued = integrationServiceClient.issueLabel(tenantCode, request);
 
         return executeInTransaction(() -> {
             List<OutboundPending> pendingRows = outboundPendingRepository.findAllByIdOrderIdAndIdTenantId(orderId, tenantCode);
@@ -138,12 +140,19 @@ public class IssueInvoiceService {
         }
 
         for (String orderId : orderIds) {
-            ShipmentRecommendationDto recommendation = integrationServiceClient.recommendShipment(tenantCode, orderId);
+            IssueLabelRequestDto request = shipmentPayloadResolver.build(
+                    tenantCode,
+                    orderId,
+                    carrier,
+                    service,
+                    hasText(labelFormat) ? labelFormat : "4x6 PDF"
+            );
+            ShipmentRecommendationDto recommendation = integrationServiceClient.recommendShipment(tenantCode, request);
             issue(orderId,
                     tenantCode,
                     hasText(carrier) ? carrier : recommendation.getRecommendedCarrier(),
                     hasText(service) ? service : recommendation.getRecommendedService(),
-                    hasText(labelFormat) ? labelFormat : "4x6 PDF",
+                    request.getLabelFormat(),
                     actorId);
         }
 

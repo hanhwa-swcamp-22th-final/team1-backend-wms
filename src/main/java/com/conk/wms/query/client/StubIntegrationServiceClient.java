@@ -3,6 +3,7 @@ package com.conk.wms.query.client;
 import com.conk.wms.query.client.dto.IssueLabelRequestDto;
 import com.conk.wms.query.client.dto.ShipmentInvoiceDto;
 import com.conk.wms.query.client.dto.ShipmentRecommendationDto;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -15,13 +16,14 @@ import java.util.stream.Collectors;
  * integration-service 실연동 전 송장 화면과 출고 확정 흐름을 개발하기 위한 임시 stub 구현이다.
  */
 @Component
+@ConditionalOnProperty(name = "wms.stub-clients.enabled", havingValue = "true")
 public class StubIntegrationServiceClient implements IntegrationServiceClient {
 
     private final Map<String, ShipmentInvoiceDto> issuedInvoices = new ConcurrentHashMap<>();
 
     @Override
-    public ShipmentRecommendationDto recommendShipment(String tenantCode, String orderId) {
-        int seed = Math.abs(orderId.hashCode());
+    public ShipmentRecommendationDto recommendShipment(String tenantCode, IssueLabelRequestDto request) {
+        int seed = Math.abs(request.getOrderId().hashCode());
         String carrier = switch (seed % 3) {
             case 0 -> "UPS";
             case 1 -> "USPS";

@@ -6,10 +6,14 @@ import com.conk.wms.command.domain.repository.AllocatedInventoryRepository;
 import com.conk.wms.command.domain.repository.OutboundPendingRepository;
 import com.conk.wms.command.domain.repository.WorkAssignmentRepository;
 import com.conk.wms.command.domain.repository.WorkDetailRepository;
+import com.conk.wms.command.infrastructure.kafka.event.TaskAssignedEvent;
+import com.conk.wms.command.infrastructure.kafka.publisher.NotificationEventKafkaPublisher;
 import com.conk.wms.common.exception.BusinessException;
 import com.conk.wms.common.exception.ErrorCode;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
 
 /**
  * 출고 지시된 주문을 작업자에게 배정하고 work_detail을 생성하는 서비스다.
@@ -24,17 +28,20 @@ public class AssignTaskService {
     private final WorkAssignmentRepository workAssignmentRepository;
     private final WorkDetailRepository workDetailRepository;
     private final AutoAssignTaskService autoAssignTaskService;
+    private final NotificationEventKafkaPublisher notificationEventKafkaPublisher;
 
     public AssignTaskService(OutboundPendingRepository outboundPendingRepository,
                              AllocatedInventoryRepository allocatedInventoryRepository,
                              WorkAssignmentRepository workAssignmentRepository,
                              WorkDetailRepository workDetailRepository,
-                             AutoAssignTaskService autoAssignTaskService) {
+                             AutoAssignTaskService autoAssignTaskService,
+                             NotificationEventKafkaPublisher notificationEventKafkaPublisher) {
         this.outboundPendingRepository = outboundPendingRepository;
         this.allocatedInventoryRepository = allocatedInventoryRepository;
         this.workAssignmentRepository = workAssignmentRepository;
         this.workDetailRepository = workDetailRepository;
         this.autoAssignTaskService = autoAssignTaskService;
+        this.notificationEventKafkaPublisher = notificationEventKafkaPublisher;
     }
 
     /**
@@ -61,7 +68,8 @@ public class AssignTaskService {
 
         String actor = assignedByAccountId == null || assignedByAccountId.isBlank() ? "SYSTEM" : assignedByAccountId;
         workAssignmentRepository.save(new WorkAssignment(workId, tenantCode, workerId, actor));
-        allocatedInventoryRepository.findAllByIdOrderIdAndIdTenantId(orderId, tenantCode).forEach(allocated ->
+        int assignedCount = allocatedInventoryRepository.findAllByIdOrderIdAndIdTenantId(orderId, tenantCode).stream()
+                .mapToInt(allocated -> {
                 workDetailRepository.save(new WorkDetail(
                         workId,
                         orderId,
@@ -69,17 +77,18 @@ public class AssignTaskService {
                         allocated.getId().getLocationId(),
                         allocated.getQuantity(),
                         actor
-                )));
+                ));
+                return 1;
+            })
+            .sum();
 
-        // Kafka 알림 이벤트 연결 가이드:
-        //   실제 발행 로직을 붙일 때는 위의 work_assignment / work_detail 저장이 모두 끝난 뒤
-        //   NotificationEventKafkaPublisher.publishTaskAssigned(...)를 호출한다.
-        //   payload 권장값:
-        //     - workerId: 메서드 인자로 받은 workerId
-        //     - roleId: "ROLE_WH_WORKER"
-        //     - assignedCount: 이번 배정으로 생성한 work_detail 건수
-        //     - tenantId: 메서드 인자로 받은 tenantCode
-        //     - timestamp: LocalDateTime.now()
+        TaskAssignedEvent event = new TaskAssignedEvent();
+        event.setWorkerId(workerId);
+        event.setRoleId("ROLE_WH_WORKER");
+        event.setAssignedCount(assignedCount);
+        event.setTenantId(tenantCode);
+        event.setTimestamp(LocalDateTime.now());
+        notificationEventKafkaPublisher.publishTaskAssigned(event);
 
         return new AssignResult(workId, orderId, workerId, reassigned);
     }

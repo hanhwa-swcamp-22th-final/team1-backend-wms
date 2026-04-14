@@ -4,8 +4,10 @@ import com.conk.wms.command.domain.aggregate.OutboundPending;
 import com.conk.wms.command.domain.aggregate.WorkDetail;
 import com.conk.wms.command.domain.repository.OutboundPendingRepository;
 import com.conk.wms.command.domain.repository.WorkDetailRepository;
+import com.conk.wms.command.application.service.ShipmentPayloadResolver;
 import com.conk.wms.query.client.IntegrationServiceClient;
 import com.conk.wms.query.client.OrderServiceClient;
+import com.conk.wms.query.client.dto.IssueLabelRequestDto;
 import com.conk.wms.query.client.dto.OrderItemDto;
 import com.conk.wms.query.client.dto.OrderSummaryDto;
 import com.conk.wms.query.client.dto.ShipmentInvoiceDto;
@@ -41,6 +43,9 @@ class GetInvoiceOrdersServiceTest {
     @Mock
     private IntegrationServiceClient integrationServiceClient;
 
+    @Mock
+    private ShipmentPayloadResolver shipmentPayloadResolver;
+
     @InjectMocks
     private GetInvoiceOrdersService getInvoiceOrdersService;
 
@@ -73,14 +78,22 @@ class GetInvoiceOrdersServiceTest {
                 List.of(OrderItemDto.builder().skuId("SKU-002").productName("상품C").quantity(1).build())
         )));
 
-        when(integrationServiceClient.recommendShipment("CONK", "ORD-001"))
+        IssueLabelRequestDto ord001Request = IssueLabelRequestDto.builder().orderId("ORD-001").build();
+        IssueLabelRequestDto ord002Request = IssueLabelRequestDto.builder().orderId("ORD-002").build();
+
+        when(shipmentPayloadResolver.build("CONK", "ORD-001", null, null, "4x6 PDF"))
+                .thenReturn(ord001Request);
+        when(shipmentPayloadResolver.build("CONK", "ORD-002", null, null, "4x6 PDF"))
+                .thenReturn(ord002Request);
+
+        when(integrationServiceClient.recommendShipment("CONK", ord001Request))
                 .thenReturn(ShipmentRecommendationDto.builder()
                         .recommendedCarrier("UPS")
                         .recommendedService("Ground")
                         .estimatedRate(8.5)
                         .weightLbs(4.0)
                         .build());
-        when(integrationServiceClient.recommendShipment("CONK", "ORD-002"))
+        when(integrationServiceClient.recommendShipment("CONK", ord002Request))
                 .thenReturn(ShipmentRecommendationDto.builder()
                         .recommendedCarrier("FedEx")
                         .recommendedService("Express Saver")

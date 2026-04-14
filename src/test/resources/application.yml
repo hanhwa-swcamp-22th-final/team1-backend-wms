@@ -19,3 +19,7 @@ app:
       billing-monthly-result: billing.monthly.result.v1
     consumer:
       billing-monthly-result-auto-startup: false
+
+wms:
+  stub-clients:
+    enabled: true

@@ -3,6 +3,7 @@ package com.conk.wms.query.client;
 import com.conk.wms.query.client.dto.CreateWorkerAccountRequestDto;
 import com.conk.wms.query.client.dto.UpdateWorkerAccountRequestDto;
 import com.conk.wms.query.client.dto.WorkerAccountDto;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -15,6 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * member-service 실연동 전 작업자 계정 화면 개발을 위해 사용하는 임시 stub 구현이다.
  */
 @Component
+@ConditionalOnProperty(name = "wms.stub-clients.enabled", havingValue = "true")
 public class StubMemberServiceClient implements MemberServiceClient {
 
     private final Map<String, WorkerAccountDto> workerAccounts = new ConcurrentHashMap<>();

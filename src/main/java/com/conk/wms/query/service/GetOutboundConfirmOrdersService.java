@@ -101,7 +101,7 @@ public class GetOutboundConfirmOrdersService {
                 .service(invoice == null ? "" : safe(invoice.getService()))
                 .trackingNumber(invoice == null ? "" : safe(invoice.getTrackingCode()))
                 .shipState(order.getCityName())
-                .shipCountry("KR")
+                .shipCountry(order.getCountry())
                 .labelIssuedAt(formatDate(issuedAt))
                 .status(completed ? "CONFIRMED" : "PENDING_CONFIRM")
                 .skuDeductions(buildSkuDeductions(orderId, tenantCode))
