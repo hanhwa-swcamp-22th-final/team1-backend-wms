@@ -1,11 +1,11 @@
 package com.conk.wms.query.service;
 
-import com.conk.wms.command.domain.aggregate.Asn;
 import com.conk.wms.command.domain.repository.AsnRepository;
 import com.conk.wms.command.domain.repository.WarehouseRepository;
 import com.conk.wms.query.controller.dto.response.AsnStatsResponse;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -14,6 +14,8 @@ import java.util.stream.Collectors;
  */
 @Service
 public class GetDashboardAsnStatsService {
+
+    private static final List<String> PROCESSED_STATUSES = List.of("STORED", "CANCELED");
 
     private final WarehouseRepository warehouseRepository;
     private final AsnRepository asnRepository;
@@ -29,10 +31,9 @@ public class GetDashboardAsnStatsService {
                 .map(warehouse -> warehouse.getWarehouseId())
                 .collect(Collectors.toSet());
 
-        int unprocessedCount = (int) asnRepository.findAll().stream()
-                .filter(asn -> warehouseIds.contains(asn.getWarehouseId()))
-                .filter(this::isUnprocessed)
-                .count();
+        int unprocessedCount = warehouseIds.isEmpty()
+                ? 0
+                : (int) asnRepository.countByWarehouseIdInAndStatusNotIn(warehouseIds, PROCESSED_STATUSES);
 
         return AsnStatsResponse.builder()
                 .unprocessedCount(unprocessedCount)
@@ -40,9 +41,5 @@ public class GetDashboardAsnStatsService {
                 .trendLabel("현재 기준")
                 .trendType("neutral")
                 .build();
-    }
-
-    private boolean isUnprocessed(Asn asn) {
-        return !"STORED".equals(asn.getStatus()) && !"CANCELED".equals(asn.getStatus());
     }
 }

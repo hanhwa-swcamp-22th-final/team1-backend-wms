@@ -1,6 +1,5 @@
 package com.conk.wms.query.service;
 
-import com.conk.wms.command.domain.aggregate.Asn;
 import com.conk.wms.command.domain.aggregate.Warehouse;
 import com.conk.wms.command.domain.repository.AsnRepository;
 import com.conk.wms.command.domain.repository.WarehouseRepository;
@@ -12,12 +11,11 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -37,17 +35,24 @@ class GetDashboardAsnStatsServiceTest {
     void getStats_countsOnlyTenantWarehouses() {
         when(warehouseRepository.findAllByTenantIdOrderByWarehouseIdAsc("CONK"))
                 .thenReturn(List.of(warehouse("WH-001", "CONK"), warehouse("WH-002", "CONK")));
-        when(asnRepository.findAll())
-                .thenReturn(List.of(
-                        asn("ASN-001", "WH-001", "REGISTERED"),
-                        asn("ASN-002", "WH-002", "INSPECTING_PUTAWAY"),
-                        asn("ASN-003", "WH-002", "STORED"),
-                        asn("ASN-004", "WH-OTHER", "REGISTERED")
-                ));
+        when(asnRepository.countByWarehouseIdInAndStatusNotIn(anyCollection(), anyCollection()))
+                .thenReturn(2L);
 
         AsnStatsResponse response = getDashboardAsnStatsService.getStats("CONK");
 
         assertThat(response.getUnprocessedCount()).isEqualTo(2);
+        assertThat(response.getTrendType()).isEqualTo("neutral");
+    }
+
+    @Test
+    @DisplayName("tenant 소속 창고가 없으면 ASN 조회 없이 0건을 반환한다")
+    void getStats_returnsZeroWhenTenantHasNoWarehouse() {
+        when(warehouseRepository.findAllByTenantIdOrderByWarehouseIdAsc("EMPTY"))
+                .thenReturn(List.of());
+
+        AsnStatsResponse response = getDashboardAsnStatsService.getStats("EMPTY");
+
+        assertThat(response.getUnprocessedCount()).isZero();
         assertThat(response.getTrendType()).isEqualTo("neutral");
     }
 
@@ -70,19 +75,4 @@ class GetDashboardAsnStatsServiceTest {
         );
     }
 
-    private Asn asn(String asnId, String warehouseId, String status) {
-        return new Asn(
-                asnId,
-                warehouseId,
-                "SELLER-001",
-                LocalDate.of(2026, 4, 10),
-                status,
-                null,
-                1,
-                LocalDateTime.now(),
-                LocalDateTime.now(),
-                "SYSTEM",
-                "SYSTEM"
-        );
-    }
 }
