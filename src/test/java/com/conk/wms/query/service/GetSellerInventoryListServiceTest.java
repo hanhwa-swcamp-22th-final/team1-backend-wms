@@ -91,12 +91,17 @@ class GetSellerInventoryListServiceTest {
         assertThat(normal.getTotalStock()).isEqualTo(15);
         assertThat(normal.getStatus()).isEqualTo("NORMAL");
         assertThat(normal.getDetail().getLocationCode()).isEqualTo("WH-001 / A-01-01");
+        assertThat(normal.getDetail().getSafetyStockDays()).isEqualTo(3);
+        assertThat(normal.getDetail().getCoverageDays()).isEqualTo(3);
+        assertThat(normal.getDetail().getTurnoverRate()).isEqualTo("20%");
 
         SellerInventoryListItemResponse low = responses.get(1);
         assertThat(low.getSku()).isEqualTo("SKU-LOW");
         assertThat(low.getStatus()).isEqualTo("LOW");
         assertThat(low.getWarehouseName()).isEqualTo("WH-002");
         assertThat(low.getWarningThreshold()).isEqualTo(5);
+        assertThat(low.getDetail().getSafetyStockDays()).isEqualTo(1);
+        assertThat(low.getDetail().getCoverageDays()).isEqualTo(1);
 
         SellerInventoryListItemResponse out = responses.get(2);
         assertThat(out.getSku()).isEqualTo("SKU-OUT");
@@ -104,6 +109,9 @@ class GetSellerInventoryListServiceTest {
         assertThat(out.getInboundExpected()).isEqualTo(7);
         assertThat(out.getWarehouseName()).isEqualTo("WH-001");
         assertThat(out.getDetail().getNextInboundAsnNo()).isEqualTo("ASN-001");
+        assertThat(out.getDetail().getSafetyStockDays()).isZero();
+        assertThat(out.getDetail().getCoverageDays()).isEqualTo(2);
+        assertThat(out.getDetail().getTurnoverRate()).isEqualTo("0%");
     }
 
     @Test

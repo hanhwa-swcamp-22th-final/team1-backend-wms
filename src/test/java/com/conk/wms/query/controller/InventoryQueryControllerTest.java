@@ -64,6 +64,9 @@ class InventoryQueryControllerTest {
         when(getSellerInventoryDetailService.getSellerInventoryDetail("SELLER-001", "SKU-001@WH-001"))
                 .thenReturn(SellerInventoryDetailResponse.builder()
                         .locationCode("WH-001 / A-01-01")
+                        .safetyStockDays(5)
+                        .coverageDays(8)
+                        .turnoverRate("20%")
                         .memo("정상 재고 수준을 유지 중입니다.")
                         .build());
 
@@ -71,6 +74,9 @@ class InventoryQueryControllerTest {
                         .header("X-Tenant-Code", "SELLER-001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.locationCode").value("WH-001 / A-01-01"));
+                .andExpect(jsonPath("$.data.locationCode").value("WH-001 / A-01-01"))
+                .andExpect(jsonPath("$.data.safetyStockDays").value(5))
+                .andExpect(jsonPath("$.data.coverageDays").value(8))
+                .andExpect(jsonPath("$.data.turnoverRate").value("20%"));
     }
 }

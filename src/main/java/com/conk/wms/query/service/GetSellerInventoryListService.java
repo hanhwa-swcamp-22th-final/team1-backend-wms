@@ -16,6 +16,8 @@ import com.conk.wms.query.controller.dto.response.SellerInventoryListResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -285,12 +287,40 @@ public class GetSellerInventoryListService {
                 .status(resolveStatus(availableStock, totalStock, warningThreshold))
                 .detail(SellerInventoryDetailResponse.builder()
                         .locationCode(locationCode)
+                        .safetyStockDays(calculateSafetyStockDays(availableStock, warningThreshold))
+                        .coverageDays(calculateCoverageDays(availableStock, inboundExpected, warningThreshold))
+                        .turnoverRate(calculateTurnoverRate(allocatedStock, totalStock))
                         .lastCycleCount(lastInboundDate)
                         .nextInboundAsnNo(nextInboundAsn == null ? null : nextInboundAsn.getAsnId())
                         .salesChannel("Seller")
                         .memo(buildMemo(availableStock, totalStock, inboundExpected, warningThreshold))
                         .build())
                 .build();
+    }
+
+    private int calculateSafetyStockDays(int availableStock, int warningThreshold) {
+        if (availableStock <= 0 || warningThreshold <= 0) {
+            return 0;
+        }
+        return (int) Math.ceil((double) availableStock / warningThreshold);
+    }
+
+    private int calculateCoverageDays(int availableStock, int inboundExpected, int warningThreshold) {
+        int projectedStock = availableStock + Math.max(inboundExpected, 0);
+        if (projectedStock <= 0 || warningThreshold <= 0) {
+            return 0;
+        }
+        return (int) Math.ceil((double) projectedStock / warningThreshold);
+    }
+
+    private String calculateTurnoverRate(int allocatedStock, int totalStock) {
+        if (totalStock <= 0) {
+            return "0%";
+        }
+        return BigDecimal.valueOf(allocatedStock * 100.0 / totalStock)
+                .setScale(1, RoundingMode.HALF_UP)
+                .stripTrailingZeros()
+                .toPlainString() + "%";
     }
 
     private String resolveLocationCode(String warehouseLabel,

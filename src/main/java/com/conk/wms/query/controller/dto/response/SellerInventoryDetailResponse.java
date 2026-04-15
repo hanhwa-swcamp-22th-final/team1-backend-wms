@@ -11,6 +11,9 @@ import lombok.Getter;
 public class SellerInventoryDetailResponse {
 
     private String locationCode;
+    private int safetyStockDays;
+    private int coverageDays;
+    private String turnoverRate;
     private String lastCycleCount;
     private String nextInboundAsnNo;
     private String salesChannel;
