@@ -79,6 +79,7 @@ class AssignAsnPutawayServiceTest {
         int assignedCount = assignAsnPutawayService.assign(new AssignAsnPutawayCommand(
                 "ASN-001",
                 "CONK",
+                "worker-1",
                 List.of(new AssignAsnPutawayCommand.ItemCommand("SKU-001", "LOC-A-01-01"))
         ));
 
@@ -114,6 +115,7 @@ class AssignAsnPutawayServiceTest {
                 () -> assignAsnPutawayService.assign(new AssignAsnPutawayCommand(
                         "ASN-001",
                         "CONK",
+                        "worker-1",
                         List.of(new AssignAsnPutawayCommand.ItemCommand("SKU-001", "LOC-A-01-01"))
                 )));
 
