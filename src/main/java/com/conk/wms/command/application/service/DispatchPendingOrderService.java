@@ -2,9 +2,11 @@ package com.conk.wms.command.application.service;
 
 import com.conk.wms.command.domain.aggregate.AllocatedInventory;
 import com.conk.wms.command.domain.aggregate.Inventory;
+import com.conk.wms.command.domain.aggregate.Location;
 import com.conk.wms.command.domain.aggregate.OutboundPending;
 import com.conk.wms.command.domain.repository.AllocatedInventoryRepository;
 import com.conk.wms.command.domain.repository.InventoryRepository;
+import com.conk.wms.command.domain.repository.LocationRepository;
 import com.conk.wms.command.domain.repository.OutboundPendingRepository;
 import com.conk.wms.common.exception.BusinessException;
 import com.conk.wms.common.exception.ErrorCode;
@@ -16,6 +18,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 대기 주문을 출고 대상으로 확정하고 AVAILABLE 재고를 ALLOCATED로 전환하는 서비스다.
@@ -23,6 +27,7 @@ import java.util.Map;
 @Service
 public class DispatchPendingOrderService {
 
+    private static final String ORDER_STATUS_ALLOCATED = "ALLOCATED";
     private static final String ORDER_STATUS_RECEIVED = "RECEIVED";
     private static final String ORDER_STATUS_OUTBOUND_INSTRUCTED = "OUTBOUND_INSTRUCTED";
 
@@ -30,23 +35,26 @@ public class DispatchPendingOrderService {
     private final InventoryRepository inventoryRepository;
     private final OutboundPendingRepository outboundPendingRepository;
     private final AllocatedInventoryRepository allocatedInventoryRepository;
-    private final IssueInvoiceService issueInvoiceService;
+    private final LocationRepository locationRepository;
     private final AutoAssignTaskService autoAssignTaskService;
+    private final IssueInvoiceService issueInvoiceService;
     private final TransactionTemplate transactionTemplate;
 
     public DispatchPendingOrderService(OrderServiceClient orderServiceClient,
                                        InventoryRepository inventoryRepository,
                                        OutboundPendingRepository outboundPendingRepository,
                                        AllocatedInventoryRepository allocatedInventoryRepository,
-                                       IssueInvoiceService issueInvoiceService,
+                                       LocationRepository locationRepository,
                                        AutoAssignTaskService autoAssignTaskService,
+                                       IssueInvoiceService issueInvoiceService,
                                        TransactionTemplate transactionTemplate) {
         this.orderServiceClient = orderServiceClient;
         this.inventoryRepository = inventoryRepository;
         this.outboundPendingRepository = outboundPendingRepository;
         this.allocatedInventoryRepository = allocatedInventoryRepository;
-        this.issueInvoiceService = issueInvoiceService;
+        this.locationRepository = locationRepository;
         this.autoAssignTaskService = autoAssignTaskService;
+        this.issueInvoiceService = issueInvoiceService;
         this.transactionTemplate = transactionTemplate;
     }
 
@@ -77,8 +85,13 @@ public class DispatchPendingOrderService {
             return new DispatchResult(1, allocatedRowCount);
         });
 
-        issueInvoiceService.issueOnDispatch(orderId, tenantCode, carrier, service, labelFormat, actorId);
+        String warehouseId = resolveWarehouseId(orderId, tenantCode);
+        orderServiceClient.updateOrderStatus(orderId, Map.of(
+                "status", ORDER_STATUS_ALLOCATED,
+                "warehouseId", warehouseId
+        ));
         orderServiceClient.updateOrderStatus(orderId, Map.of("status", ORDER_STATUS_OUTBOUND_INSTRUCTED));
+        issueInvoiceService.issueOnDispatch(orderId, tenantCode, carrier, service, labelFormat, actorId);
 
         return result;
     }
@@ -191,6 +204,35 @@ public class DispatchPendingOrderService {
         }
 
         return allocatedRows;
+    }
+
+    private String resolveWarehouseId(String orderId, String tenantCode) {
+        List<OutboundPending> pendingRows = outboundPendingRepository.findAllByIdOrderIdAndIdTenantId(orderId, tenantCode);
+        if (pendingRows.isEmpty()) {
+            throw new BusinessException(
+                    ErrorCode.OUTBOUND_ORDER_NOT_FOUND,
+                    ErrorCode.OUTBOUND_ORDER_NOT_FOUND.getMessage() + ": " + orderId
+            );
+        }
+
+        Set<String> warehouseIds = locationRepository.findAllByLocationIdIn(
+                        pendingRows.stream()
+                                .map(pending -> pending.getId().getLocationId())
+                                .distinct()
+                                .toList()
+                ).stream()
+                .map(Location::getWarehouseId)
+                .filter(value -> value != null && !value.isBlank())
+                .collect(Collectors.toSet());
+
+        if (warehouseIds.size() != 1) {
+            throw new BusinessException(
+                    ErrorCode.OUTBOUND_DISPATCH_NOT_ALLOWED,
+                    ErrorCode.OUTBOUND_DISPATCH_NOT_ALLOWED.getMessage() + ": warehouse resolution failed for " + orderId
+            );
+        }
+
+        return warehouseIds.iterator().next();
     }
 
     public static class DispatchResult {

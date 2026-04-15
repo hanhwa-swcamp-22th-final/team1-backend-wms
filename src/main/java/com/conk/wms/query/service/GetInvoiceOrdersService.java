@@ -1,9 +1,7 @@
 package com.conk.wms.query.service;
 
 import com.conk.wms.command.domain.aggregate.OutboundPending;
-import com.conk.wms.command.domain.aggregate.WorkDetail;
 import com.conk.wms.command.domain.repository.OutboundPendingRepository;
-import com.conk.wms.command.domain.repository.WorkDetailRepository;
 import com.conk.wms.command.application.service.ShipmentPayloadResolver;
 import com.conk.wms.query.client.IntegrationServiceClient;
 import com.conk.wms.query.client.OrderServiceClient;
@@ -22,7 +20,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 /**
- * 패킹 완료된 출고 주문을 송장 발행 화면용 목록으로 가공하는 조회 서비스다.
+ * 출고 지시가 생성된 주문을 송장 발행/재출력 화면용 목록으로 가공하는 조회 서비스다.
  */
 @Service
 public class GetInvoiceOrdersService {
@@ -30,31 +28,27 @@ public class GetInvoiceOrdersService {
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     private final OutboundPendingRepository outboundPendingRepository;
-    private final WorkDetailRepository workDetailRepository;
     private final OrderServiceClient orderServiceClient;
     private final IntegrationServiceClient integrationServiceClient;
     private final ShipmentPayloadResolver shipmentPayloadResolver;
 
     public GetInvoiceOrdersService(OutboundPendingRepository outboundPendingRepository,
-                                   WorkDetailRepository workDetailRepository,
                                    OrderServiceClient orderServiceClient,
                                    IntegrationServiceClient integrationServiceClient,
                                    ShipmentPayloadResolver shipmentPayloadResolver) {
         this.outboundPendingRepository = outboundPendingRepository;
-        this.workDetailRepository = workDetailRepository;
         this.orderServiceClient = orderServiceClient;
         this.integrationServiceClient = integrationServiceClient;
         this.shipmentPayloadResolver = shipmentPayloadResolver;
     }
 
     /**
-     * 송장 발행이 가능한 주문과 이미 발행된 주문을 함께 조회해 관리자 송장 화면 DTO로 변환한다.
+     * 출고 지시 후 송장 발행 상태를 조회해 관리자 송장 화면 DTO로 변환한다.
      */
     public List<InvoiceOrderResponse> getInvoiceOrders(String tenantCode) {
         List<String> candidateOrderIds = outboundPendingRepository.findAllByIdTenantId(tenantCode).stream()
                 .map(outboundPending -> outboundPending.getId().getOrderId())
                 .distinct()
-                .filter(orderId -> isPacked(orderId, tenantCode))
                 .toList();
 
         Map<String, ShipmentInvoiceDto> issuedInvoices = integrationServiceClient.getShipmentInvoices(tenantCode, candidateOrderIds);
@@ -101,14 +95,6 @@ public class GetInvoiceOrdersService {
                 .labelUrl(issuedInvoice == null ? null : issuedInvoice.getLabelFileUrl())
                 .labelIssuedAt(formatDate(invoiceIssuedAt))
                 .build();
-    }
-
-    private boolean isPacked(String orderId, String tenantCode) {
-        List<WorkDetail> details = workDetailRepository.findAllByIdOrderIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc(orderId, tenantCode);
-        List<WorkDetail> packingDetails = details.stream()
-                .filter(WorkDetail::isPackingRelevantWork)
-                .toList();
-        return !packingDetails.isEmpty() && packingDetails.stream().allMatch(WorkDetail::isCompleted);
     }
 
     private String buildItemSummary(OrderSummaryDto order) {

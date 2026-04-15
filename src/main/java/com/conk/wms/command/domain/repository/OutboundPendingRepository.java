@@ -2,8 +2,12 @@ package com.conk.wms.command.domain.repository;
 
 import com.conk.wms.command.domain.aggregate.OutboundPending;
 import com.conk.wms.command.domain.aggregate.OutboundPendingId;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
@@ -23,4 +27,18 @@ public interface OutboundPendingRepository extends JpaRepository<OutboundPending
     );
 
     List<OutboundPending> findAllByIdTenantId(String tenantId);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+            update OutboundPending pending
+               set pending.invoiceIssuedAt = :issuedAt,
+                   pending.updatedAt = :issuedAt,
+                   pending.updatedBy = :actorId
+             where pending.id.orderId = :orderId
+               and pending.id.tenantId = :tenantId
+            """)
+    int markInvoiceIssued(@Param("orderId") String orderId,
+                          @Param("tenantId") String tenantId,
+                          @Param("actorId") String actorId,
+                          @Param("issuedAt") LocalDateTime issuedAt);
 }

@@ -71,12 +71,12 @@ public class SaveAsnInspectionService {
             validateItem(item, asnItemBySkuId, existingLocationId);
         }
 
-        asn.beginInspectionPutaway(command.getTenantCode());
+        asn.beginInspectionPutaway(command.getActorId());
 
         for (SaveAsnInspectionCommand.ItemCommand item : command.getItems()) {
             InspectionPutaway inspectionPutaway = inspectionPutawayRepository
                     .findByAsnIdAndSkuId(command.getAsnId(), item.getSkuId())
-                    .orElseGet(() -> new InspectionPutaway(command.getAsnId(), item.getSkuId(), command.getTenantCode()));
+                    .orElseGet(() -> new InspectionPutaway(command.getAsnId(), item.getSkuId(), command.getTenantId()));
 
             // inspection 단계에서 locationId를 비워 보내도, 앞 단계에서 선저장된 bin 배정값을 그대로 이어서 사용한다.
             String resolvedLocationId = item.getLocationId() != null && !item.getLocationId().isBlank()

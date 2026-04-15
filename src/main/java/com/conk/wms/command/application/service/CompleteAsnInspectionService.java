@@ -89,7 +89,7 @@ public class CompleteAsnInspectionService {
             }
         }
 
-        asn.beginInspectionPutaway(command.getTenantCode());
+        asn.beginInspectionPutaway(command.getActorId());
         LocalDateTime completedAt = LocalDateTime.now();
         for (InspectionPutaway inspectionRow : inspectionRows) {
             inspectionRow.complete();

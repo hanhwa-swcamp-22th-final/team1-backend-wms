@@ -99,7 +99,7 @@ public class ConfirmAsnInventoryService {
             reflectedInventoryCount++;
         }
 
-        asn.completeStorage(confirmedAt, command.getTenantCode());
+        asn.completeStorage(confirmedAt, command.getActorId());
         asnRepository.save(asn);
 
         return new ConfirmResult(asn, reflectedInventoryCount);

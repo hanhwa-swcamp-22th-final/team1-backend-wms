@@ -6,19 +6,19 @@ package com.conk.wms.command.application.dto;
 public class ConfirmAsnInventoryCommand {
 
     private final String asnId;
-    private final String tenantCode;
+    private final String actorId;
 
-    public ConfirmAsnInventoryCommand(String asnId, String tenantCode) {
+    public ConfirmAsnInventoryCommand(String asnId, String actorId) {
         this.asnId = asnId;
-        this.tenantCode = tenantCode;
+        this.actorId = actorId;
     }
 
     public String getAsnId() {
         return asnId;
     }
 
-    public String getTenantCode() {
-        return tenantCode;
+    public String getActorId() {
+        return actorId;
     }
 }
 

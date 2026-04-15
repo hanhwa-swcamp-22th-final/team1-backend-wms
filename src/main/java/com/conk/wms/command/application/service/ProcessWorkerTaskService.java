@@ -17,11 +17,16 @@ import com.conk.wms.common.exception.BusinessException;
 import com.conk.wms.common.exception.ErrorCode;
 import com.conk.wms.common.support.InspectionPutawayNoteSupport;
 import com.conk.wms.common.support.PickingPackingNoteSupport;
+import com.conk.wms.query.client.OrderServiceClient;
+import com.conk.wms.query.client.dto.OrderSummaryDto;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 /**
  * 작업자가 검수/적재 또는 피킹/패킹 결과를 저장하고 work_detail / work_assignment 상태를 갱신한다.
@@ -43,6 +48,7 @@ public class ProcessWorkerTaskService {
     private final LocationRepository locationRepository;
     private final WorkRepository workRepository;
     private final AutoAssignTaskService autoAssignTaskService;
+    private final OrderServiceClient orderServiceClient;
 
     public ProcessWorkerTaskService(WorkAssignmentRepository workAssignmentRepository,
                                     WorkDetailRepository workDetailRepository,
@@ -52,7 +58,8 @@ public class ProcessWorkerTaskService {
                                     InspectionPutawayNoteSupport inspectionPutawayNoteSupport,
                                     LocationRepository locationRepository,
                                     WorkRepository workRepository,
-                                    AutoAssignTaskService autoAssignTaskService) {
+                                    AutoAssignTaskService autoAssignTaskService,
+                                    OrderServiceClient orderServiceClient) {
         this.workAssignmentRepository = workAssignmentRepository;
         this.workDetailRepository = workDetailRepository;
         this.pickingPackingRepository = pickingPackingRepository;
@@ -62,6 +69,7 @@ public class ProcessWorkerTaskService {
         this.locationRepository = locationRepository;
         this.workRepository = workRepository;
         this.autoAssignTaskService = autoAssignTaskService;
+        this.orderServiceClient = orderServiceClient;
     }
 
     @Transactional
@@ -138,6 +146,7 @@ public class ProcessWorkerTaskService {
                     issueNote,
                     now
             );
+            syncOrderStatusOnOutboundProgress(tenantCode, orderId, stage);
         }
 
         List<WorkDetail> workDetails = workDetailRepository.findAllByIdWorkIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc(workId, tenantCode);
@@ -145,6 +154,10 @@ public class ProcessWorkerTaskService {
         if (workCompleted) {
             assignment.markCompleted(workerAccountId, now);
             workAssignmentRepository.save(assignment);
+            workRepository.findByWorkIdAndTenantId(workId, tenantCode).ifPresent(work -> {
+                work.complete();
+                workRepository.save(work);
+            });
         }
         if (!isInboundStage(stage) && STAGE_PICKING.equals(stage) && detail.isPickingOnlyWork()) {
             autoAssignTaskService.assignPackingIfReady(orderId, tenantCode, workerAccountId);
@@ -352,6 +365,44 @@ public class ProcessWorkerTaskService {
 
     private boolean isInboundStage(String stage) {
         return STAGE_INSPECTION.equals(stage) || STAGE_PUTAWAY.equals(stage);
+    }
+
+    private void syncOrderStatusOnOutboundProgress(String tenantCode, String orderId, String stage) {
+        if (orderId == null || orderId.isBlank()) {
+            return;
+        }
+
+        Optional<OrderSummaryDto> optionalOrder = orderServiceClient.getPendingOrder(tenantCode, orderId);
+        if (optionalOrder.isEmpty() || optionalOrder.get().getOrderStatus() == null) {
+            return;
+        }
+
+        String currentStatus = optionalOrder.get().getOrderStatus();
+        List<String> transitions = new ArrayList<>();
+
+        if (STAGE_PICKING.equals(stage)) {
+            if ("ALLOCATED".equals(currentStatus)) {
+                transitions.add("OUTBOUND_INSTRUCTED");
+                transitions.add("PICKING");
+            } else if ("OUTBOUND_INSTRUCTED".equals(currentStatus)) {
+                transitions.add("PICKING");
+            }
+        } else if (STAGE_PACKING.equals(stage)) {
+            if ("ALLOCATED".equals(currentStatus)) {
+                transitions.add("OUTBOUND_INSTRUCTED");
+                transitions.add("PICKING");
+                transitions.add("PACKING");
+            } else if ("OUTBOUND_INSTRUCTED".equals(currentStatus)) {
+                transitions.add("PICKING");
+                transitions.add("PACKING");
+            } else if ("PICKING".equals(currentStatus)) {
+                transitions.add("PACKING");
+            }
+        }
+
+        for (String targetStatus : transitions) {
+            orderServiceClient.updateOrderStatus(orderId, Map.of("status", targetStatus));
+        }
     }
 }
 
