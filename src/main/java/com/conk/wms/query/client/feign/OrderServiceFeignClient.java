@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
  */
 @FeignClient(
         name = "orderServiceFeignClient",
-        url = "${wms.clients.order.base-url:http://localhost:8082}",
+        url = "${wms.clients.order.base-url}",
         configuration = FeignConfig.class
 )
 public interface OrderServiceFeignClient {

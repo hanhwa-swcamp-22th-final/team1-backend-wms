@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RequestParam;
  */
 @FeignClient(
         name = "memberServiceFeignClient",
-        url = "${wms.clients.member.base-url:http://localhost:8081}",
+        url = "${wms.clients.member.base-url}",
         configuration = FeignConfig.class
 )
 public interface MemberServiceFeignClient {

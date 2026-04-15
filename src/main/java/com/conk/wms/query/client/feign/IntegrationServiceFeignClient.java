@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
  */
 @FeignClient(
         name = "integrationServiceFeignClient",
-        url = "${wms.clients.integration.base-url:http://localhost:8084}",
+        url = "${wms.clients.integration.base-url}",
         configuration = FeignConfig.class
 )
 public interface IntegrationServiceFeignClient {
