@@ -38,6 +38,7 @@ import java.util.List;
 
 import static com.conk.wms.common.auth.AuthContextSupport.resolveActorId;
 import static com.conk.wms.common.auth.AuthContextSupport.resolveSellerId;
+import static com.conk.wms.common.auth.AuthContextSupport.resolveTenantId;
 
 /**
  * 창고 관리자 기준 ASN command API를 모아둔 컨트롤러다.
@@ -104,12 +105,14 @@ public class AsnManagementController {
             @RequestBody AssignAsnPutawayRequest request,
             AuthContext authContext
     ) {
+        String tenantId = resolveTenantId(authContext);
         String actorId = resolveActorId(authContext);
         List<AssignAsnPutawayRequest.ItemRequest> items = request != null && request.getItems() != null
                 ? request.getItems()
                 : List.of();
         int assignedCount = assignAsnPutawayService.assign(new AssignAsnPutawayCommand(
                 asnId,
+                tenantId,
                 actorId,
                 items.stream()
                         .map(item -> new AssignAsnPutawayCommand.ItemCommand(
@@ -129,6 +132,7 @@ public class AsnManagementController {
             @RequestBody BinAssignmentsRequest request,
             AuthContext authContext
     ) {
+        String tenantId = resolveTenantId(authContext);
         String actorId = resolveActorId(authContext);
         List<AssignAsnPutawayCommand.ItemCommand> items = request != null && request.getAssignments() != null
                 ? request.getAssignments().stream()
@@ -139,7 +143,7 @@ public class AsnManagementController {
                 .toList()
                 : List.of();
 
-        int assignedCount = assignAsnPutawayService.assign(new AssignAsnPutawayCommand(asnId, actorId, items));
+        int assignedCount = assignAsnPutawayService.assign(new AssignAsnPutawayCommand(asnId, tenantId, actorId, items));
         return ResponseEntity.ok(ApiResponse.success(
                 "putaway assigned",
                 new AssignAsnPutawayResponse(asnId, assignedCount)
@@ -154,12 +158,14 @@ public class AsnManagementController {
             @RequestBody SaveAsnInspectionRequest request,
             AuthContext authContext
     ) {
+        String tenantId = resolveTenantId(authContext);
         String actorId = resolveActorId(authContext);
         List<SaveAsnInspectionRequest.ItemRequest> items = request != null && request.getItems() != null
                 ? request.getItems()
                 : List.of();
         Asn asn = saveAsnInspectionService.save(new SaveAsnInspectionCommand(
                 asnId,
+                tenantId,
                 actorId,
                 items.stream()
                         .map(item -> new SaveAsnInspectionCommand.ItemCommand(

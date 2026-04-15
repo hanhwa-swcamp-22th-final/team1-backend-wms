@@ -4,6 +4,7 @@ import com.conk.wms.command.domain.aggregate.AllocatedInventory;
 import com.conk.wms.command.domain.aggregate.AsnItem;
 import com.conk.wms.command.domain.aggregate.InspectionPutaway;
 import com.conk.wms.command.domain.aggregate.Location;
+import com.conk.wms.command.domain.aggregate.Work;
 import com.conk.wms.command.domain.aggregate.WorkAssignment;
 import com.conk.wms.command.domain.aggregate.WorkDetail;
 import com.conk.wms.command.domain.repository.AllocatedInventoryRepository;
@@ -12,6 +13,7 @@ import com.conk.wms.command.domain.repository.InspectionPutawayRepository;
 import com.conk.wms.command.domain.repository.LocationRepository;
 import com.conk.wms.command.domain.repository.WorkAssignmentRepository;
 import com.conk.wms.command.domain.repository.WorkDetailRepository;
+import com.conk.wms.command.domain.repository.WorkRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +32,10 @@ public class AutoAssignTaskService {
 
     private static final String OUTBOUND_WORK_ID_PREFIX = "WORK-OUT-";
     private static final String INBOUND_WORK_ID_PREFIX = "WORK-IN-";
+    private static final String WORK_STATUS_ASSIGNED = "ASSIGNED";
+    private static final String WORK_TYPE_OUTBOUND = "OUTBOUND";
+    private static final String WORK_TYPE_OUTBOUND_PACKING = "OUTBOUND_PACKING";
+    private static final String WORK_TYPE_INBOUND = "INSPECTION_LOADING";
 
     private final AllocatedInventoryRepository allocatedInventoryRepository;
     private final AsnItemRepository asnItemRepository;
@@ -37,19 +43,22 @@ public class AutoAssignTaskService {
     private final LocationRepository locationRepository;
     private final WorkAssignmentRepository workAssignmentRepository;
     private final WorkDetailRepository workDetailRepository;
+    private final WorkRepository workRepository;
 
     public AutoAssignTaskService(AllocatedInventoryRepository allocatedInventoryRepository,
                                  AsnItemRepository asnItemRepository,
                                  InspectionPutawayRepository inspectionPutawayRepository,
                                  LocationRepository locationRepository,
                                  WorkAssignmentRepository workAssignmentRepository,
-                                 WorkDetailRepository workDetailRepository) {
+                                 WorkDetailRepository workDetailRepository,
+                                 WorkRepository workRepository) {
         this.allocatedInventoryRepository = allocatedInventoryRepository;
         this.asnItemRepository = asnItemRepository;
         this.inspectionPutawayRepository = inspectionPutawayRepository;
         this.locationRepository = locationRepository;
         this.workAssignmentRepository = workAssignmentRepository;
         this.workDetailRepository = workDetailRepository;
+        this.workRepository = workRepository;
     }
 
     /**
@@ -88,6 +97,7 @@ public class AutoAssignTaskService {
             String workId = splitPickingAndPacking
                     ? buildOutboundPickingWorkId(orderId, tenantCode, workerId)
                     : buildOutboundWorkId(orderId, tenantCode, workerId);
+            createOrReplaceWork(workId, tenantCode, WORK_TYPE_OUTBOUND, workerId);
             workAssignmentRepository.save(new WorkAssignment(workId, tenantCode, workerId, actor));
             assignmentCount++;
 
@@ -157,6 +167,7 @@ public class AutoAssignTaskService {
         String packingWorkerId = lastPickingWorkerId;
         String workId = buildOutboundPackingWorkId(orderId, tenantCode, packingWorkerId);
 
+        createOrReplaceWork(workId, tenantCode, WORK_TYPE_OUTBOUND_PACKING, packingWorkerId);
         workAssignmentRepository.save(new WorkAssignment(workId, tenantCode, packingWorkerId, actor));
         for (WorkDetail pickingDetail : pickingDetails) {
             workDetailRepository.save(WorkDetail.forOutboundPacking(
@@ -209,6 +220,7 @@ public class AutoAssignTaskService {
         for (Map.Entry<String, List<InspectionPutaway>> entry : rowsByWorker.entrySet()) {
             String workerId = entry.getKey();
             String workId = buildInboundWorkId(asnId, tenantCode, workerId);
+            createOrReplaceWork(workId, tenantCode, WORK_TYPE_INBOUND, workerId);
             workAssignmentRepository.save(new WorkAssignment(workId, tenantCode, workerId, actor));
             assignmentCount++;
 
@@ -249,7 +261,17 @@ public class AutoAssignTaskService {
         for (String workId : workIds) {
             workDetailRepository.deleteAllByIdWorkIdAndTenantId(workId, tenantCode);
             workAssignmentRepository.deleteAllByIdWorkIdAndIdTenantId(workId, tenantCode);
+            workRepository.findByWorkIdAndTenantId(workId, tenantCode)
+                    .ifPresent(workRepository::delete);
         }
+    }
+
+    private void createOrReplaceWork(String workId, String tenantCode, String workType, String workerId) {
+        workRepository.findByWorkIdAndTenantId(workId, tenantCode)
+                .ifPresent(workRepository::delete);
+        Work work = new Work(workId, tenantCode, workType, WORK_STATUS_ASSIGNED);
+        work.assignWorker(workerId);
+        workRepository.save(work);
     }
 
     private String buildOutboundWorkId(String orderId, String tenantCode, String workerId) {

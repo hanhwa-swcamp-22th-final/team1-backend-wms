@@ -68,7 +68,7 @@ public class AssignAsnPutawayService {
         Map<String, AsnItem> asnItemBySkuId = asnItemRepository.findAllByAsnId(command.getAsnId()).stream()
                 .collect(Collectors.toMap(AsnItem::getSkuId, Function.identity()));
         PutawayLocationSupport.AssignmentContext context =
-                putawayLocationSupport.buildContext(asn.getWarehouseId(), command.getTenantCode());
+                putawayLocationSupport.buildContext(asn.getWarehouseId(), command.getTenantId());
 
         Set<String> seenSkuIds = new HashSet<>();
         Map<String, String> requestedSkuByLocationId = new HashMap<>();
@@ -80,13 +80,13 @@ public class AssignAsnPutawayService {
             // Bin 미배정 화면의 최종 결과는 별도 테이블이 아니라 inspection_putaway.locationId에 선저장한다.
             // 이후 inspection 저장에서는 이 locationId를 그대로 재사용한다.
             InspectionPutaway row = inspectionPutawayRepository.findByAsnIdAndSkuId(command.getAsnId(), item.getSkuId())
-                    .orElseGet(() -> new InspectionPutaway(command.getAsnId(), item.getSkuId(), command.getTenantCode()));
+                    .orElseGet(() -> new InspectionPutaway(command.getAsnId(), item.getSkuId(), command.getTenantId()));
             row.assignLocation(item.getLocationId());
             inspectionPutawayRepository.save(row);
         }
 
         // ASN별 BIN 배정이 끝나면, 해당 BIN 담당 작업자 기준으로 검수/적재 작업을 자동 생성한다.
-        autoAssignTaskService.assignInspectionLoading(command.getAsnId(), command.getTenantCode(), command.getTenantCode());
+        autoAssignTaskService.assignInspectionLoading(command.getAsnId(), command.getTenantId(), command.getActorId());
 
         return command.getItems().size();
     }

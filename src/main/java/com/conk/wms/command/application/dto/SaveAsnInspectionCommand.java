@@ -8,12 +8,14 @@ import java.util.List;
 public class SaveAsnInspectionCommand {
 
     private final String asnId;
-    private final String tenantCode;
+    private final String tenantId;
+    private final String actorId;
     private final List<ItemCommand> items;
 
-    public SaveAsnInspectionCommand(String asnId, String tenantCode, List<ItemCommand> items) {
+    public SaveAsnInspectionCommand(String asnId, String tenantId, String actorId, List<ItemCommand> items) {
         this.asnId = asnId;
-        this.tenantCode = tenantCode;
+        this.tenantId = tenantId;
+        this.actorId = actorId;
         this.items = items;
     }
 
@@ -21,8 +23,12 @@ public class SaveAsnInspectionCommand {
         return asnId;
     }
 
-    public String getTenantCode() {
-        return tenantCode;
+    public String getTenantId() {
+        return tenantId;
+    }
+
+    public String getActorId() {
+        return actorId;
     }
 
     public List<ItemCommand> getItems() {

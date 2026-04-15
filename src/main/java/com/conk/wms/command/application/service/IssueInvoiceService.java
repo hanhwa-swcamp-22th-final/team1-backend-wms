@@ -110,10 +110,13 @@ public class IssueInvoiceService {
 
             LocalDateTime issuedAt = issued.getIssuedAt() == null ? LocalDateTime.now() : issued.getIssuedAt();
             String actor = actorId == null || actorId.isBlank() ? "SYSTEM" : actorId;
-            pendingRows.forEach(pending -> {
-                pending.markInvoiceIssued(actor, issuedAt);
-                outboundPendingRepository.save(pending);
-            });
+            int updatedRowCount = outboundPendingRepository.markInvoiceIssued(orderId, tenantCode, actor, issuedAt);
+            if (updatedRowCount == 0) {
+                throw new BusinessException(
+                        ErrorCode.OUTBOUND_INVOICE_SOURCE_NOT_FOUND,
+                        ErrorCode.OUTBOUND_INVOICE_SOURCE_NOT_FOUND.getMessage() + ": " + orderId
+                );
+            }
 
             return new IssueResult(
                     orderId,
