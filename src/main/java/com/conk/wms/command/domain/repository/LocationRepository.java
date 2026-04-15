@@ -21,5 +21,7 @@ public interface LocationRepository extends JpaRepository<Location, String> {
 
     List<Location> findAllByLocationIdIn(Collection<String> locationIds);
 
+    List<Location> findAllByWarehouseIdIn(Collection<String> warehouseIds);
+
     java.util.Optional<Location> findByBinId(String binId);
 }

@@ -7,6 +7,7 @@ import com.conk.wms.command.domain.repository.AsnItemRepository;
 import com.conk.wms.command.domain.repository.AsnRepository;
 import com.conk.wms.command.domain.repository.WarehouseRepository;
 import com.conk.wms.query.controller.dto.response.MasterAsnListItemResponse;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,10 +36,10 @@ public class GetMasterAsnListService {
     }
 
     public List<MasterAsnListItemResponse> getAsns(String status) {
-        List<Asn> asns = asnRepository.findAll().stream()
-                .filter(asn -> status == null || status.isBlank() || normalizeStatus(asn.getStatus()).equals(status))
-                .sorted((left, right) -> right.getCreatedAt().compareTo(left.getCreatedAt()))
-                .toList();
+        List<String> rawStatuses = resolveRawStatuses(status);
+        List<Asn> asns = rawStatuses.isEmpty()
+                ? asnRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"))
+                : asnRepository.findAllByStatusInOrderByCreatedAtDesc(rawStatuses);
         if (asns.isEmpty()) {
             return List.of();
         }
@@ -72,6 +73,18 @@ public class GetMasterAsnListService {
                             .build();
                 })
                 .toList();
+    }
+
+    private List<String> resolveRawStatuses(String status) {
+        if (status == null || status.isBlank()) {
+            return List.of();
+        }
+        return switch (status) {
+            case "SUBMITTED" -> List.of("REGISTERED");
+            case "RECEIVED" -> List.of("ARRIVED", "INSPECTING_PUTAWAY", "STORED", "RECEIVED");
+            case "CANCELLED" -> List.of("CANCELED", "CANCELLED");
+            default -> List.of(status);
+        };
     }
 
     private String normalizeStatus(String status) {

@@ -21,6 +21,8 @@ public interface AsnRepository extends JpaRepository<Asn, Long> {
 
     List<Asn> findAllByWarehouseIdIn(Collection<String> warehouseIds);
 
+    List<Asn> findAllByStatusInOrderByCreatedAtDesc(Collection<String> statuses);
+
     long countByWarehouseIdInAndStatusNotIn(Collection<String> warehouseIds, Collection<String> excludedStatuses);
 
     List<Asn> findAllBySellerIdOrderByCreatedAtDesc(String sellerId);

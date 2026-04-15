@@ -58,14 +58,16 @@ public class GetDashboardWarehouseStatusService {
         Set<String> warehouseIds = warehouses.stream()
                 .map(Warehouse::getWarehouseId)
                 .collect(Collectors.toSet());
-        List<Location> allLocations = locationRepository.findAll();
+        List<Location> allLocations = locationRepository.findAllByWarehouseIdIn(warehouseIds);
         Map<String, Location> locationById = allLocations.stream()
                 .collect(Collectors.toMap(Location::getLocationId, Function.identity(), (left, right) -> left));
         Map<String, List<Location>> locationsByWarehouse = allLocations.stream()
-                .filter(location -> warehouseIds.contains(location.getWarehouseId()))
                 .collect(Collectors.groupingBy(Location::getWarehouseId));
+        Set<String> locationIds = locationById.keySet();
 
-        List<Inventory> positiveInventories = inventoryRepository.findAllByIdTenantId(tenantCode).stream()
+        List<Inventory> positiveInventories = locationIds.isEmpty()
+                ? List.of()
+                : inventoryRepository.findAllByIdTenantIdAndIdLocationIdIn(tenantCode, locationIds).stream()
                 .filter(inventory -> inventory.getQuantity() > 0)
                 .toList();
         Set<String> usedLocationIds = positiveInventories.stream()
@@ -78,18 +80,20 @@ public class GetDashboardWarehouseStatusService {
                         Collectors.summingInt(Inventory::getQuantity)
                 ));
 
-        Map<String, List<Asn>> asnsByWarehouse = asnRepository.findAll().stream()
-                .filter(asn -> warehouseIds.contains(asn.getWarehouseId()))
+        Map<String, List<Asn>> asnsByWarehouse = asnRepository.findAllByWarehouseIdIn(warehouseIds).stream()
                 .collect(Collectors.groupingBy(Asn::getWarehouseId));
 
-        Map<String, Set<String>> pendingOrdersByWarehouse = outboundPendingRepository.findAllByIdTenantId(tenantCode).stream()
-                .filter(pending -> locationById.containsKey(pending.getId().getLocationId()))
+        List<com.conk.wms.command.domain.aggregate.OutboundPending> pendingRecords = locationIds.isEmpty()
+                ? List.of()
+                : outboundPendingRepository.findAllByIdTenantIdAndIdLocationIdIn(tenantCode, locationIds);
+
+        Map<String, Set<String>> pendingOrdersByWarehouse = pendingRecords.stream()
                 .collect(Collectors.groupingBy(
                         pending -> locationById.get(pending.getId().getLocationId()).getWarehouseId(),
                         Collectors.mapping(pending -> pending.getId().getOrderId(), Collectors.toSet())
                 ));
 
-        Map<String, Integer> completedOrdersByWarehouse = buildCompletedOrdersByWarehouse(tenantCode, locationById);
+        Map<String, Integer> completedOrdersByWarehouse = buildCompletedOrdersByWarehouse(tenantCode, pendingRecords, locationById);
 
         return warehouses.stream()
                 .map(warehouse -> toResponse(
@@ -104,16 +108,23 @@ public class GetDashboardWarehouseStatusService {
                 .toList();
     }
 
-    private Map<String, Integer> buildCompletedOrdersByWarehouse(String tenantCode, Map<String, Location> locationById) {
-        Map<String, String> warehouseByOrder = outboundPendingRepository.findAllByIdTenantId(tenantCode).stream()
-                .filter(pending -> locationById.containsKey(pending.getId().getLocationId()))
+    private Map<String, Integer> buildCompletedOrdersByWarehouse(String tenantCode,
+                                                                 List<com.conk.wms.command.domain.aggregate.OutboundPending> pendingRecords,
+                                                                 Map<String, Location> locationById) {
+        if (pendingRecords.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<String, String> warehouseByOrder = pendingRecords.stream()
                 .collect(Collectors.toMap(
                         pending -> pending.getId().getOrderId(),
                         pending -> locationById.get(pending.getId().getLocationId()).getWarehouseId(),
                         (left, right) -> left
                 ));
 
-        return outboundCompletedRepository.findAllByIdTenantId(tenantCode).stream()
+        Set<String> orderIds = warehouseByOrder.keySet();
+
+        return outboundCompletedRepository.findAllByIdTenantIdAndIdOrderIdIn(tenantCode, orderIds).stream()
                 .filter(completed -> completed.getConfirmedAt() != null
                         && completed.getConfirmedAt().toLocalDate().equals(LocalDate.now()))
                 .map(OutboundCompleted::getId)

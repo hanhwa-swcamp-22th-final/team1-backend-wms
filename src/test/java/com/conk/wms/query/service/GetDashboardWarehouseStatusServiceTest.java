@@ -26,6 +26,7 @@ import java.time.LocalTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -64,11 +65,14 @@ class GetDashboardWarehouseStatusServiceTest {
         OutboundCompleted completed = new OutboundCompleted("ORD-001", "CONK", "SYSTEM", LocalDateTime.now());
 
         when(warehouseRepository.findAllByTenantIdOrderByWarehouseIdAsc("CONK")).thenReturn(List.of(warehouse));
-        when(locationRepository.findAll()).thenReturn(List.of(loc1, loc2));
-        when(inventoryRepository.findAllByIdTenantId("CONK")).thenReturn(List.of(inventory));
-        when(asnRepository.findAll()).thenReturn(List.of(asn));
-        when(outboundPendingRepository.findAllByIdTenantId("CONK")).thenReturn(List.of(pending));
-        when(outboundCompletedRepository.findAllByIdTenantId("CONK")).thenReturn(List.of(completed));
+        when(locationRepository.findAllByWarehouseIdIn(anyCollection())).thenReturn(List.of(loc1, loc2));
+        when(inventoryRepository.findAllByIdTenantIdAndIdLocationIdIn(org.mockito.ArgumentMatchers.eq("CONK"), anyCollection()))
+                .thenReturn(List.of(inventory));
+        when(asnRepository.findAllByWarehouseIdIn(anyCollection())).thenReturn(List.of(asn));
+        when(outboundPendingRepository.findAllByIdTenantIdAndIdLocationIdIn(org.mockito.ArgumentMatchers.eq("CONK"), anyCollection()))
+                .thenReturn(List.of(pending));
+        when(outboundCompletedRepository.findAllByIdTenantIdAndIdOrderIdIn(org.mockito.ArgumentMatchers.eq("CONK"), anyCollection()))
+                .thenReturn(List.of(completed));
 
         List<WarehouseStatusItemResponse> responses = getDashboardWarehouseStatusService.getStatuses("CONK");
 
