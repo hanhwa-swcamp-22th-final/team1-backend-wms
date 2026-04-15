@@ -59,6 +59,7 @@ class SaveAsnInspectionServiceTest {
         Asn saved = saveAsnInspectionService.save(new SaveAsnInspectionCommand(
                 "ASN-001",
                 "CONK",
+                "worker-1",
                 List.of(new SaveAsnInspectionCommand.ItemCommand(
                         "SKU-001",
                         "LOC-A-01-01",
@@ -94,6 +95,7 @@ class SaveAsnInspectionServiceTest {
                 () -> saveAsnInspectionService.save(new SaveAsnInspectionCommand(
                         "ASN-001",
                         "CONK",
+                        "worker-1",
                         List.of(new SaveAsnInspectionCommand.ItemCommand(
                                 "SKU-404",
                                 "LOC-A-01-01",
@@ -120,6 +122,7 @@ class SaveAsnInspectionServiceTest {
                 () -> saveAsnInspectionService.save(new SaveAsnInspectionCommand(
                         "ASN-001",
                         "CONK",
+                        "worker-1",
                         List.of(new SaveAsnInspectionCommand.ItemCommand(
                                 "SKU-001",
                                 null,
@@ -146,6 +149,7 @@ class SaveAsnInspectionServiceTest {
                 () -> saveAsnInspectionService.save(new SaveAsnInspectionCommand(
                         "ASN-001",
                         "CONK",
+                        "worker-1",
                         List.of(new SaveAsnInspectionCommand.ItemCommand(
                                 "SKU-001",
                                 "LOC-A-01-01",
@@ -178,6 +182,7 @@ class SaveAsnInspectionServiceTest {
         saveAsnInspectionService.save(new SaveAsnInspectionCommand(
                 "ASN-001",
                 "CONK",
+                "worker-1",
                 List.of(new SaveAsnInspectionCommand.ItemCommand(
                         "SKU-001",
                         null,
