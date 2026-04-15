@@ -17,7 +17,6 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.Locale;
 
 /**
  * 창고 등록과 담당 관리자 배정을 처리하는 command 서비스다.
@@ -28,20 +27,23 @@ public class ManageWarehouseService {
     private final WarehouseRepository warehouseRepository;
     private final WarehouseManagerAssignmentRepository warehouseManagerAssignmentRepository;
     private final GetWarehousesService getWarehousesService;
+    private final WarehouseIdGenerator warehouseIdGenerator;
 
     public ManageWarehouseService(WarehouseRepository warehouseRepository,
                                   WarehouseManagerAssignmentRepository warehouseManagerAssignmentRepository,
-                                  GetWarehousesService getWarehousesService) {
+                                  GetWarehousesService getWarehousesService,
+                                  WarehouseIdGenerator warehouseIdGenerator) {
         this.warehouseRepository = warehouseRepository;
         this.warehouseManagerAssignmentRepository = warehouseManagerAssignmentRepository;
         this.getWarehousesService = getWarehousesService;
+        this.warehouseIdGenerator = warehouseIdGenerator;
     }
 
     @Transactional
     public WarehouseResponse register(String tenantCode, RegisterWarehouseRequest request) {
         validateRegisterRequest(request);
 
-        String warehouseId = nextWarehouseId(request.getState(), request.getCity());
+        String warehouseId = warehouseIdGenerator.generate(request.getState(), request.getCity());
         Warehouse warehouse = new Warehouse(
                 warehouseId,
                 tenantCode,
@@ -138,41 +140,6 @@ public class ManageWarehouseService {
         if (!hasText(managerEmail)) {
             throw new BusinessException(ErrorCode.WAREHOUSE_MANAGER_EMAIL_REQUIRED);
         }
-    }
-
-    private String nextWarehouseId(String state, String city) {
-        String regionCode = resolveRegionCode(state, city);
-        String prefix = "WH-" + regionCode + "-";
-        long next = warehouseRepository.countByWarehouseIdStartingWith(prefix) + 1;
-        return prefix + String.format("%03d", next);
-    }
-
-    private String resolveRegionCode(String state, String city) {
-        String normalizedState = state == null ? "" : state.trim().toUpperCase(Locale.ROOT);
-        if ("CA".equals(normalizedState)) {
-            return "LAX";
-        }
-        if ("TX".equals(normalizedState)) {
-            return "DFW";
-        }
-        if ("NY".equals(normalizedState)) {
-            return "NYC";
-        }
-        if ("GA".equals(normalizedState)) {
-            return "ATL";
-        }
-
-        String normalizedCity = city == null ? "" : city.trim().toUpperCase(Locale.ROOT).replaceAll("[^A-Z]", "");
-        if (normalizedCity.length() >= 3) {
-            return normalizedCity.substring(0, 3);
-        }
-        if (normalizedState.length() >= 3) {
-            return normalizedState.substring(0, 3);
-        }
-        if (normalizedState.length() == 2) {
-            return normalizedState + "X";
-        }
-        return "GEN";
     }
 
     private LocalTime parseTime(String value) {

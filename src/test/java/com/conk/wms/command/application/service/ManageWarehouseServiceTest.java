@@ -20,7 +20,6 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.startsWith;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -36,6 +35,9 @@ class ManageWarehouseServiceTest {
     @Mock
     private GetWarehousesService getWarehousesService;
 
+    @Mock
+    private WarehouseIdGenerator warehouseIdGenerator;
+
     @InjectMocks
     private ManageWarehouseService manageWarehouseService;
 
@@ -44,7 +46,7 @@ class ManageWarehouseServiceTest {
     void register_success() {
         RegisterWarehouseRequest request = request("LA West Coast Hub", "CA", "Los Angeles");
 
-        when(warehouseRepository.countByWarehouseIdStartingWith("WH-LAX-")).thenReturn(0L);
+        when(warehouseIdGenerator.generate("CA", "Los Angeles")).thenReturn("WH-LAX-001");
         when(getWarehousesService.getWarehouse("CONK", "WH-LAX-001"))
                 .thenReturn(WarehouseResponse.builder().id("WH-LAX-001").name("LA West Coast Hub").build());
 

@@ -10,6 +10,8 @@ import com.conk.wms.command.domain.repository.AsnItemRepository;
 import com.conk.wms.command.domain.repository.AsnRepository;
 import com.conk.wms.command.domain.repository.SellerWarehouseRepository;
 import com.conk.wms.command.domain.repository.WarehouseRepository;
+import com.conk.wms.command.domain.repository.WarehouseManagerAssignmentRepository;
+import com.conk.wms.command.infrastructure.kafka.publisher.NotificationEventKafkaPublisher;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -45,6 +47,15 @@ class RegisterAsnServiceTest {
     @Mock
     private SellerWarehouseRepository sellerWarehouseRepository;
 
+    @Mock
+    private WarehouseManagerAssignmentRepository warehouseManagerAssignmentRepository;
+
+    @Mock
+    private NotificationEventKafkaPublisher notificationEventKafkaPublisher;
+
+    @Mock
+    private AsnIdGenerator asnIdGenerator;
+
     @InjectMocks
     private RegisterAsnService registerAsnService;
 
@@ -61,7 +72,8 @@ class RegisterAsnServiceTest {
         );
         when(warehouseRepository.existsById("WH-001")).thenReturn(true);
         when(sellerWarehouseRepository.existsByIdSellerIdAndIdWarehouseId("SELLER-001", "WH-001")).thenReturn(true);
-        when(asnRepository.existsByAsnId("ASN-001")).thenReturn(false);
+        when(asnIdGenerator.generate()).thenReturn("ASN-20260329-001");
+        when(asnRepository.existsByAsnId("ASN-20260329-001")).thenReturn(false);
 
         // 실제 저장소 구현 대신 mock에 저장되는 값을 캡처해, 서비스가 어떤 상태를 만들었는지 검증한다.
         registerAsnService.register(command);
@@ -75,7 +87,7 @@ class RegisterAsnServiceTest {
         Asn savedAsn = asnCaptor.getValue();
         AsnItem savedItem = itemCaptor.getValue();
 
-        assertEquals("ASN-001", savedAsn.getAsnId());
+        assertEquals("ASN-20260329-001", savedAsn.getAsnId());
         assertEquals("WH-001", savedAsn.getWarehouseId());
         assertEquals("SELLER-001", savedAsn.getSellerId());
         assertEquals(LocalDate.of(2026, 3, 29), savedAsn.getExpectedArrivalDate());
@@ -83,7 +95,7 @@ class RegisterAsnServiceTest {
         assertEquals("온도 민감 상품 포함", savedAsn.getSellerMemo());
         assertEquals(5, savedAsn.getBoxQuantity());
 
-        assertEquals("ASN-001", savedItem.getAsnId());
+        assertEquals("ASN-20260329-001", savedItem.getAsnId());
         assertEquals("SKU-001", savedItem.getSkuId());
         assertEquals("루미에르 앰플 30ml", savedItem.getProductNameSnapshot());
         assertEquals(100, savedItem.getQuantity());
@@ -94,7 +106,7 @@ class RegisterAsnServiceTest {
     @DisplayName("ASN 등록 실패: 존재하지 않는 창고면 예외가 발생한다")
     void register_whenWarehouseNotFound_thenThrow() {
         RegisterAsnCommand command = new RegisterAsnCommand(
-                "ASN-001",
+                "IGNORED",
                 "WH-999",
                 "SELLER-001",
                 LocalDate.of(2026, 3, 29),
@@ -111,7 +123,7 @@ class RegisterAsnServiceTest {
     @DisplayName("ASN 등록 실패: 셀러와 연결되지 않은 창고면 예외가 발생한다")
     void register_whenSellerWarehouseMismatch_thenThrow() {
         RegisterAsnCommand command = new RegisterAsnCommand(
-                "ASN-001",
+                "IGNORED",
                 "WH-001",
                 "SELLER-001",
                 LocalDate.of(2026, 3, 29),
@@ -129,7 +141,7 @@ class RegisterAsnServiceTest {
     @DisplayName("ASN 등록 실패: 이미 존재하는 ASN 번호면 예외가 발생한다")
     void register_whenAsnAlreadyExists_thenThrow() {
         RegisterAsnCommand command = new RegisterAsnCommand(
-                "ASN-001",
+                "IGNORED",
                 "WH-001",
                 "SELLER-001",
                 LocalDate.of(2026, 3, 29),
@@ -138,7 +150,8 @@ class RegisterAsnServiceTest {
         );
         when(warehouseRepository.existsById("WH-001")).thenReturn(true);
         when(sellerWarehouseRepository.existsByIdSellerIdAndIdWarehouseId("SELLER-001", "WH-001")).thenReturn(true);
-        when(asnRepository.existsByAsnId("ASN-001")).thenReturn(true);
+        when(asnIdGenerator.generate()).thenReturn("ASN-20260329-001");
+        when(asnRepository.existsByAsnId("ASN-20260329-001")).thenReturn(true);
 
         BusinessException exception = assertThrows(BusinessException.class, () -> registerAsnService.register(command));
         assertEquals(ErrorCode.ASN_ALREADY_EXISTS, exception.getErrorCode());
@@ -148,7 +161,7 @@ class RegisterAsnServiceTest {
     @DisplayName("ASN 등록 실패: 동일 커맨드 내 중복 SKU가 있으면 예외가 발생한다")
     void register_whenDuplicateSku_thenThrow() {
         RegisterAsnCommand command = new RegisterAsnCommand(
-                "ASN-001",
+                "IGNORED",
                 "WH-001",
                 "SELLER-001",
                 LocalDate.of(2026, 3, 29),
@@ -160,7 +173,8 @@ class RegisterAsnServiceTest {
         );
         when(warehouseRepository.existsById("WH-001")).thenReturn(true);
         when(sellerWarehouseRepository.existsByIdSellerIdAndIdWarehouseId("SELLER-001", "WH-001")).thenReturn(true);
-        when(asnRepository.existsByAsnId("ASN-001")).thenReturn(false);
+        when(asnIdGenerator.generate()).thenReturn("ASN-20260329-001");
+        when(asnRepository.existsByAsnId("ASN-20260329-001")).thenReturn(false);
 
         BusinessException exception = assertThrows(BusinessException.class, () -> registerAsnService.register(command));
         assertEquals(ErrorCode.ASN_DUPLICATE_SKU, exception.getErrorCode());
@@ -170,7 +184,7 @@ class RegisterAsnServiceTest {
     @DisplayName("ASN 등록 실패: 품목이 비어 있으면 예외가 발생한다")
     void register_whenItemsEmpty_thenThrow() {
         RegisterAsnCommand command = new RegisterAsnCommand(
-                "ASN-001",
+                "IGNORED",
                 "WH-001",
                 "SELLER-001",
                 LocalDate.of(2026, 3, 29),
@@ -188,7 +202,7 @@ class RegisterAsnServiceTest {
     @DisplayName("ASN 등록 실패: 박스 수가 0 이하면 예외가 발생한다")
     void register_whenBoxQuantityInvalid_thenThrow() {
         RegisterAsnCommand command = new RegisterAsnCommand(
-                "ASN-001",
+                "IGNORED",
                 "WH-001",
                 "SELLER-001",
                 LocalDate.of(2026, 3, 29),

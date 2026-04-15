@@ -24,7 +24,6 @@ import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -118,7 +117,7 @@ class AsnControllerTest {
                         )
                 )
         );
-        doNothing().when(registerAsnService).register(any());
+        when(registerAsnService.register(any())).thenReturn("ASN-20260329-001");
 
         mockMvc.perform(post("/wms/seller/asns")
                         .header("X-Tenant-Code", "SELLER-001")

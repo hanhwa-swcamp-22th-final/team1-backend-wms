@@ -77,7 +77,7 @@ public class AsnController {
         List<RegisterAsnItemCommand> items = toItemCommands(request);
         String sellerId = resolveSellerId(authContext);
 
-        registerAsnService.register(new RegisterAsnCommand(
+        String asnId = registerAsnService.register(new RegisterAsnCommand(
                 request.getAsnNo(),
                 request.getWarehouseId(),
                 sellerId,
@@ -87,7 +87,7 @@ public class AsnController {
         ));
 
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("created", new CreateSellerAsnResponse(request.getAsnNo())));
+                .body(ApiResponse.success("created", new CreateSellerAsnResponse(asnId)));
     }
 
     // 프론트는 `detail.items[]` 구조로 보내므로 서비스 command용 flat item 목록으로 한 번 변환한다.

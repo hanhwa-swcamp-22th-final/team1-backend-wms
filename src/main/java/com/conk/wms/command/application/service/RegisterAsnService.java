@@ -36,18 +36,21 @@ public class RegisterAsnService {
     private final SellerWarehouseRepository sellerWarehouseRepository;
     private final WarehouseManagerAssignmentRepository warehouseManagerAssignmentRepository;
     private final NotificationEventKafkaPublisher notificationEventKafkaPublisher;
+    private final AsnIdGenerator asnIdGenerator;
 
     public RegisterAsnService(AsnRepository asnRepository, AsnItemRepository asnItemRepository,
                               WarehouseRepository warehouseRepository,
                               SellerWarehouseRepository sellerWarehouseRepository,
                               WarehouseManagerAssignmentRepository warehouseManagerAssignmentRepository,
-                              NotificationEventKafkaPublisher notificationEventKafkaPublisher) {
+                              NotificationEventKafkaPublisher notificationEventKafkaPublisher,
+                              AsnIdGenerator asnIdGenerator) {
         this.asnRepository = asnRepository;
         this.asnItemRepository = asnItemRepository;
         this.warehouseRepository = warehouseRepository;
         this.sellerWarehouseRepository = sellerWarehouseRepository;
         this.warehouseManagerAssignmentRepository = warehouseManagerAssignmentRepository;
         this.notificationEventKafkaPublisher = notificationEventKafkaPublisher;
+        this.asnIdGenerator = asnIdGenerator;
     }
 
     /**
@@ -55,8 +58,10 @@ public class RegisterAsnService {
      * 저장 전에 창고 존재 여부, ASN 중복 여부, SKU 중복 여부를 한 번에 점검한다.
      */
     @Transactional
-    public void register(RegisterAsnCommand command) {
+    public String register(RegisterAsnCommand command) {
         validateCommand(command);
+
+        String asnId = asnIdGenerator.generate();
 
         if (!warehouseRepository.existsById(command.getWarehouseId())) {
             throw new BusinessException(
@@ -65,10 +70,10 @@ public class RegisterAsnService {
             );
         }
         assertSellerUsesWarehouse(command.getSellerId(), command.getWarehouseId());
-        if (asnRepository.existsByAsnId(command.getAsnId())) {
+        if (asnRepository.existsByAsnId(asnId)) {
             throw new BusinessException(
                     ErrorCode.ASN_ALREADY_EXISTS,
-                    buildDetailedMessage(ErrorCode.ASN_ALREADY_EXISTS, command.getAsnId())
+                    buildDetailedMessage(ErrorCode.ASN_ALREADY_EXISTS, asnId)
             );
         }
 
@@ -91,7 +96,7 @@ public class RegisterAsnService {
         // ERD 운영 상태는 현재 REGISTERED로 저장하고,
         // seller 조회 화면에는 이후 query layer에서 SUBMITTED로 변환해서 보여준다.
         asnRepository.save(new Asn(
-                command.getAsnId(),
+                asnId,
                 command.getWarehouseId(),
                 command.getSellerId(),
                 command.getExpectedDate(),
@@ -106,7 +111,7 @@ public class RegisterAsnService {
 
         command.getItems().forEach(item ->
                 asnItemRepository.save(new AsnItem(
-                        command.getAsnId(),
+                        asnId,
                         item.getSkuId(),
                         item.getQuantity(),
                         item.getProductNameSnapshot(),
@@ -123,21 +128,19 @@ public class RegisterAsnService {
                 .filter(this::isBlankNegated)
                 .ifPresent(managerId -> {
                     AsnCreatedEvent event = new AsnCreatedEvent();
-                    event.setAsnId(command.getAsnId());
+                    event.setAsnId(asnId);
                     event.setManagerId(managerId);
                     event.setAsnCount(1);
                     event.setExpectedDate(command.getExpectedDate().toString());
                     event.setTimestamp(LocalDateTime.now());
                     notificationEventKafkaPublisher.publishAsnCreated(event);
                 });
+        return asnId;
     }
 
     // 서비스 레벨 사전 검증.
     // 도메인 저장 전에 걸러야 하는 형식/필수값 오류는 여기서 공통 에러 코드로 정리한다.
     private void validateCommand(RegisterAsnCommand command) {
-        if (isBlank(command.getAsnId())) {
-            throw new BusinessException(ErrorCode.ASN_ID_REQUIRED);
-        }
         if (isBlank(command.getWarehouseId())) {
             throw new BusinessException(ErrorCode.ASN_WAREHOUSE_ID_REQUIRED);
         }
