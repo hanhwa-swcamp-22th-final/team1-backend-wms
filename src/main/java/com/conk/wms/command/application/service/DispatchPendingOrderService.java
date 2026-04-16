@@ -3,10 +3,12 @@ package com.conk.wms.command.application.service;
 import com.conk.wms.command.domain.aggregate.AllocatedInventory;
 import com.conk.wms.command.domain.aggregate.Inventory;
 import com.conk.wms.command.domain.aggregate.Location;
+import com.conk.wms.command.domain.aggregate.OutboundInvoiceJob;
 import com.conk.wms.command.domain.aggregate.OutboundPending;
 import com.conk.wms.command.domain.repository.AllocatedInventoryRepository;
 import com.conk.wms.command.domain.repository.InventoryRepository;
 import com.conk.wms.command.domain.repository.LocationRepository;
+import com.conk.wms.command.domain.repository.OutboundInvoiceJobRepository;
 import com.conk.wms.command.domain.repository.OutboundPendingRepository;
 import com.conk.wms.common.exception.BusinessException;
 import com.conk.wms.common.exception.ErrorCode;
@@ -30,31 +32,32 @@ public class DispatchPendingOrderService {
     private static final String ORDER_STATUS_ALLOCATED = "ALLOCATED";
     private static final String ORDER_STATUS_RECEIVED = "RECEIVED";
     private static final String ORDER_STATUS_OUTBOUND_INSTRUCTED = "OUTBOUND_INSTRUCTED";
+    private static final List<String> ACTIVE_INVOICE_JOB_STATUSES = List.of("PENDING", "PROCESSING");
 
     private final OrderServiceClient orderServiceClient;
     private final InventoryRepository inventoryRepository;
     private final OutboundPendingRepository outboundPendingRepository;
+    private final OutboundInvoiceJobRepository outboundInvoiceJobRepository;
     private final AllocatedInventoryRepository allocatedInventoryRepository;
     private final LocationRepository locationRepository;
     private final AutoAssignTaskService autoAssignTaskService;
-    private final IssueInvoiceService issueInvoiceService;
     private final TransactionTemplate transactionTemplate;
 
     public DispatchPendingOrderService(OrderServiceClient orderServiceClient,
                                        InventoryRepository inventoryRepository,
                                        OutboundPendingRepository outboundPendingRepository,
+                                       OutboundInvoiceJobRepository outboundInvoiceJobRepository,
                                        AllocatedInventoryRepository allocatedInventoryRepository,
                                        LocationRepository locationRepository,
                                        AutoAssignTaskService autoAssignTaskService,
-                                       IssueInvoiceService issueInvoiceService,
                                        TransactionTemplate transactionTemplate) {
         this.orderServiceClient = orderServiceClient;
         this.inventoryRepository = inventoryRepository;
         this.outboundPendingRepository = outboundPendingRepository;
+        this.outboundInvoiceJobRepository = outboundInvoiceJobRepository;
         this.allocatedInventoryRepository = allocatedInventoryRepository;
         this.locationRepository = locationRepository;
         this.autoAssignTaskService = autoAssignTaskService;
-        this.issueInvoiceService = issueInvoiceService;
         this.transactionTemplate = transactionTemplate;
     }
 
@@ -91,7 +94,7 @@ public class DispatchPendingOrderService {
                 "warehouseId", warehouseId
         ));
         orderServiceClient.updateOrderStatus(orderId, Map.of("status", ORDER_STATUS_OUTBOUND_INSTRUCTED));
-        issueInvoiceService.issueOnDispatch(orderId, tenantCode, carrier, service, labelFormat, actorId);
+        enqueueInvoiceJob(orderId, tenantCode, carrier, service, labelFormat, actorId);
 
         return result;
     }
@@ -233,6 +236,30 @@ public class DispatchPendingOrderService {
         }
 
         return warehouseIds.iterator().next();
+    }
+
+    private void enqueueInvoiceJob(String orderId,
+                                   String tenantCode,
+                                   String carrier,
+                                   String service,
+                                   String labelFormat,
+                                   String actorId) {
+        if (outboundInvoiceJobRepository.existsByOrderIdAndTenantIdAndStatusIn(
+                orderId,
+                tenantCode,
+                ACTIVE_INVOICE_JOB_STATUSES
+        )) {
+            return;
+        }
+
+        outboundInvoiceJobRepository.save(new OutboundInvoiceJob(
+                orderId,
+                tenantCode,
+                carrier,
+                service,
+                labelFormat,
+                actorId
+        ));
     }
 
     public static class DispatchResult {
