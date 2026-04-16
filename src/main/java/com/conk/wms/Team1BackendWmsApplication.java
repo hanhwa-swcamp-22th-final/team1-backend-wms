@@ -3,6 +3,7 @@ package com.conk.wms;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.openfeign.EnableFeignClients;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * 스프링 부트 WMS 애플리케이션의 진입점이다.
@@ -10,6 +11,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
  */
 @SpringBootApplication
 @EnableFeignClients(basePackages = "com.conk.wms.query.client.feign")
+@EnableScheduling
 public class Team1BackendWmsApplication {
 
   public static void main(String[] args) {

@@ -40,6 +40,10 @@ app:
 wms:
   stub-clients:
     enabled: false
+  invoice-jobs:
+    enabled: true
+    fixed-delay-ms: 5000
+    batch-size: 10
   clients:
     member:
       base-url: ${MEMBER_SERVICE_URL:http://localhost:8081}

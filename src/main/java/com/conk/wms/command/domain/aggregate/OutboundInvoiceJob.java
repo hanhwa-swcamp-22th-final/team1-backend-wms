@@ -16,6 +16,8 @@ import java.time.LocalDateTime;
 @Table(name = "outbound_invoice_jobs")
 public class OutboundInvoiceJob {
 
+    private static final int MAX_ERROR_MESSAGE_LENGTH = 1000;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -89,5 +91,55 @@ public class OutboundInvoiceJob {
 
     public String getStatus() {
         return status;
+    }
+
+    public String getCarrier() {
+        return carrier;
+    }
+
+    public String getService() {
+        return service;
+    }
+
+    public String getLabelFormat() {
+        return labelFormat;
+    }
+
+    public int getRetryCount() {
+        return retryCount;
+    }
+
+    public String getLastErrorMessage() {
+        return lastErrorMessage;
+    }
+
+    public void markProcessing() {
+        this.status = "PROCESSING";
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public void markSuccess() {
+        LocalDateTime now = LocalDateTime.now();
+        this.status = "SUCCESS";
+        this.processedAt = now;
+        this.updatedAt = now;
+        this.lastErrorMessage = null;
+    }
+
+    public void markFailed(String errorMessage) {
+        LocalDateTime now = LocalDateTime.now();
+        this.status = "FAILED";
+        this.retryCount += 1;
+        this.updatedAt = now;
+        this.lastErrorMessage = trimErrorMessage(errorMessage);
+    }
+
+    private String trimErrorMessage(String errorMessage) {
+        if (errorMessage == null || errorMessage.isBlank()) {
+            return null;
+        }
+        return errorMessage.length() > MAX_ERROR_MESSAGE_LENGTH
+                ? errorMessage.substring(0, MAX_ERROR_MESSAGE_LENGTH)
+                : errorMessage;
     }
 }
