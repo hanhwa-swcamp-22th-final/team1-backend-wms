@@ -212,8 +212,14 @@ public class GetWarehousesService {
                 .filter(completed -> completed.getConfirmedAt() != null
                         && completed.getConfirmedAt().toLocalDate().equals(LocalDate.now()))
                 .map(OutboundCompleted::getId)
-                .map(id -> Map.entry(id.getOrderId(), warehouseByOrder.get(id.getOrderId())))
-                .filter(entry -> entry.getValue() != null)
+                .map(id -> {
+                    String warehouseId = warehouseByOrder.get(id.getOrderId());
+                    if (warehouseId == null) {
+                        return null;
+                    }
+                    return Map.entry(id.getOrderId(), warehouseId);
+                })
+                .filter(Objects::nonNull)
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (left, right) -> left));
     }
 
