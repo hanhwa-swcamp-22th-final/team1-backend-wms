@@ -18,6 +18,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -84,11 +86,13 @@ class GetPendingOrdersServiceTest {
                         .build()
         ));
 
-        when(inventoryRepository.findAllByIdSkuAndIdTenantId("SKU-001", "CONK"))
-                .thenReturn(List.of(new Inventory("LOC-A-01-01", "SKU-001", "CONK", 10, "AVAILABLE")));
-        when(inventoryRepository.findAllByIdSkuAndIdTenantId("SKU-002", "CONK"))
-                .thenReturn(List.of(new Inventory("LOC-A-01-02", "SKU-002", "CONK", 5, "AVAILABLE")));
-        when(outboundPendingRepository.existsByIdOrderIdAndIdTenantId("ORD-001", "CONK")).thenReturn(false);
+        when(inventoryRepository.findAllByIdTenantIdAndIdSkuInAndIdInventoryType(eq("CONK"), anyCollection(), eq("AVAILABLE")))
+                .thenReturn(List.of(
+                        new Inventory("LOC-A-01-01", "SKU-001", "CONK", 10, "AVAILABLE"),
+                        new Inventory("LOC-A-01-02", "SKU-002", "CONK", 5, "AVAILABLE")
+                ));
+        when(outboundPendingRepository.findAllByIdTenantIdAndIdOrderIdIn(eq("CONK"), anyCollection()))
+                .thenReturn(List.of());
 
         List<PendingOrderResponse> responses = getPendingOrdersService.getPendingOrders("CONK");
 
@@ -96,5 +100,47 @@ class GetPendingOrdersServiceTest {
         assertEquals("ORD-001", responses.get(0).getId());
         assertEquals("상품A 외 1건 / 4개", responses.get(0).getItemSummary());
         assertEquals("SUFFICIENT", responses.get(0).getStockStatus());
+    }
+
+    @Test
+    @DisplayName("이미 출고 지시된 주문은 배치 조회 결과를 기준으로 제외한다")
+    void getPendingOrders_excludesAlreadyPendingOrders() {
+        when(orderServiceClient.getPendingOrders("CONK")).thenReturn(List.of(
+                OrderSummaryDto.builder()
+                        .orderId("ORD-001")
+                        .sellerName("셀러A")
+                        .channel("AMAZON")
+                        .orderStatus("RECEIVED")
+                        .cityName("서울")
+                        .orderedAt(LocalDateTime.of(2026, 4, 4, 9, 30))
+                        .items(List.of(
+                                OrderItemDto.builder().skuId("SKU-001").productName("상품A").quantity(3).build()
+                        ))
+                        .build(),
+                OrderSummaryDto.builder()
+                        .orderId("ORD-002")
+                        .sellerName("셀러B")
+                        .channel("MANUAL")
+                        .orderStatus("RECEIVED")
+                        .cityName("부산")
+                        .orderedAt(LocalDateTime.of(2026, 4, 4, 10, 0))
+                        .items(List.of(
+                                OrderItemDto.builder().skuId("SKU-002").productName("상품B").quantity(2).build()
+                        ))
+                        .build()
+        ));
+
+        when(inventoryRepository.findAllByIdTenantIdAndIdSkuInAndIdInventoryType(eq("CONK"), anyCollection(), eq("AVAILABLE")))
+                .thenReturn(List.of(
+                        new Inventory("LOC-A-01-01", "SKU-001", "CONK", 10, "AVAILABLE"),
+                        new Inventory("LOC-A-01-02", "SKU-002", "CONK", 5, "AVAILABLE")
+                ));
+        when(outboundPendingRepository.findAllByIdTenantIdAndIdOrderIdIn(eq("CONK"), anyCollection()))
+                .thenReturn(List.of(new com.conk.wms.command.domain.aggregate.OutboundPending("ORD-002", "SKU-002", "LOC-A-01-02", "CONK", "worker-1")));
+
+        List<PendingOrderResponse> responses = getPendingOrdersService.getPendingOrders("CONK");
+
+        assertEquals(1, responses.size());
+        assertEquals("ORD-001", responses.get(0).getId());
     }
 }

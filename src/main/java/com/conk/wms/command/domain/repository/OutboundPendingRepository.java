@@ -20,6 +20,8 @@ public interface OutboundPendingRepository extends JpaRepository<OutboundPending
 
     List<OutboundPending> findAllByIdOrderIdAndIdTenantId(String orderId, String tenantId);
 
+    List<OutboundPending> findAllByIdTenantIdAndIdOrderIdIn(String tenantId, Collection<String> orderIds);
+
     List<OutboundPending> findAllByIdTenantIdAndIdOrderIdInAndIdLocationIdIn(
             String tenantId,
             Collection<String> orderIds,

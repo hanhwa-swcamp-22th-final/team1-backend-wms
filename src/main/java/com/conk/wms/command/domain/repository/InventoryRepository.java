@@ -28,6 +28,10 @@ public interface InventoryRepository extends JpaRepository<Inventory, InventoryI
 
     List<Inventory> findAllByIdTenantIdAndIdLocationIdInAndIdSku(String tenantId, Collection<String> locationIds, String sku);
 
+    List<Inventory> findAllByIdTenantIdAndIdSkuInAndIdInventoryType(String tenantId,
+                                                                     Collection<String> skuIds,
+                                                                     String inventoryType);
+
     List<Inventory> findAllByIdSkuAndIdTenantId(String sku, String tenantId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

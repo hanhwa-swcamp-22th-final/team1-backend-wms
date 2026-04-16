@@ -12,6 +12,9 @@ import org.springframework.stereotype.Service;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * order-service 주문 원본을 출고 지시 대기 목록 형태로 가공하는 서비스다.
@@ -41,9 +44,19 @@ public class GetPendingOrdersService {
      * 취소/출고완료/이미 지시된 주문은 제외하고 재고 충분 여부를 같이 계산한다.
      */
     public List<PendingOrderResponse> getPendingOrders(String tenantCode) {
-        return orderServiceClient.getPendingOrders(tenantCode).stream()
+        List<OrderSummaryDto> pendingOrders = orderServiceClient.getPendingOrders(tenantCode).stream()
                 .filter(this::isPendingTarget)
-                .filter(order -> !outboundPendingRepository.existsByIdOrderIdAndIdTenantId(order.getOrderId(), tenantCode))
+                .toList();
+
+        if (pendingOrders.isEmpty()) {
+            return List.of();
+        }
+
+        Set<String> pendingOrderIds = loadPendingOrderIds(tenantCode, pendingOrders);
+        Map<String, Integer> availableQuantityBySku = loadAvailableQuantityBySku(tenantCode, pendingOrders);
+
+        return pendingOrders.stream()
+                .filter(order -> !pendingOrderIds.contains(order.getOrderId()))
                 .sorted(Comparator.comparing(OrderSummaryDto::getOrderedAt).reversed())
                 .map(order -> PendingOrderResponse.builder()
                         .id(order.getOrderId())
@@ -52,7 +65,7 @@ public class GetPendingOrdersService {
                         .itemSummary(toItemSummary(order.getItems()))
                         .shipDestination(order.getCityName())
                         .orderDate(order.getOrderedAt().format(ORDER_DATE_FORMATTER))
-                        .stockStatus(resolveStockStatus(order.getItems(), tenantCode))
+                        .stockStatus(resolveStockStatus(order.getItems(), availableQuantityBySku))
                         .build())
                 .toList();
     }
@@ -61,16 +74,37 @@ public class GetPendingOrdersService {
         return ORDER_STATUS_RECEIVED.equals(order.getOrderStatus());
     }
 
-    private String resolveStockStatus(List<OrderItemDto> items, String tenantCode) {
-        boolean sufficient = items.stream().allMatch(item -> availableQuantity(item.getSkuId(), tenantCode) >= item.getQuantity());
-        return sufficient ? "SUFFICIENT" : "INSUFFICIENT";
+    private Set<String> loadPendingOrderIds(String tenantCode, List<OrderSummaryDto> pendingOrders) {
+        Set<String> orderIds = pendingOrders.stream()
+                .map(OrderSummaryDto::getOrderId)
+                .collect(Collectors.toSet());
+
+        return outboundPendingRepository.findAllByIdTenantIdAndIdOrderIdIn(tenantCode, orderIds).stream()
+                .map(pending -> pending.getId().getOrderId())
+                .collect(Collectors.toSet());
     }
 
-    private int availableQuantity(String skuId, String tenantCode) {
-        return inventoryRepository.findAllByIdSkuAndIdTenantId(skuId, tenantCode).stream()
-                .filter(inventory -> "AVAILABLE".equals(inventory.getType()))
-                .mapToInt(Inventory::getQuantity)
-                .sum();
+    private Map<String, Integer> loadAvailableQuantityBySku(String tenantCode, List<OrderSummaryDto> pendingOrders) {
+        Set<String> skuIds = pendingOrders.stream()
+                .flatMap(order -> order.getItems().stream())
+                .map(OrderItemDto::getSkuId)
+                .collect(Collectors.toSet());
+
+        if (skuIds.isEmpty()) {
+            return Map.of();
+        }
+
+        return inventoryRepository.findAllByIdTenantIdAndIdSkuInAndIdInventoryType(tenantCode, skuIds, "AVAILABLE").stream()
+                .collect(Collectors.groupingBy(
+                        Inventory::getSku,
+                        Collectors.summingInt(Inventory::getQuantity)
+                ));
+    }
+
+    private String resolveStockStatus(List<OrderItemDto> items, Map<String, Integer> availableQuantityBySku) {
+        boolean sufficient = items.stream()
+                .allMatch(item -> availableQuantityBySku.getOrDefault(item.getSkuId(), 0) >= item.getQuantity());
+        return sufficient ? "SUFFICIENT" : "INSUFFICIENT";
     }
 
     private String toItemSummary(List<OrderItemDto> items) {
