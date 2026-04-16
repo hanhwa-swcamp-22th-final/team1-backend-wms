@@ -4,7 +4,7 @@ import com.conk.wms.common.auth.AuthContext;
 import com.conk.wms.common.controller.ApiResponse;
 import com.conk.wms.query.controller.dto.response.AsnDetailResponse;
 import com.conk.wms.query.controller.dto.response.AsnKpiResponse;
-import com.conk.wms.query.controller.dto.response.MasterAsnListItemResponse;
+import com.conk.wms.query.controller.dto.response.MasterAsnListResponse;
 import com.conk.wms.query.service.GetAsnDetailService;
 import com.conk.wms.query.service.GetAsnKpiService;
 import com.conk.wms.query.service.GetMasterAsnListService;
@@ -14,9 +14,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
-
 import static com.conk.wms.common.auth.AuthContextSupport.resolveSellerId;
 import static com.conk.wms.common.auth.AuthContextSupport.resolveTenantId;
 
@@ -43,12 +40,18 @@ public class AsnQueryController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<MasterAsnListItemResponse>>> getAsns(
+    public ResponseEntity<ApiResponse<MasterAsnListResponse>> getAsns(
             AuthContext authContext,
-            @RequestParam(value = "status", required = false) String status
+            @RequestParam(value = "status", required = false) String status,
+            @RequestParam(value = "warehouseId", required = false) String warehouseId,
+            @RequestParam(value = "company", required = false) String company,
+            @RequestParam(value = "search", required = false) String search,
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size
     ) {
         resolveTenantId(authContext);
-        return ResponseEntity.ok(ApiResponse.success("ok", getMasterAsnListService.getAsns(status)));
+        return ResponseEntity.ok(ApiResponse.success("ok",
+                getMasterAsnListService.getAsns(status, warehouseId, company, search, page, size)));
     }
 
     // ASN 목록 화면 상단 KPI.
