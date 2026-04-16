@@ -110,4 +110,37 @@ class GetAsnDetailServiceTest {
 
         assertEquals(ErrorCode.ASN_NOT_FOUND, exception.getErrorCode());
     }
+
+    @Test
+    @DisplayName("총괄관리자는 ASN 번호 기준으로 상세를 조회할 수 있다")
+    void getAsnDetail_forAdmin_success() {
+        Asn asn = new Asn(
+                "ASN-20260329-001",
+                "WH-001",
+                "SELLER-001",
+                LocalDate.of(2026, 3, 30),
+                "REGISTERED",
+                "온도 민감 상품 포함",
+                5,
+                LocalDateTime.of(2026, 3, 29, 10, 0),
+                LocalDateTime.of(2026, 3, 29, 10, 0),
+                "MASTER-001",
+                "MASTER-001"
+        );
+
+        when(asnRepository.findByAsnId("ASN-20260329-001"))
+                .thenReturn(Optional.of(asn));
+        when(asnItemRepository.findAllByAsnId("ASN-20260329-001"))
+                .thenReturn(List.of(
+                        new AsnItem("ASN-20260329-001", "SKU-001", 100, "루미에르 앰플 30ml", 3)
+                ));
+        when(warehouseRepository.findById("WH-001"))
+                .thenReturn(Optional.of(new Warehouse("WH-001", "서울 창고", "SELLER-001")));
+
+        AsnDetailResponse result = getAsnDetailService.getAsnDetail("ASN-20260329-001");
+
+        assertEquals("ASN-20260329-001", result.getId());
+        assertEquals("서울 창고", result.getWarehouse());
+        assertEquals(1, result.getDetail().getItems().size());
+    }
 }

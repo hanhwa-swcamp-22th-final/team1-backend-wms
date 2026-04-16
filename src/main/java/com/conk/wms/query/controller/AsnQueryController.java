@@ -73,8 +73,16 @@ public class AsnQueryController {
             @PathVariable String asnId,
             AuthContext authContext
     ) {
-        String sellerId = resolveSellerId(authContext);
-        AsnDetailResponse response = getAsnDetailService.getAsnDetail(sellerId, asnId);
+        AsnDetailResponse response;
+
+        if (authContext != null && authContext.getRole() != null && authContext.getRole().isSellerRole()) {
+            String sellerId = resolveSellerId(authContext);
+            response = getAsnDetailService.getAsnDetail(sellerId, asnId);
+        } else {
+            resolveTenantId(authContext);
+            response = getAsnDetailService.getAsnDetail(asnId);
+        }
+
         return ResponseEntity.ok(ApiResponse.success("ok", response));
     }
 }

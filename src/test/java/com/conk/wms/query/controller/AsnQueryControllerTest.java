@@ -8,6 +8,7 @@ import com.conk.wms.query.service.GetAsnKpiService;
 import com.conk.wms.query.controller.dto.response.AsnDetailResponse;
 import com.conk.wms.query.controller.dto.response.AsnKpiResponse;
 import com.conk.wms.query.controller.dto.response.MasterAsnListItemResponse;
+import com.conk.wms.query.controller.dto.response.MasterAsnListResponse;
 import com.conk.wms.query.service.GetMasterAsnListService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,6 +19,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -47,24 +49,61 @@ class AsnQueryControllerTest {
     @Test
     @DisplayName("ASN 목록 조회 API 호출 시 200 OK와 목록을 반환한다")
     void getAsns_success() throws Exception {
-        when(getMasterAsnListService.getAsns(null))
-                .thenReturn(List.of(MasterAsnListItemResponse.builder()
-                        .id("ASN-001")
-                        .company("SELLER-001")
-                        .warehouse("서울 창고")
-                        .skuCount(2)
-                        .plannedQty(150)
-                        .expectedDate("2026-04-13")
-                        .registeredDate("2026-04-12")
-                        .status("SUBMITTED")
-                        .build()));
+        when(getMasterAsnListService.getAsns(null, null, null, null, 1, 10))
+                .thenReturn(MasterAsnListResponse.builder()
+                        .items(List.of(MasterAsnListItemResponse.builder()
+                                .id("ASN-001")
+                                .company("SELLER-001")
+                                .warehouse("서울 창고")
+                                .skuCount(2)
+                                .plannedQty(150)
+                                .expectedDate("2026-04-13")
+                                .registeredDate("2026-04-12")
+                                .status("SUBMITTED")
+                                .build()))
+                        .total(1)
+                        .page(1)
+                        .size(10)
+                        .counts(Map.of("ALL", 1L, "SUBMITTED", 1L))
+                        .warehouseOptions(List.of())
+                        .companyOptions(List.of())
+                        .build());
 
         mockMvc.perform(get("/wms/asns")
                         .header("X-Tenant-Code", "CONK"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data[0].id").value("ASN-001"))
-                .andExpect(jsonPath("$.data[0].company").value("SELLER-001"));
+                .andExpect(jsonPath("$.data.items[0].id").value("ASN-001"))
+                .andExpect(jsonPath("$.data.items[0].company").value("SELLER-001"))
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.page").value(1));
+    }
+
+    @Test
+    @DisplayName("ASN 목록 조회 API 호출 시 필터와 페이지 파라미터를 service로 전달한다")
+    void getAsns_forwardsFilterParams() throws Exception {
+        when(getMasterAsnListService.getAsns("RECEIVED", "WH-001", "SELLER-001", "ASN-00", 2, 20))
+                .thenReturn(MasterAsnListResponse.builder()
+                        .items(List.of())
+                        .total(0)
+                        .page(2)
+                        .size(20)
+                        .counts(Map.of())
+                        .warehouseOptions(List.of())
+                        .companyOptions(List.of())
+                        .build());
+
+        mockMvc.perform(get("/wms/asns")
+                        .header("X-Tenant-Code", "CONK")
+                        .param("status", "RECEIVED")
+                        .param("warehouseId", "WH-001")
+                        .param("company", "SELLER-001")
+                        .param("search", "ASN-00")
+                        .param("page", "2")
+                        .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.page").value(2))
+                .andExpect(jsonPath("$.data.size").value(20));
     }
 
     @Test
@@ -91,10 +130,10 @@ class AsnQueryControllerTest {
     }
 
     @Test
-    @DisplayName("ASN 상세 조회 API 호출 시 200 OK와 상세 응답을 반환한다")
-    void getAsnDetail_success() throws Exception {
-        // 컨트롤러는 service가 만든 상세 응답을 정상적으로 감싸서 내려주는지만 확인한다.
-        when(getAsnDetailService.getAsnDetail(eq("SELLER-001"), eq("ASN-20260329-001")))
+    @DisplayName("총괄관리자 ASN 상세 조회 API 호출 시 200 OK와 상세 응답을 반환한다")
+    void getAsnDetail_forMasterAdmin_success() throws Exception {
+        // 총괄관리자는 sellerId 없이도 ASN 번호 기준 상세 조회가 가능해야 한다.
+        when(getAsnDetailService.getAsnDetail(eq("ASN-20260329-001")))
                 .thenReturn(AsnDetailResponse.builder()
                         .id("ASN-20260329-001")
                         .asnNo("ASN-20260329-001")
@@ -119,7 +158,8 @@ class AsnQueryControllerTest {
                         .build());
 
         mockMvc.perform(get("/wms/asns/ASN-20260329-001")
-                        .header("X-Tenant-Code", "SELLER-001"))
+                        .header("X-Role", "MASTER_ADMIN")
+                        .header("X-Tenant-Id", "TENANT-001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value("ok"))
@@ -130,16 +170,38 @@ class AsnQueryControllerTest {
     }
 
     @Test
+    @DisplayName("셀러 ASN 상세 조회 API 호출 시 200 OK와 상세 응답을 반환한다")
+    void getAsnDetail_forSeller_success() throws Exception {
+        when(getAsnDetailService.getAsnDetail(eq("SELLER-001"), eq("ASN-20260329-001")))
+                .thenReturn(AsnDetailResponse.builder()
+                        .id("ASN-20260329-001")
+                        .asnNo("ASN-20260329-001")
+                        .status("SUBMITTED")
+                        .warehouse("서울 창고")
+                        .skuCount(2)
+                        .totalQuantity(150)
+                        .build());
+
+        mockMvc.perform(get("/wms/asns/ASN-20260329-001")
+                        .header("X-Role", "SELLER")
+                        .header("X-Seller-Id", "SELLER-001"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.id").value("ASN-20260329-001"));
+    }
+
+    @Test
     @DisplayName("존재하지 않는 ASN 이면 404와 실패 응답을 반환한다")
     void getAsnDetail_whenNotFound_thenReturn404() throws Exception {
-        when(getAsnDetailService.getAsnDetail(eq("SELLER-001"), eq("ASN-20260329-001")))
+        when(getAsnDetailService.getAsnDetail(eq("ASN-20260329-001")))
                 .thenThrow(new BusinessException(
                         ErrorCode.ASN_NOT_FOUND,
                         "ASN 정보를 찾을 수 없습니다.: ASN-20260329-001"
                 ));
 
         mockMvc.perform(get("/wms/asns/ASN-20260329-001")
-                        .header("X-Tenant-Code", "SELLER-001"))
+                        .header("X-Role", "MASTER_ADMIN")
+                        .header("X-Tenant-Id", "TENANT-001"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.code").value("ASN-013"));

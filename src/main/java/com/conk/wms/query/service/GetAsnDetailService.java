@@ -38,15 +38,31 @@ public class GetAsnDetailService {
     }
 
     // seller 기준 ASN 상세 1건을 조회한다.
-    // 지금은 asn 헤더, 품목, 창고명을 조합해서 화면이 바로 쓰는 상세 응답으로 가공한다.
+    // 다른 seller ASN을 직접 조회하지 못하게 asnId와 sellerId를 함께 조건으로 건다.
     public AsnDetailResponse getAsnDetail(String sellerId, String asnId) {
-        // 다른 seller ASN을 직접 조회하지 못하게 asnId와 sellerId를 함께 조건으로 건다.
-        Asn asn = asnRepository.findByAsnIdAndSellerId(asnId, sellerId)
-                .orElseThrow(() -> new BusinessException(
-                        ErrorCode.ASN_NOT_FOUND,
-                        ErrorCode.ASN_NOT_FOUND.getMessage() + ": " + asnId
-                ));
+        return buildDetailResponse(
+                asnRepository.findByAsnIdAndSellerId(asnId, sellerId)
+                        .orElseThrow(() -> new BusinessException(
+                                ErrorCode.ASN_NOT_FOUND,
+                                ErrorCode.ASN_NOT_FOUND.getMessage() + ": " + asnId
+                        ))
+        );
+    }
 
+    // 총괄관리자 ASN 목록 상세 조회.
+    // 현재 ASN 헤더에는 tenantId가 없어 asnId 단건 기준으로 조회하고, tenant 컬럼이 추가되면 함께 제한한다.
+    public AsnDetailResponse getAsnDetail(String asnId) {
+        return buildDetailResponse(
+                asnRepository.findByAsnId(asnId)
+                        .orElseThrow(() -> new BusinessException(
+                                ErrorCode.ASN_NOT_FOUND,
+                                ErrorCode.ASN_NOT_FOUND.getMessage() + ": " + asnId
+                        ))
+        );
+    }
+
+    private AsnDetailResponse buildDetailResponse(Asn asn) {
+        String asnId = asn.getAsnId();
         List<AsnItem> items = asnItemRepository.findAllByAsnId(asnId);
         // ASN에는 warehouseId만 저장되어 있으므로, 상세 화면용 창고명은 별도 조회해서 채운다.
         String warehouseName = warehouseRepository.findById(asn.getWarehouseId())
