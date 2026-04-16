@@ -2,6 +2,8 @@ package com.conk.wms.command.domain.repository;
 
 import com.conk.wms.command.domain.aggregate.Location;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.Collection;
 import java.util.List;
@@ -22,6 +24,16 @@ public interface LocationRepository extends JpaRepository<Location, String> {
     List<Location> findAllByLocationIdIn(Collection<String> locationIds);
 
     List<Location> findAllByWarehouseIdIn(Collection<String> warehouseIds);
+
+    @Query("""
+            select l.warehouseId as warehouseId,
+                   count(l) as metricValue
+            from Location l
+            where l.active = true
+              and l.warehouseId in :warehouseIds
+            group by l.warehouseId
+            """)
+    List<WarehouseMetricProjection> countActiveByWarehouseIdIn(@Param("warehouseIds") Collection<String> warehouseIds);
 
     java.util.Optional<Location> findByBinId(String binId);
 }

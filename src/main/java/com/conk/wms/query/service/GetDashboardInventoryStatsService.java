@@ -1,13 +1,13 @@
 package com.conk.wms.query.service;
 
-import com.conk.wms.command.domain.aggregate.Product;
+import com.conk.wms.command.domain.repository.InventorySkuQuantityProjection;
 import com.conk.wms.command.domain.repository.InventoryRepository;
 import com.conk.wms.command.domain.repository.ProductRepository;
 import com.conk.wms.query.controller.dto.response.InventoryStatsResponse;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -26,18 +26,29 @@ public class GetDashboardInventoryStatsService {
     }
 
     public InventoryStatsResponse getStats(String tenantCode) {
-        Map<String, Integer> availableBySku = inventoryRepository.findAllByIdTenantId(tenantCode).stream()
-                .filter(inventory -> "AVAILABLE".equals(inventory.getType()))
-                .collect(Collectors.groupingBy(
-                        inventory -> inventory.getSku(),
-                        Collectors.summingInt(inventory -> inventory.getQuantity())
+        List<InventorySkuQuantityProjection> inventorySummaries = inventoryRepository.summarizeAvailableQuantityBySku(tenantCode);
+        if (inventorySummaries.isEmpty()) {
+            return InventoryStatsResponse.builder()
+                    .lowStockSkuCount(0)
+                    .trend("-")
+                    .trendLabel("현재 기준")
+                    .trendType("neutral")
+                    .build();
+        }
+
+        Map<String, Integer> safetyStockBySku = productRepository.findAllBySkuIdIn(inventorySummaries.stream()
+                        .map(InventorySkuQuantityProjection::getSku)
+                        .toList()).stream()
+                .collect(Collectors.toMap(
+                        product -> product.getSkuId(),
+                        product -> product.getSafetyStockQuantity() == null ? 0 : product.getSafetyStockQuantity(),
+                        (left, right) -> left
                 ));
 
-        Map<String, Product> productBySku = productRepository.findAll().stream()
-                .collect(Collectors.toMap(Product::getSkuId, Function.identity(), (left, right) -> left));
-
-        int lowStockSkuCount = (int) availableBySku.entrySet().stream()
-                .filter(entry -> isLowStock(productBySku.get(entry.getKey()), entry.getValue()))
+        int lowStockSkuCount = (int) inventorySummaries.stream()
+                .filter(summary -> isLowStock(
+                        safetyStockBySku.get(summary.getSku()),
+                        summary.getAvailableQuantity()))
                 .count();
 
         return InventoryStatsResponse.builder()
@@ -48,11 +59,10 @@ public class GetDashboardInventoryStatsService {
                 .build();
     }
 
-    private boolean isLowStock(Product product, int availableQuantity) {
-        if (product == null) {
+    private boolean isLowStock(Integer safetyStockQuantity, Long availableQuantity) {
+        if (safetyStockQuantity == null || availableQuantity == null) {
             return false;
         }
-        int safetyStockQuantity = product.getSafetyStockQuantity() == null ? 0 : product.getSafetyStockQuantity();
         return availableQuantity <= safetyStockQuantity;
     }
 }

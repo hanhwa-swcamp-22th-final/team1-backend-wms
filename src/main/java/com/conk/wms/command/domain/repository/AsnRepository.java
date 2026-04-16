@@ -62,6 +62,17 @@ public interface AsnRepository extends JpaRepository<Asn, Long> {
 
     long countByWarehouseIdInAndStatusNotIn(Collection<String> warehouseIds, Collection<String> excludedStatuses);
 
+    @Query("""
+            select a.warehouseId as warehouseId,
+                   count(a) as metricValue
+            from Asn a
+            where a.warehouseId in :warehouseIds
+              and a.status not in :excludedStatuses
+            group by a.warehouseId
+            """)
+    List<WarehouseMetricProjection> countPendingByWarehouseIdIn(@Param("warehouseIds") Collection<String> warehouseIds,
+                                                                @Param("excludedStatuses") Collection<String> excludedStatuses);
+
     List<Asn> findAllBySellerIdOrderByCreatedAtDesc(String sellerId);
 
     Page<Asn> findBySellerId(String sellerId, Pageable pageable);

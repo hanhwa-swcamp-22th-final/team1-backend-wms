@@ -32,6 +32,52 @@ public interface InventoryRepository extends JpaRepository<Inventory, InventoryI
                                                                      Collection<String> skuIds,
                                                                      String inventoryType);
 
+    @Query("""
+            select i.id.sku as sku,
+                   sum(i.quantity) as availableQuantity
+            from Inventory i
+            where i.id.tenantId = :tenantId
+              and i.id.inventoryType = 'AVAILABLE'
+            group by i.id.sku
+            """)
+    List<InventorySkuQuantityProjection> summarizeAvailableQuantityBySku(@Param("tenantId") String tenantId);
+
+    @Query("""
+            select l.warehouseId as warehouseId,
+                   sum(i.quantity) as metricValue
+            from Inventory i
+            join Location l on l.locationId = i.id.locationId
+            where i.id.tenantId = :tenantId
+              and i.quantity > 0
+              and l.warehouseId in :warehouseIds
+            group by l.warehouseId
+            """)
+    List<WarehouseMetricProjection> sumPositiveQuantityByWarehouse(@Param("tenantId") String tenantId,
+                                                                   @Param("warehouseIds") Collection<String> warehouseIds);
+
+    @Query("""
+            select l.warehouseId as warehouseId,
+                   count(distinct l.locationId) as metricValue
+            from Inventory i
+            join Location l on l.locationId = i.id.locationId
+            where i.id.tenantId = :tenantId
+              and i.quantity > 0
+              and l.active = true
+              and l.warehouseId in :warehouseIds
+            group by l.warehouseId
+            """)
+    List<WarehouseMetricProjection> countUsedActiveLocationsByWarehouse(@Param("tenantId") String tenantId,
+                                                                        @Param("warehouseIds") Collection<String> warehouseIds);
+
+    @Query("""
+            select i.id.locationId as locationId,
+                   sum(i.quantity) as usedQuantity
+            from Inventory i
+            where i.id.tenantId = :tenantId
+            group by i.id.locationId
+            """)
+    List<LocationQuantityProjection> sumQuantityByLocation(@Param("tenantId") String tenantId);
+
     List<Inventory> findAllByIdSkuAndIdTenantId(String sku, String tenantId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

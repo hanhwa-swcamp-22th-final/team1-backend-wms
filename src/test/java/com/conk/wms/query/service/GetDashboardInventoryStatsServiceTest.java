@@ -1,7 +1,7 @@
 package com.conk.wms.query.service;
 
-import com.conk.wms.command.domain.aggregate.Inventory;
 import com.conk.wms.command.domain.aggregate.Product;
+import com.conk.wms.command.domain.repository.InventorySkuQuantityProjection;
 import com.conk.wms.command.domain.repository.InventoryRepository;
 import com.conk.wms.command.domain.repository.ProductRepository;
 import com.conk.wms.query.controller.dto.response.InventoryStatsResponse;
@@ -13,7 +13,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -34,13 +33,12 @@ class GetDashboardInventoryStatsServiceTest {
     @Test
     @DisplayName("가용 재고가 안전재고 이하인 SKU 수를 집계한다")
     void getStats_countsLowStockSkus() {
-        when(inventoryRepository.findAllByIdTenantId("CONK"))
+        when(inventoryRepository.summarizeAvailableQuantityBySku("CONK"))
                 .thenReturn(List.of(
-                        Inventory.createAvailable("LOC-1", "SKU-LOW", "CONK", 3, LocalDateTime.now()),
-                        Inventory.createAvailable("LOC-2", "SKU-HIGH", "CONK", 12, LocalDateTime.now()),
-                        new Inventory("LOC-3", "SKU-LOW", "CONK", 2, "ALLOCATED", LocalDateTime.now(), LocalDateTime.now())
+                        inventorySummary("SKU-LOW", 3),
+                        inventorySummary("SKU-HIGH", 12)
                 ));
-        when(productRepository.findAll())
+        when(productRepository.findAllBySkuIdIn(List.of("SKU-LOW", "SKU-HIGH")))
                 .thenReturn(List.of(
                         product("SKU-LOW", 5),
                         product("SKU-HIGH", 5)
@@ -50,6 +48,20 @@ class GetDashboardInventoryStatsServiceTest {
 
         assertThat(response.getLowStockSkuCount()).isEqualTo(1);
         assertThat(response.getTrendType()).isEqualTo("neutral");
+    }
+
+    private InventorySkuQuantityProjection inventorySummary(String sku, long availableQuantity) {
+        return new InventorySkuQuantityProjection() {
+            @Override
+            public String getSku() {
+                return sku;
+            }
+
+            @Override
+            public Long getAvailableQuantity() {
+                return availableQuantity;
+            }
+        };
     }
 
     private Product product(String skuId, int safetyStockQuantity) {

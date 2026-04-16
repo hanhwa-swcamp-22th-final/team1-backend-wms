@@ -1,16 +1,12 @@
 package com.conk.wms.query.service;
 
-import com.conk.wms.command.domain.aggregate.Asn;
-import com.conk.wms.command.domain.aggregate.Inventory;
-import com.conk.wms.command.domain.aggregate.Location;
-import com.conk.wms.command.domain.aggregate.OutboundCompleted;
-import com.conk.wms.command.domain.aggregate.OutboundPending;
 import com.conk.wms.command.domain.aggregate.Warehouse;
 import com.conk.wms.command.domain.repository.AsnRepository;
 import com.conk.wms.command.domain.repository.InventoryRepository;
 import com.conk.wms.command.domain.repository.LocationRepository;
 import com.conk.wms.command.domain.repository.OutboundCompletedRepository;
 import com.conk.wms.command.domain.repository.OutboundPendingRepository;
+import com.conk.wms.command.domain.repository.WarehouseMetricProjection;
 import com.conk.wms.command.domain.repository.WarehouseRepository;
 import com.conk.wms.query.controller.dto.response.WarehouseStatusItemResponse;
 import org.junit.jupiter.api.DisplayName;
@@ -20,13 +16,13 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -57,22 +53,21 @@ class GetDashboardWarehouseStatusServiceTest {
     @DisplayName("창고 운영 현황은 상태, 진행률, KPI를 함께 계산한다")
     void getStatuses_buildsWarehouseCards() {
         Warehouse warehouse = warehouse("WH-001", "CONK", "Main Hub", "ACTIVE");
-        Location loc1 = new Location("LOC-A-01", "A-01", "WH-001", "A", "01", 100, true);
-        Location loc2 = new Location("LOC-A-02", "A-02", "WH-001", "A", "02", 100, true);
-        Inventory inventory = Inventory.createAvailable("LOC-A-01", "SKU-001", "CONK", 10, LocalDateTime.now());
-        Asn asn = asn("ASN-001", "WH-001", "REGISTERED");
-        OutboundPending pending = new OutboundPending("ORD-001", "SKU-001", "LOC-A-01", "CONK", "SYSTEM");
-        OutboundCompleted completed = new OutboundCompleted("ORD-001", "CONK", "SYSTEM", LocalDateTime.now());
 
         when(warehouseRepository.findAllByTenantIdOrderByWarehouseIdAsc("CONK")).thenReturn(List.of(warehouse));
-        when(locationRepository.findAllByWarehouseIdIn(anyCollection())).thenReturn(List.of(loc1, loc2));
-        when(inventoryRepository.findAllByIdTenantIdAndIdLocationIdIn(org.mockito.ArgumentMatchers.eq("CONK"), anyCollection()))
-                .thenReturn(List.of(inventory));
-        when(asnRepository.findAllByWarehouseIdIn(anyCollection())).thenReturn(List.of(asn));
-        when(outboundPendingRepository.findAllByIdTenantIdAndIdLocationIdIn(org.mockito.ArgumentMatchers.eq("CONK"), anyCollection()))
-                .thenReturn(List.of(pending));
-        when(outboundCompletedRepository.findAllByIdTenantIdAndIdOrderIdIn(org.mockito.ArgumentMatchers.eq("CONK"), anyCollection()))
-                .thenReturn(List.of(completed));
+        when(locationRepository.countActiveByWarehouseIdIn(anyCollection()))
+                .thenReturn(List.of(metric("WH-001", 2)));
+        when(inventoryRepository.countUsedActiveLocationsByWarehouse(anyString(), anyCollection()))
+                .thenReturn(List.of(metric("WH-001", 1)));
+        when(inventoryRepository.sumPositiveQuantityByWarehouse(anyString(), anyCollection()))
+                .thenReturn(List.of(metric("WH-001", 10)));
+        when(asnRepository.countPendingByWarehouseIdIn(anyCollection(), anyCollection()))
+                .thenReturn(List.of(metric("WH-001", 1)));
+        when(outboundPendingRepository.countDistinctOrdersByWarehouse(anyString(), anyCollection()))
+                .thenReturn(List.of(metric("WH-001", 1)));
+        when(outboundCompletedRepository.countDistinctCompletedOrdersByWarehouse(anyString(), anyCollection(),
+                org.mockito.ArgumentMatchers.any(LocalDateTime.class), org.mockito.ArgumentMatchers.any(LocalDateTime.class)))
+                .thenReturn(List.of(metric("WH-001", 1)));
 
         List<WarehouseStatusItemResponse> responses = getDashboardWarehouseStatusService.getStatuses("CONK");
 
@@ -86,6 +81,20 @@ class GetDashboardWarehouseStatusServiceTest {
         assertThat(response.getKpis().get(0).getValue()).isEqualTo(10);
         assertThat(response.getKpis().get(1).getValue()).isEqualTo(1);
         assertThat(response.getKpis().get(1).isAlert()).isTrue();
+    }
+
+    private WarehouseMetricProjection metric(String warehouseId, long metricValue) {
+        return new WarehouseMetricProjection() {
+            @Override
+            public String getWarehouseId() {
+                return warehouseId;
+            }
+
+            @Override
+            public Long getMetricValue() {
+                return metricValue;
+            }
+        };
     }
 
     private Warehouse warehouse(String warehouseId, String tenantId, String name, String status) {
@@ -103,22 +112,6 @@ class GetDashboardWarehouseStatusServiceTest {
                 "010",
                 1000,
                 status,
-                "SYSTEM"
-        );
-    }
-
-    private Asn asn(String asnId, String warehouseId, String status) {
-        return new Asn(
-                asnId,
-                warehouseId,
-                "SELLER-001",
-                LocalDate.of(2026, 4, 10),
-                status,
-                null,
-                1,
-                LocalDateTime.now(),
-                LocalDateTime.now(),
-                "SYSTEM",
                 "SYSTEM"
         );
     }

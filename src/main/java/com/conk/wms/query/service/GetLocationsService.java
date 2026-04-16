@@ -1,8 +1,8 @@
 package com.conk.wms.query.service;
 
-import com.conk.wms.command.domain.aggregate.Inventory;
 import com.conk.wms.command.domain.aggregate.Location;
 import com.conk.wms.command.domain.repository.InventoryRepository;
+import com.conk.wms.command.domain.repository.LocationQuantityProjection;
 import com.conk.wms.command.domain.repository.LocationRepository;
 import com.conk.wms.query.controller.dto.response.LocationBinResponse;
 import com.conk.wms.query.controller.dto.response.LocationRackResponse;
@@ -29,10 +29,10 @@ public class GetLocationsService {
     }
 
     public List<LocationZoneResponse> getLocations(String tenantCode) {
-        Map<String, Integer> usedQuantityByLocation = inventoryRepository.findAllByIdTenantId(tenantCode).stream()
+        Map<String, Integer> usedQuantityByLocation = inventoryRepository.sumQuantityByLocation(tenantCode).stream()
                 .collect(Collectors.toMap(
-                        Inventory::getLocationId,
-                        Inventory::getQuantity,
+                        LocationQuantityProjection::getLocationId,
+                        projection -> projection.getUsedQuantity() == null ? 0 : projection.getUsedQuantity(),
                         Integer::sum
                 ));
 

@@ -32,6 +32,18 @@ public interface OutboundPendingRepository extends JpaRepository<OutboundPending
 
     List<OutboundPending> findAllByIdTenantId(String tenantId);
 
+    @Query("""
+            select l.warehouseId as warehouseId,
+                   count(distinct pending.id.orderId) as metricValue
+            from OutboundPending pending
+            join Location l on l.locationId = pending.id.locationId
+            where pending.id.tenantId = :tenantId
+              and l.warehouseId in :warehouseIds
+            group by l.warehouseId
+            """)
+    List<WarehouseMetricProjection> countDistinctOrdersByWarehouse(@Param("tenantId") String tenantId,
+                                                                   @Param("warehouseIds") Collection<String> warehouseIds);
+
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
             update OutboundPending pending

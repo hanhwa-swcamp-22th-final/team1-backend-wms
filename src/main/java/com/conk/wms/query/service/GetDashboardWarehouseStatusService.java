@@ -1,25 +1,22 @@
 package com.conk.wms.query.service;
 
-import com.conk.wms.command.domain.aggregate.Asn;
-import com.conk.wms.command.domain.aggregate.Inventory;
-import com.conk.wms.command.domain.aggregate.Location;
-import com.conk.wms.command.domain.aggregate.OutboundCompleted;
 import com.conk.wms.command.domain.aggregate.Warehouse;
 import com.conk.wms.command.domain.repository.AsnRepository;
 import com.conk.wms.command.domain.repository.InventoryRepository;
 import com.conk.wms.command.domain.repository.LocationRepository;
 import com.conk.wms.command.domain.repository.OutboundCompletedRepository;
 import com.conk.wms.command.domain.repository.OutboundPendingRepository;
+import com.conk.wms.command.domain.repository.WarehouseMetricProjection;
 import com.conk.wms.command.domain.repository.WarehouseRepository;
 import com.conk.wms.query.controller.dto.response.WarehouseStatusItemResponse;
 import com.conk.wms.query.controller.dto.response.WarehouseStatusKpiResponse;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -58,95 +55,57 @@ public class GetDashboardWarehouseStatusService {
         Set<String> warehouseIds = warehouses.stream()
                 .map(Warehouse::getWarehouseId)
                 .collect(Collectors.toSet());
-        List<Location> allLocations = locationRepository.findAllByWarehouseIdIn(warehouseIds);
-        Map<String, Location> locationById = allLocations.stream()
-                .collect(Collectors.toMap(Location::getLocationId, Function.identity(), (left, right) -> left));
-        Map<String, List<Location>> locationsByWarehouse = allLocations.stream()
-                .collect(Collectors.groupingBy(Location::getWarehouseId));
-        Set<String> locationIds = locationById.keySet();
-
-        List<Inventory> positiveInventories = locationIds.isEmpty()
-                ? List.of()
-                : inventoryRepository.findAllByIdTenantIdAndIdLocationIdIn(tenantCode, locationIds).stream()
-                .filter(inventory -> inventory.getQuantity() > 0)
-                .toList();
-        Set<String> usedLocationIds = positiveInventories.stream()
-                .map(Inventory::getLocationId)
-                .collect(Collectors.toSet());
-        Map<String, Integer> inventoryByWarehouse = positiveInventories.stream()
-                .filter(inventory -> locationById.containsKey(inventory.getLocationId()))
-                .collect(Collectors.groupingBy(
-                        inventory -> locationById.get(inventory.getLocationId()).getWarehouseId(),
-                        Collectors.summingInt(Inventory::getQuantity)
-                ));
-
-        Map<String, List<Asn>> asnsByWarehouse = asnRepository.findAllByWarehouseIdIn(warehouseIds).stream()
-                .collect(Collectors.groupingBy(Asn::getWarehouseId));
-
-        List<com.conk.wms.command.domain.aggregate.OutboundPending> pendingRecords = locationIds.isEmpty()
-                ? List.of()
-                : outboundPendingRepository.findAllByIdTenantIdAndIdLocationIdIn(tenantCode, locationIds);
-
-        Map<String, Set<String>> pendingOrdersByWarehouse = pendingRecords.stream()
-                .collect(Collectors.groupingBy(
-                        pending -> locationById.get(pending.getId().getLocationId()).getWarehouseId(),
-                        Collectors.mapping(pending -> pending.getId().getOrderId(), Collectors.toSet())
-                ));
-
-        Map<String, Integer> completedOrdersByWarehouse = buildCompletedOrdersByWarehouse(tenantCode, pendingRecords, locationById);
+        Map<String, Integer> activeLocationsByWarehouse = toMetricMap(locationRepository.countActiveByWarehouseIdIn(warehouseIds));
+        Map<String, Integer> usedLocationsByWarehouse = toMetricMap(
+                inventoryRepository.countUsedActiveLocationsByWarehouse(tenantCode, warehouseIds)
+        );
+        Map<String, Integer> inventoryByWarehouse = toMetricMap(
+                inventoryRepository.sumPositiveQuantityByWarehouse(tenantCode, warehouseIds)
+        );
+        Map<String, Integer> pendingAsnByWarehouse = toMetricMap(
+                asnRepository.countPendingByWarehouseIdIn(warehouseIds, List.of("STORED", "CANCELED"))
+        );
+        Map<String, Integer> pendingOrdersByWarehouse = toMetricMap(
+                outboundPendingRepository.countDistinctOrdersByWarehouse(tenantCode, warehouseIds)
+        );
+        Map<String, Integer> completedOrdersByWarehouse = loadCompletedOrdersByWarehouse(tenantCode, warehouseIds);
 
         return warehouses.stream()
                 .map(warehouse -> toResponse(
                         warehouse,
-                        locationsByWarehouse.getOrDefault(warehouse.getWarehouseId(), List.of()),
-                        usedLocationIds,
+                        activeLocationsByWarehouse.getOrDefault(warehouse.getWarehouseId(), 0),
+                        usedLocationsByWarehouse.getOrDefault(warehouse.getWarehouseId(), 0),
                         inventoryByWarehouse.getOrDefault(warehouse.getWarehouseId(), 0),
-                        asnsByWarehouse.getOrDefault(warehouse.getWarehouseId(), List.of()),
-                        pendingOrdersByWarehouse.getOrDefault(warehouse.getWarehouseId(), Set.of()).size(),
+                        pendingAsnByWarehouse.getOrDefault(warehouse.getWarehouseId(), 0),
+                        pendingOrdersByWarehouse.getOrDefault(warehouse.getWarehouseId(), 0),
                         completedOrdersByWarehouse.getOrDefault(warehouse.getWarehouseId(), 0)
                 ))
                 .toList();
     }
 
-    private Map<String, Integer> buildCompletedOrdersByWarehouse(String tenantCode,
-                                                                 List<com.conk.wms.command.domain.aggregate.OutboundPending> pendingRecords,
-                                                                 Map<String, Location> locationById) {
-        if (pendingRecords.isEmpty()) {
+    private Map<String, Integer> loadCompletedOrdersByWarehouse(String tenantCode, Set<String> warehouseIds) {
+        if (warehouseIds.isEmpty()) {
             return Map.of();
         }
-
-        Map<String, String> warehouseByOrder = pendingRecords.stream()
-                .collect(Collectors.toMap(
-                        pending -> pending.getId().getOrderId(),
-                        pending -> locationById.get(pending.getId().getLocationId()).getWarehouseId(),
-                        (left, right) -> left
-                ));
-
-        Set<String> orderIds = warehouseByOrder.keySet();
-
-        return outboundCompletedRepository.findAllByIdTenantIdAndIdOrderIdIn(tenantCode, orderIds).stream()
-                .filter(completed -> completed.getConfirmedAt() != null
-                        && completed.getConfirmedAt().toLocalDate().equals(LocalDate.now()))
-                .map(OutboundCompleted::getId)
-                .map(id -> Map.entry(id.getOrderId(), warehouseByOrder.get(id.getOrderId())))
-                .filter(entry -> entry.getValue() != null)
-                .collect(Collectors.groupingBy(
-                        Map.Entry::getValue,
-                        Collectors.collectingAndThen(Collectors.counting(), Long::intValue)
-                ));
+        LocalDate today = LocalDate.now();
+        LocalDateTime startAt = today.atStartOfDay();
+        LocalDateTime endAt = today.plusDays(1).atStartOfDay();
+        return toMetricMap(outboundCompletedRepository.countDistinctCompletedOrdersByWarehouse(
+                tenantCode,
+                warehouseIds,
+                startAt,
+                endAt
+        ));
     }
 
     private WarehouseStatusItemResponse toResponse(Warehouse warehouse,
-                                                   List<Location> locations,
-                                                   Set<String> usedLocationIds,
+                                                   int activeLocationCount,
+                                                   int usedLocationCount,
                                                    int inventory,
-                                                   List<Asn> asns,
+                                                   int pendingAsn,
                                                    int pendingOrders,
                                                    int completedOrdersToday) {
-        int locationUtil = calculateLocationUtil(locations, usedLocationIds);
-        int pendingAsn = (int) asns.stream()
-                .filter(asn -> !"STORED".equals(asn.getStatus()) && !"CANCELED".equals(asn.getStatus()))
-                .count();
+        int locationUtil = calculateLocationUtil(activeLocationCount, usedLocationCount);
         WarehouseStatusView statusView = resolveStatus(warehouse.getStatus(), locationUtil);
 
         return WarehouseStatusItemResponse.builder()
@@ -172,17 +131,11 @@ public class GetDashboardWarehouseStatusService {
                 .build();
     }
 
-    private int calculateLocationUtil(List<Location> locations, Set<String> usedLocationIds) {
-        List<Location> activeLocations = locations.stream()
-                .filter(Location::isActive)
-                .toList();
-        if (activeLocations.isEmpty()) {
+    private int calculateLocationUtil(int activeLocationCount, int usedLocationCount) {
+        if (activeLocationCount <= 0) {
             return 0;
         }
-        long usedCount = activeLocations.stream()
-                .filter(location -> usedLocationIds.contains(location.getLocationId()))
-                .count();
-        return (int) Math.round((double) usedCount * 100 / activeLocations.size());
+        return (int) Math.round((double) usedLocationCount * 100 / activeLocationCount);
     }
 
     private int calculateProgress(int completedOrdersToday, int pendingOrders) {
@@ -201,6 +154,15 @@ public class GetDashboardWarehouseStatusService {
             return new WarehouseStatusView("idle", "주의");
         }
         return new WarehouseStatusView("active", "운영중");
+    }
+
+    private Map<String, Integer> toMetricMap(List<WarehouseMetricProjection> projections) {
+        return projections.stream()
+                .collect(Collectors.toMap(
+                        WarehouseMetricProjection::getWarehouseId,
+                        projection -> projection.getMetricValue() == null ? 0 : projection.getMetricValue().intValue(),
+                        (left, right) -> left
+                ));
     }
 
     private record WarehouseStatusView(String status, String label) {
