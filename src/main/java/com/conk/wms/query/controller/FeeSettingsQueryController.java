@@ -39,7 +39,6 @@ public class FeeSettingsQueryController {
 
     /**
      * order-service 내부 호출 전용 엔드포인트.
-     * X-Internal-Call: true 헤더로 Nginx auth_request를 우회해 호출한다.
      * sellerId 기준으로 기본 창고 → 테넌트 → 요금표를 조회해 raw BigDecimal 값을 반환한다.
      */
     @GetMapping("/internal")
