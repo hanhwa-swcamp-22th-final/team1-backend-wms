@@ -71,6 +71,13 @@ public class OutboundManagementController {
                 BulkDispatchPendingOrdersResponse.builder()
                         .dispatchedOrderCount(result.getDispatchedOrderCount())
                         .allocatedRowCount(result.getAllocatedRowCount())
+                        .succeededOrderIds(result.getSucceededOrderIds())
+                        .failedOrders(result.getFailedOrders().stream()
+                                .map(failure -> BulkDispatchPendingOrdersResponse.FailedOrderDto.builder()
+                                        .orderId(failure.getOrderId())
+                                        .reason(failure.getReason())
+                                        .build())
+                                .toList())
                         .build()));
     }
 

@@ -11,7 +11,6 @@ import com.conk.wms.query.client.dto.ShipmentInvoiceDto;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -27,6 +26,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -68,6 +68,9 @@ class IssueInvoiceServiceTest {
         IssueLabelRequestDto request = IssueLabelRequestDto.builder().orderId("ORD-001").carrier("UPS").service("Ground").labelFormat("4x6 PDF").build();
         when(shipmentPayloadResolver.build("CONK", "ORD-001", "UPS", "Ground", "4x6 PDF"))
                 .thenReturn(request);
+        when(outboundPendingRepository.markInvoiceIssued("ORD-001", "CONK", "MANAGER-001",
+                LocalDateTime.of(2026, 4, 6, 11, 0)))
+                .thenReturn(1);
         when(integrationServiceClient.issueLabel(eq("CONK"), any()))
                 .thenReturn(ShipmentInvoiceDto.builder()
                         .orderId("ORD-001")
@@ -94,10 +97,12 @@ class IssueInvoiceServiceTest {
         assertThat(result.getOrderId()).isEqualTo("ORD-001");
         assertThat(result.getTrackingNumber()).isEqualTo("TRK-ORD-001");
         assertThat(result.getCarrier()).isEqualTo("UPS");
-
-        ArgumentCaptor<OutboundPending> pendingCaptor = ArgumentCaptor.forClass(OutboundPending.class);
-        verify(outboundPendingRepository).save(pendingCaptor.capture());
-        assertThat(pendingCaptor.getValue().getInvoiceIssuedAt()).isEqualTo(LocalDateTime.of(2026, 4, 6, 11, 0));
+        verify(outboundPendingRepository).markInvoiceIssued(
+                "ORD-001",
+                "CONK",
+                "MANAGER-001",
+                LocalDateTime.of(2026, 4, 6, 11, 0)
+        );
     }
 
     @Test
@@ -109,6 +114,9 @@ class IssueInvoiceServiceTest {
         IssueLabelRequestDto request = IssueLabelRequestDto.builder().orderId("ORD-001").carrier("UPS").service("Ground").labelFormat("4x6 PDF").build();
         when(shipmentPayloadResolver.build("CONK", "ORD-001", "UPS", "Ground", "4x6 PDF"))
                 .thenReturn(request);
+        when(outboundPendingRepository.markInvoiceIssued("ORD-001", "CONK", "MANAGER-001",
+                LocalDateTime.of(2026, 4, 6, 11, 0)))
+                .thenReturn(1);
         when(integrationServiceClient.issueLabel(eq("CONK"), any()))
                 .thenReturn(ShipmentInvoiceDto.builder()
                         .orderId("ORD-001")
@@ -131,7 +139,12 @@ class IssueInvoiceServiceTest {
         );
 
         assertThat(result.getOrderId()).isEqualTo("ORD-001");
-        verify(outboundPendingRepository).save(any());
+        verify(outboundPendingRepository).markInvoiceIssued(
+                "ORD-001",
+                "CONK",
+                "MANAGER-001",
+                LocalDateTime.of(2026, 4, 6, 11, 0)
+        );
     }
 
     @Test
@@ -153,6 +166,7 @@ class IssueInvoiceServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.OUTBOUND_INVOICE_ALREADY_ISSUED);
+        verify(outboundPendingRepository, never()).markInvoiceIssued(any(), any(), any(), any());
     }
 
     @Test

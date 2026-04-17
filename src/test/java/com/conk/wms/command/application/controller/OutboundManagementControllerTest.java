@@ -100,7 +100,12 @@ class OutboundManagementControllerTest {
     @DisplayName("일괄 출고 지시 성공 시 200과 처리 건수를 반환한다")
     void dispatchBulk_success() throws Exception {
         when(dispatchPendingOrderService.dispatchBulk(any(), any(), any(), any(), any(), any()))
-                .thenReturn(new DispatchPendingOrderService.DispatchResult(2, 3));
+                .thenReturn(new DispatchPendingOrderService.DispatchResult(
+                        2,
+                        3,
+                        List.of("ORD-001", "ORD-002"),
+                        List.of()
+                ));
 
         mockMvc.perform(post("/wms/manager/pending-orders/bulk")
                         .header("X-Tenant-Code", "CONK")
@@ -118,7 +123,9 @@ class OutboundManagementControllerTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value("bulk dispatch requested"))
                 .andExpect(jsonPath("$.data.dispatchedOrderCount").value(2))
-                .andExpect(jsonPath("$.data.allocatedRowCount").value(3));
+                .andExpect(jsonPath("$.data.allocatedRowCount").value(3))
+                .andExpect(jsonPath("$.data.succeededOrderIds[0]").value("ORD-001"))
+                .andExpect(jsonPath("$.data.failedOrders").isArray());
     }
 }
 

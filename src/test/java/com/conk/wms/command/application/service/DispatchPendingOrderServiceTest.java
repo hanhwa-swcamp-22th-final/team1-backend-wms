@@ -37,6 +37,8 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -63,6 +65,9 @@ class DispatchPendingOrderServiceTest {
 
     @Mock
     private AutoAssignTaskService autoAssignTaskService;
+
+    @Mock
+    private IssueInvoiceService issueInvoiceService;
 
     @Mock
     private TransactionTemplate transactionTemplate;
@@ -106,9 +111,6 @@ class DispatchPendingOrderServiceTest {
                 .thenReturn(List.of(new OutboundPending("ORD-001", "SKU-001", "LOC-A-01-01", "CONK", "WORKER-001")));
         when(locationRepository.findAllByLocationIdIn(List.of("LOC-A-01-01")))
                 .thenReturn(List.of(location("LOC-A-01-01", "WH-001")));
-        when(outboundInvoiceJobRepository.existsByOrderIdAndTenantIdAndStatusIn(
-                "ORD-001", "CONK", List.of("PENDING", "PROCESSING")))
-                .thenReturn(false);
 
         DispatchPendingOrderService.DispatchResult result = dispatchPendingOrderService.dispatch(
                 "ORD-001",
@@ -123,11 +125,8 @@ class DispatchPendingOrderServiceTest {
         verify(inventoryRepository, times(2)).save(inventoryCaptor.capture());
         verify(outboundPendingRepository).save(any(OutboundPending.class));
         verify(allocatedInventoryRepository).save(any(AllocatedInventory.class));
-        verify(outboundInvoiceJobRepository).save(argThat(job ->
-                "ORD-001".equals(job.getOrderId())
-                        && "CONK".equals(job.getTenantId())
-                        && "PENDING".equals(job.getStatus())
-        ));
+        verify(issueInvoiceService).issueOnDispatch("ORD-001", "CONK", "UPS", "Ground", "4x6 PDF", "WORKER-001");
+        verify(outboundInvoiceJobRepository, never()).save(any(OutboundInvoiceJob.class));
         verify(autoAssignTaskService).assign("ORD-001", "CONK", "WORKER-001");
         verify(orderServiceClient).updateOrderStatus("ORD-001", Map.of(
                 "status", "ALLOCATED",
@@ -147,8 +146,105 @@ class DispatchPendingOrderServiceTest {
     }
 
     @Test
-    @DisplayName("이미 활성 송장 작업이 있으면 중복 작업을 적재하지 않는다")
-    void dispatch_whenInvoiceJobAlreadyQueued_thenSkipEnqueue() {
+    @DisplayName("일괄 출고 지시는 주문마다 동기 송장 발행을 수행한다")
+    void dispatchBulk_thenIssueInvoicesSynchronously() {
+        when(orderServiceClient.getPendingOrder("CONK", "ORD-001")).thenReturn(Optional.of(order("ORD-001", "SKU-001", 1)));
+        when(orderServiceClient.getPendingOrder("CONK", "ORD-002")).thenReturn(Optional.of(order("ORD-002", "SKU-002", 2)));
+        when(outboundPendingRepository.existsByIdOrderIdAndIdTenantId("ORD-001", "CONK")).thenReturn(false);
+        when(outboundPendingRepository.existsByIdOrderIdAndIdTenantId("ORD-002", "CONK")).thenReturn(false);
+        when(inventoryRepository.findAllocatableAvailableBySkuAndTenantIdForUpdate("SKU-001", "CONK"))
+                .thenReturn(List.of(new Inventory("LOC-A-01-01", "SKU-001", "CONK", 5, "AVAILABLE")));
+        when(inventoryRepository.findAllocatableAvailableBySkuAndTenantIdForUpdate("SKU-002", "CONK"))
+                .thenReturn(List.of(new Inventory("LOC-A-01-01", "SKU-002", "CONK", 5, "AVAILABLE")));
+        when(inventoryRepository.findByIdLocationIdAndIdSkuAndIdTenantIdAndIdInventoryType(
+                "LOC-A-01-01", "SKU-001", "CONK", "ALLOCATED"))
+                .thenReturn(Optional.empty());
+        when(inventoryRepository.findByIdLocationIdAndIdSkuAndIdTenantIdAndIdInventoryType(
+                "LOC-A-01-01", "SKU-002", "CONK", "ALLOCATED"))
+                .thenReturn(Optional.empty());
+        when(outboundPendingRepository.findAllByIdOrderIdAndIdTenantId("ORD-001", "CONK"))
+                .thenReturn(List.of(new OutboundPending("ORD-001", "SKU-001", "LOC-A-01-01", "CONK", "SYSTEM")));
+        when(outboundPendingRepository.findAllByIdOrderIdAndIdTenantId("ORD-002", "CONK"))
+                .thenReturn(List.of(new OutboundPending("ORD-002", "SKU-002", "LOC-A-01-01", "CONK", "SYSTEM")));
+        when(locationRepository.findAllByLocationIdIn(List.of("LOC-A-01-01")))
+                .thenReturn(List.of(location("LOC-A-01-01", "WH-001")));
+
+        DispatchPendingOrderService.DispatchResult result = dispatchPendingOrderService.dispatchBulk(
+                List.of("ORD-001", "ORD-002"),
+                "CONK",
+                null,
+                "UPS",
+                "Ground",
+                "4x6 PDF"
+        );
+
+        assertEquals(2, result.getDispatchedOrderCount());
+        assertEquals(2, result.getAllocatedRowCount());
+        verify(issueInvoiceService).issueOnDispatch("ORD-001", "CONK", "UPS", "Ground", "4x6 PDF", null);
+        verify(issueInvoiceService).issueOnDispatch("ORD-002", "CONK", "UPS", "Ground", "4x6 PDF", null);
+        verify(outboundInvoiceJobRepository, never()).save(any(OutboundInvoiceJob.class));
+    }
+
+    @Test
+    @DisplayName("일괄 출고 지시는 실패 주문을 모아 부분 성공 결과를 반환한다")
+    void dispatchBulk_whenOneOrderFails_thenReturnPartialSuccess() {
+        when(orderServiceClient.getPendingOrder("CONK", "ORD-001")).thenReturn(Optional.of(order("ORD-001", "SKU-001", 1)));
+        when(orderServiceClient.getPendingOrder("CONK", "ORD-002")).thenReturn(Optional.of(order("ORD-002", "SKU-002", 2)));
+        when(outboundPendingRepository.existsByIdOrderIdAndIdTenantId("ORD-001", "CONK")).thenReturn(false);
+        when(outboundPendingRepository.existsByIdOrderIdAndIdTenantId("ORD-002", "CONK")).thenReturn(false);
+        when(inventoryRepository.findAllocatableAvailableBySkuAndTenantIdForUpdate("SKU-001", "CONK"))
+                .thenReturn(List.of(new Inventory("LOC-A-01-01", "SKU-001", "CONK", 5, "AVAILABLE")));
+        when(inventoryRepository.findAllocatableAvailableBySkuAndTenantIdForUpdate("SKU-002", "CONK"))
+                .thenReturn(List.of(new Inventory("LOC-A-01-01", "SKU-002", "CONK", 5, "AVAILABLE")));
+        when(inventoryRepository.findByIdLocationIdAndIdSkuAndIdTenantIdAndIdInventoryType(
+                "LOC-A-01-01", "SKU-001", "CONK", "ALLOCATED"))
+                .thenReturn(Optional.empty());
+        when(inventoryRepository.findByIdLocationIdAndIdSkuAndIdTenantIdAndIdInventoryType(
+                "LOC-A-01-01", "SKU-002", "CONK", "ALLOCATED"))
+                .thenReturn(Optional.empty(), Optional.of(new Inventory("LOC-A-01-01", "SKU-002", "CONK", 2, "ALLOCATED")));
+        when(outboundPendingRepository.findAllByIdOrderIdAndIdTenantId("ORD-001", "CONK"))
+                .thenReturn(List.of(new OutboundPending("ORD-001", "SKU-001", "LOC-A-01-01", "CONK", "SYSTEM")));
+        when(outboundPendingRepository.findAllByIdOrderIdAndIdTenantId("ORD-002", "CONK"))
+                .thenReturn(
+                        List.of(new OutboundPending("ORD-002", "SKU-002", "LOC-A-01-01", "CONK", "SYSTEM")),
+                        List.of(new OutboundPending("ORD-002", "SKU-002", "LOC-A-01-01", "CONK", "SYSTEM"))
+                );
+        when(allocatedInventoryRepository.findAllByIdOrderIdAndIdTenantId("ORD-002", "CONK"))
+                .thenReturn(List.of(new AllocatedInventory("ORD-002", "SKU-002", "LOC-A-01-01", "CONK", 2, "SYSTEM")));
+        when(locationRepository.findAllByLocationIdIn(List.of("LOC-A-01-01")))
+                .thenReturn(List.of(location("LOC-A-01-01", "WH-001")));
+        doReturn(new IssueInvoiceService.IssueResult(
+                "ORD-001",
+                "TRK-ORD-001",
+                "UPS",
+                "Ground",
+                "https://label.example/ORD-001.pdf",
+                LocalDateTime.of(2026, 4, 6, 11, 0)
+        )).when(issueInvoiceService)
+                .issueOnDispatch("ORD-001", "CONK", "UPS", "Ground", "4x6 PDF", null);
+        doThrow(new BusinessException(ErrorCode.OUTBOUND_STOCK_INSUFFICIENT)).when(issueInvoiceService)
+                .issueOnDispatch("ORD-002", "CONK", "UPS", "Ground", "4x6 PDF", null);
+
+        DispatchPendingOrderService.DispatchResult result = dispatchPendingOrderService.dispatchBulk(
+                List.of("ORD-001", "ORD-002"),
+                "CONK",
+                null,
+                "UPS",
+                "Ground",
+                "4x6 PDF"
+        );
+
+        assertEquals(1, result.getDispatchedOrderCount());
+        assertEquals(1, result.getAllocatedRowCount());
+        assertEquals(List.of("ORD-001"), result.getSucceededOrderIds());
+        assertEquals(1, result.getFailedOrders().size());
+        assertEquals("ORD-002", result.getFailedOrders().get(0).getOrderId());
+        verify(autoAssignTaskService).clearExistingAssignments("ORD-002", "CONK");
+    }
+
+    @Test
+    @DisplayName("동기 송장 발행이 실패하면 할당 재고와 작업 배정을 되돌린다")
+    void dispatch_whenIssueInvoiceFails_thenRollbackLocalAllocation() {
         when(orderServiceClient.getPendingOrder("CONK", "ORD-001")).thenReturn(Optional.of(
                 OrderSummaryDto.builder()
                         .orderId("ORD-001")
@@ -161,7 +257,7 @@ class DispatchPendingOrderServiceTest {
                         .cityName("서울")
                         .orderedAt(LocalDateTime.of(2026, 4, 4, 9, 30))
                         .items(List.of(
-                                OrderItemDto.builder().skuId("SKU-001").productName("상품A").quantity(1).build()
+                                OrderItemDto.builder().skuId("SKU-001").productName("상품A").quantity(2).build()
                         ))
                         .build()
         ));
@@ -170,18 +266,29 @@ class DispatchPendingOrderServiceTest {
                 .thenReturn(List.of(new Inventory("LOC-A-01-01", "SKU-001", "CONK", 5, "AVAILABLE")));
         when(inventoryRepository.findByIdLocationIdAndIdSkuAndIdTenantIdAndIdInventoryType(
                 "LOC-A-01-01", "SKU-001", "CONK", "ALLOCATED"))
-                .thenReturn(Optional.empty());
+                .thenReturn(Optional.empty(), Optional.of(new Inventory("LOC-A-01-01", "SKU-001", "CONK", 2, "ALLOCATED")));
         when(outboundPendingRepository.findAllByIdOrderIdAndIdTenantId("ORD-001", "CONK"))
-                .thenReturn(List.of(new OutboundPending("ORD-001", "SKU-001", "LOC-A-01-01", "CONK", "SYSTEM")));
+                .thenReturn(
+                        List.of(new OutboundPending("ORD-001", "SKU-001", "LOC-A-01-01", "CONK", "WORKER-001")),
+                        List.of(new OutboundPending("ORD-001", "SKU-001", "LOC-A-01-01", "CONK", "WORKER-001"))
+                );
+        when(allocatedInventoryRepository.findAllByIdOrderIdAndIdTenantId("ORD-001", "CONK"))
+                .thenReturn(List.of(new AllocatedInventory("ORD-001", "SKU-001", "LOC-A-01-01", "CONK", 2, "WORKER-001")));
         when(locationRepository.findAllByLocationIdIn(List.of("LOC-A-01-01")))
                 .thenReturn(List.of(location("LOC-A-01-01", "WH-001")));
-        when(outboundInvoiceJobRepository.existsByOrderIdAndTenantIdAndStatusIn(
-                "ORD-001", "CONK", List.of("PENDING", "PROCESSING")))
-                .thenReturn(true);
+        doThrow(new IllegalStateException("easypost timeout")).when(issueInvoiceService)
+                .issueOnDispatch("ORD-001", "CONK", "UPS", "Ground", "4x6 PDF", "WORKER-001");
 
-        dispatchPendingOrderService.dispatch("ORD-001", "CONK", null, "UPS", "Ground", "4x6 PDF");
+        IllegalStateException exception = assertThrows(IllegalStateException.class, () ->
+                dispatchPendingOrderService.dispatch("ORD-001", "CONK", "WORKER-001", "UPS", "Ground", "4x6 PDF")
+        );
 
-        verify(outboundInvoiceJobRepository, never()).save(any(OutboundInvoiceJob.class));
+        assertEquals("easypost timeout", exception.getMessage());
+        verify(autoAssignTaskService).clearExistingAssignments("ORD-001", "CONK");
+        verify(inventoryRepository, times(4)).save(any(Inventory.class));
+        verify(allocatedInventoryRepository).deleteAll(any());
+        verify(outboundPendingRepository).deleteAll(any());
+        verify(orderServiceClient, never()).updateOrderStatus(any(), any());
     }
 
     @Test
@@ -216,6 +323,23 @@ class DispatchPendingOrderServiceTest {
 
     private Location location(String locationId, String warehouseId) {
         return new Location(locationId, "BIN-001", warehouseId, "ZONE-A", "RACK-01", 100, true);
+    }
+
+    private OrderSummaryDto order(String orderId, String skuId, int quantity) {
+        return OrderSummaryDto.builder()
+                .orderId(orderId)
+                .sellerId("SELLER-001")
+                .sellerName("셀러A")
+                .warehouseId("WH-001")
+                .channel("SHOPIFY")
+                .orderStatus("RECEIVED")
+                .recipientName("김고객")
+                .cityName("서울")
+                .orderedAt(LocalDateTime.of(2026, 4, 4, 9, 30))
+                .items(List.of(
+                        OrderItemDto.builder().skuId(skuId).productName("상품A").quantity(quantity).build()
+                ))
+                .build();
     }
 }
 
