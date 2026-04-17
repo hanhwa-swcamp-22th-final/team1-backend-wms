@@ -3,9 +3,11 @@ package com.conk.wms.query.service;
 import com.conk.wms.command.application.service.AsnIdGenerator;
 import com.conk.wms.command.domain.aggregate.Inventory;
 import com.conk.wms.command.domain.aggregate.Product;
+import com.conk.wms.command.domain.aggregate.SellerWarehouse;
 import com.conk.wms.command.domain.aggregate.Warehouse;
 import com.conk.wms.command.domain.repository.InventoryRepository;
 import com.conk.wms.command.domain.repository.ProductRepository;
+import com.conk.wms.command.domain.repository.SellerWarehouseRepository;
 import com.conk.wms.command.domain.repository.WarehouseRepository;
 import com.conk.wms.query.controller.dto.response.SellerAsnOptionsResponse;
 import org.springframework.stereotype.Service;
@@ -13,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -23,22 +26,37 @@ import java.util.stream.Collectors;
 public class GetSellerAsnOptionsService {
 
     private final WarehouseRepository warehouseRepository;
+    private final SellerWarehouseRepository sellerWarehouseRepository;
     private final ProductRepository productRepository;
     private final InventoryRepository inventoryRepository;
     private final AsnIdGenerator asnIdGenerator;
 
     public GetSellerAsnOptionsService(WarehouseRepository warehouseRepository,
+                                      SellerWarehouseRepository sellerWarehouseRepository,
                                       ProductRepository productRepository,
                                       InventoryRepository inventoryRepository,
                                       AsnIdGenerator asnIdGenerator) {
         this.warehouseRepository = warehouseRepository;
+        this.sellerWarehouseRepository = sellerWarehouseRepository;
         this.productRepository = productRepository;
         this.inventoryRepository = inventoryRepository;
         this.asnIdGenerator = asnIdGenerator;
     }
 
     public SellerAsnOptionsResponse getOptions(String sellerId) {
-        List<Warehouse> warehouses = warehouseRepository.findAllByTenantIdOrderByWarehouseIdAsc(sellerId);
+        List<SellerWarehouse> sellerWarehouses = sellerWarehouseRepository
+                .findAllByIdSellerIdOrderByIsDefaultDescIdWarehouseIdAsc(sellerId);
+        Map<String, Warehouse> warehouseById = warehouseRepository.findAllById(
+                        sellerWarehouses.stream()
+                                .map(mapping -> mapping.getId().getWarehouseId())
+                                .distinct()
+                                .toList()
+                ).stream()
+                .collect(Collectors.toMap(Warehouse::getWarehouseId, warehouse -> warehouse));
+        List<Warehouse> warehouses = sellerWarehouses.stream()
+                .map(mapping -> warehouseById.get(mapping.getId().getWarehouseId()))
+                .filter(Objects::nonNull)
+                .toList();
         List<Product> products = productRepository.findAllBySellerIdOrderByCreatedAtDesc(sellerId);
         Map<String, Integer> availableStockBySku = inventoryRepository.findAllByIdTenantId(sellerId).stream()
                 .filter(inventory -> "AVAILABLE".equals(inventory.getId().getInventoryType()))
