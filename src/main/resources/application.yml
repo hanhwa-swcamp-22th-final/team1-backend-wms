@@ -1,6 +1,10 @@
 spring:
   application:
     name: team1-backend-wms
+
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
   cloud:
     openfeign:
       okhttp:
@@ -30,6 +34,9 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+server:
+  shutdown: graceful
 
 app:
   kafka:
