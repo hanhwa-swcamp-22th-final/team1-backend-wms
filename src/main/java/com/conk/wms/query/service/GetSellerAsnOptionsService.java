@@ -75,6 +75,7 @@ public class GetSellerAsnOptionsService {
                                 .sku(product.getSkuId())
                                 .productName(product.getProductName())
                                 .availableStock(availableStockBySku.getOrDefault(product.getSkuId(), 0))
+                                .unitPrice(product.getSalePriceAmt())
                                 .build())
                         .toList())
                 .build();

@@ -30,5 +30,6 @@ public class SellerAsnOptionsResponse {
         private String sku;
         private String productName;
         private int availableStock;
+        private int unitPrice;
     }
 }
