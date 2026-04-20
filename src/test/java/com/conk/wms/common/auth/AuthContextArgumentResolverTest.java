@@ -35,6 +35,7 @@ class AuthContextArgumentResolverTest {
         MethodParameter authParameter = new MethodParameter(method, 0);
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader(AuthHeaders.USER_ID, "user-001");
+        request.addHeader(AuthHeaders.WORKER_CODE, "WORKER-001");
         request.addHeader(AuthHeaders.ROLE, "WH_WORKER");
         request.addHeader(AuthHeaders.TENANT_ID, "tenant-001");
 
@@ -46,6 +47,7 @@ class AuthContextArgumentResolverTest {
         );
 
         assertThat(resolved.getUserId()).isEqualTo("user-001");
+        assertThat(resolved.getWorkerCode()).isEqualTo("WORKER-001");
         assertThat(resolved.getRole()).isEqualTo(AuthRole.WH_WORKER);
         assertThat(resolved.getTenantId()).isEqualTo("tenant-001");
     }

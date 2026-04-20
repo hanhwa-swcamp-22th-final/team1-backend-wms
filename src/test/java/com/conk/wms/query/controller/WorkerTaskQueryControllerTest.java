@@ -46,6 +46,8 @@ class WorkerTaskQueryControllerTest {
                         .build()));
 
         mockMvc.perform(get("/wms/worker/tasks")
+                        .header("X-Role", "WH_WORKER")
+                        .header("X-Worker-Code", "WORKER-001")
                         .header("X-Tenant-Code", "CONK")
                         .param("workerAccountId", "WORKER-001"))
                 .andExpect(status().isOk())
@@ -54,11 +56,24 @@ class WorkerTaskQueryControllerTest {
     }
 
     @Test
-    @DisplayName("작업자 작업 목록 조회 시 workerAccountId가 없으면 400을 반환한다")
+    @DisplayName("작업자 작업 목록 조회 시 worker 식별값이 없으면 400을 반환한다")
     void getTasks_whenWorkerMissing_thenReturn400() throws Exception {
         mockMvc.perform(get("/wms/worker/tasks")
+                        .header("X-Role", "WH_WORKER")
                         .header("X-Tenant-Code", "CONK"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("OUTBOUND-007"));
+    }
+
+    @Test
+    @DisplayName("작업자 작업 목록 조회 시 다른 작업자 코드를 요청하면 403을 반환한다")
+    void getTasks_whenWorkerCodeDoesNotMatch_thenReturn403() throws Exception {
+        mockMvc.perform(get("/wms/worker/tasks")
+                        .header("X-Role", "WH_WORKER")
+                        .header("X-Worker-Code", "WORKER-001")
+                        .header("X-Tenant-Code", "CONK")
+                        .param("workerAccountId", "WORKER-999"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("COMMON-008"));
     }
 }

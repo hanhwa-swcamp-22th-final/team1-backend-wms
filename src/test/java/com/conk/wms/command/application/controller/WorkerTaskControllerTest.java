@@ -65,8 +65,9 @@ class WorkerTaskControllerTest {
                 .build());
 
         mockMvc.perform(patch("/wms/worker/tasks/WORK-OUT-CONK-ORD-001")
-                        .header("X-Role", "WM_WORKER")
-                        .header("X-User-Id", "WORKER-001")
+                        .header("X-Role", "WH_WORKER")
+                        .header("X-User-Id", "ACC-001")
+                        .header("X-Worker-Code", "WORKER-001")
                         .header("X-Tenant-Id", "CONK")
                         .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
@@ -91,8 +92,9 @@ class WorkerTaskControllerTest {
                 .when(processWorkerTaskService).process(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
 
         mockMvc.perform(patch("/wms/worker/tasks/WORK-OUT-CONK-ORD-001")
-                        .header("X-Role", "WM_WORKER")
-                        .header("X-User-Id", "WORKER-001")
+                        .header("X-Role", "WH_WORKER")
+                        .header("X-User-Id", "ACC-001")
+                        .header("X-Worker-Code", "WORKER-001")
                         .header("X-Tenant-Id", "CONK")
                         .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
@@ -111,8 +113,9 @@ class WorkerTaskControllerTest {
     @DisplayName("작업 시작 성공 시 200을 반환한다")
     void start_success() throws Exception {
         mockMvc.perform(patch("/wms/tasks/WORK-001/start")
-                        .header("X-Role", "WM_WORKER")
-                        .header("X-User-Id", "WORKER-001")
+                        .header("X-Role", "WH_WORKER")
+                        .header("X-User-Id", "ACC-001")
+                        .header("X-Worker-Code", "WORKER-001")
                         .header("X-Tenant-Id", "TENANT-001")
                         .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of("workerId", "WORKER-001"))))
@@ -126,8 +129,9 @@ class WorkerTaskControllerTest {
                 .when(processWorkerTaskService).start(eq("TENANT-001"), eq("WORK-999"), eq("WORKER-001"));
 
         mockMvc.perform(patch("/wms/tasks/WORK-999/start")
-                        .header("X-Role", "WM_WORKER")
-                        .header("X-User-Id", "WORKER-001")
+                        .header("X-Role", "WH_WORKER")
+                        .header("X-User-Id", "ACC-001")
+                        .header("X-Worker-Code", "WORKER-001")
                         .header("X-Tenant-Id", "TENANT-001")
                         .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of("workerId", "WORKER-001"))))

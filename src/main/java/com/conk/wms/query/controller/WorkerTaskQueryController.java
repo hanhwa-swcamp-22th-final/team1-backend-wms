@@ -34,12 +34,17 @@ public class WorkerTaskQueryController {
             @RequestParam(value = "workerAccountId", required = false) String workerAccountId,
             @RequestParam(value = "workerUserId", required = false) String workerUserId
     ) {
-        String accountId = resolveWorkerAccountId(workerAccountId, workerUserId);
+        authContext.requireWorkerAccess();
+        String accountId = resolveWorkerAccountId(authContext, workerAccountId, workerUserId);
+        authContext.requireSameWorker(accountId);
         return ResponseEntity.ok(getWorkerTasksService.getTasks(resolveTenantId(authContext), accountId));
     }
 
-    private String resolveWorkerAccountId(String workerAccountId, String workerUserId) {
+    private String resolveWorkerAccountId(AuthContext authContext, String workerAccountId, String workerUserId) {
         String accountId = (workerAccountId == null || workerAccountId.isBlank()) ? workerUserId : workerAccountId;
+        if (accountId == null || accountId.isBlank()) {
+            accountId = authContext.getWorkerCode();
+        }
         if (accountId == null || accountId.isBlank()) {
             throw new BusinessException(ErrorCode.OUTBOUND_WORKER_REQUIRED);
         }

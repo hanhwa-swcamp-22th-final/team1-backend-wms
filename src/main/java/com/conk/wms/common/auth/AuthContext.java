@@ -9,13 +9,15 @@ import com.conk.wms.common.exception.ErrorCode;
 public final class AuthContext {
 
     private final String userId;
+    private final String workerCode;
     private final String userName;
     private final AuthRole role;
     private final String tenantId;
     private final String sellerId;
 
-    public AuthContext(String userId, String userName, AuthRole role, String tenantId, String sellerId) {
+    public AuthContext(String userId, String workerCode, String userName, AuthRole role, String tenantId, String sellerId) {
         this.userId = normalize(userId);
+        this.workerCode = normalize(workerCode);
         this.userName = normalize(userName);
         this.role = role;
         this.tenantId = normalize(tenantId);
@@ -24,6 +26,10 @@ public final class AuthContext {
 
     public String getUserId() {
         return userId;
+    }
+
+    public String getWorkerCode() {
+        return workerCode;
     }
 
     public String getUserName() {
@@ -47,6 +53,13 @@ public final class AuthContext {
             throw new BusinessException(ErrorCode.AUTH_USER_ID_REQUIRED);
         }
         return userId;
+    }
+
+    public String requireWorkerCode() {
+        if (workerCode == null) {
+            throw new BusinessException(ErrorCode.OUTBOUND_WORKER_REQUIRED);
+        }
+        return workerCode;
     }
 
     public AuthRole requireRole() {
@@ -102,13 +115,20 @@ public final class AuthContext {
         if (requiredRole != AuthRole.WH_WORKER) {
             throw new BusinessException(ErrorCode.AUTH_ROLE_FORBIDDEN);
         }
-        requireUserId();
+        requireWorkerCode();
         requireTenantId();
     }
 
     public void requireSameUser(String requestedUserId) {
         String normalizedRequestedUserId = normalize(requestedUserId);
         if (normalizedRequestedUserId != null && !requireUserId().equals(normalizedRequestedUserId)) {
+            throw new BusinessException(ErrorCode.AUTH_ROLE_FORBIDDEN);
+        }
+    }
+
+    public void requireSameWorker(String requestedWorkerCode) {
+        String normalizedRequestedWorkerCode = normalize(requestedWorkerCode);
+        if (normalizedRequestedWorkerCode != null && !requireWorkerCode().equals(normalizedRequestedWorkerCode)) {
             throw new BusinessException(ErrorCode.AUTH_ROLE_FORBIDDEN);
         }
     }

@@ -20,6 +20,7 @@ public class AuthContextResolver {
 
     public AuthContext resolve(HttpServletRequest request) {
         String userId = readHeader(request, AuthHeaders.USER_ID);
+        String workerCode = readHeader(request, AuthHeaders.WORKER_CODE);
         String userName = readHeader(request, AuthHeaders.USER_NAME);
         AuthRole role = AuthRole.fromHeaderValue(readHeader(request, AuthHeaders.ROLE));
         String tenantId = readHeader(request, AuthHeaders.TENANT_ID);
@@ -38,7 +39,11 @@ public class AuthContextResolver {
             }
         }
 
-        return new AuthContext(userId, userName, role, tenantId, sellerId);
+        if (workerCode == null) {
+            workerCode = userId;
+        }
+
+        return new AuthContext(userId, workerCode, userName, role, tenantId, sellerId);
     }
 
     private String readHeader(HttpServletRequest request, String headerName) {

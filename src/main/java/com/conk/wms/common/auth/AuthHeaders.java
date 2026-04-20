@@ -6,6 +6,7 @@ package com.conk.wms.common.auth;
 public final class AuthHeaders {
 
     public static final String USER_ID = "X-User-Id";
+    public static final String WORKER_CODE = "X-Worker-Code";
     public static final String USER_NAME = "X-User-Name";
     public static final String ROLE = "X-Role";
     public static final String TENANT_ID = "X-Tenant-Id";

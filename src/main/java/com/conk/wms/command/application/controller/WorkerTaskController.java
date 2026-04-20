@@ -34,9 +34,9 @@ public class WorkerTaskController {
             @RequestBody ProcessWorkerTaskRequest request
     ) {
         authContext.requireWorkerAccess();
-        authContext.requireSameUser(request.getWorkerAccountId());
+        authContext.requireSameWorker(request.getWorkerAccountId());
         String tenantId = resolveTenantId(authContext);
-        String workerAccountId = authContext.requireUserId();
+        String workerAccountId = authContext.requireWorkerCode();
         ProcessWorkerTaskResponse response = processWorkerTaskService.process(
                 tenantId,
                 workId,
@@ -61,11 +61,11 @@ public class WorkerTaskController {
             @RequestBody StartWorkRequest request
     ) {
         authContext.requireWorkerAccess();
-        authContext.requireSameUser(request.getWorkerId());
+        authContext.requireSameWorker(request.getWorkerId());
         processWorkerTaskService.start(
                 resolveTenantId(authContext),
                 workId,
-                authContext.requireUserId()
+                authContext.requireWorkerCode()
         );
         return ResponseEntity.ok().build();
     }
