@@ -1,11 +1,13 @@
 package com.conk.wms.command.application.service;
 
 import com.conk.wms.command.application.dto.response.ProcessWorkerTaskResponse;
+import com.conk.wms.command.domain.aggregate.Asn;
 import com.conk.wms.command.domain.aggregate.InspectionPutaway;
 import com.conk.wms.command.domain.aggregate.PickingPacking;
 import com.conk.wms.command.domain.aggregate.Work;
 import com.conk.wms.command.domain.aggregate.WorkAssignment;
 import com.conk.wms.command.domain.aggregate.WorkDetail;
+import com.conk.wms.command.domain.repository.AsnRepository;
 import com.conk.wms.command.domain.repository.InspectionPutawayRepository;
 import com.conk.wms.command.domain.repository.LocationRepository;
 import com.conk.wms.command.domain.repository.PickingPackingRepository;
@@ -25,6 +27,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -51,6 +55,9 @@ class ProcessWorkerTaskServiceTest {
 
     @Mock
     private PickingPackingNoteSupport pickingPackingNoteSupport;
+
+    @Mock
+    private AsnRepository asnRepository;
 
     @Mock
     private InspectionPutawayRepository inspectionPutawayRepository;
@@ -358,9 +365,12 @@ class ProcessWorkerTaskServiceTest {
                 "ASN-001", "SKU-001", "LOC-C-01-01", 5, "CONK");
         InspectionPutaway row = new InspectionPutaway("ASN-001", "SKU-001", "CONK");
         row.assignLocation("LOC-C-01-01");
+        Asn asn = createAsn("REGISTERED");
 
         when(workAssignmentRepository.findAllByIdWorkIdAndIdTenantId("WORK-IN-CONK-ASN-001-WORKER-003", "CONK"))
                 .thenReturn(List.of(assignment));
+        when(asnRepository.findByAsnId("ASN-001")).thenReturn(Optional.of(asn));
+        when(asnRepository.save(any(Asn.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(workDetailRepository.findByIdWorkIdAndAsnIdAndIdSkuIdAndIdLocationIdAndTenantId(
                 "WORK-IN-CONK-ASN-001-WORKER-003", "ASN-001", "SKU-001", "LOC-C-01-01", "CONK"
         )).thenReturn(Optional.of(detail));
@@ -388,9 +398,11 @@ class ProcessWorkerTaskServiceTest {
 
         verify(inspectionPutawayRepository).save(row);
         verify(workDetailRepository).save(detail);
+        verify(asnRepository).save(asn);
         assertEquals("INSPECTED", response.getDetailStatus());
         assertFalse(response.isWorkCompleted());
         assertEquals(5, row.getInspectedQuantity());
+        assertEquals("INSPECTING_PUTAWAY", asn.getStatus());
     }
 
     @Test
@@ -403,9 +415,11 @@ class ProcessWorkerTaskServiceTest {
         InspectionPutaway row = new InspectionPutaway("ASN-001", "SKU-001", "CONK");
         row.assignLocation("LOC-C-01-01");
         row.saveProgress("LOC-C-01-01", 5, 0, "INSP::정상::", 0);
+        Asn asn = createAsn("INSPECTING_PUTAWAY");
 
         when(workAssignmentRepository.findAllByIdWorkIdAndIdTenantId("WORK-IN-CONK-ASN-001-WORKER-003", "CONK"))
                 .thenReturn(List.of(assignment));
+        when(asnRepository.findByAsnId("ASN-001")).thenReturn(Optional.of(asn));
         when(workDetailRepository.findByIdWorkIdAndAsnIdAndIdSkuIdAndIdLocationIdAndTenantId(
                 "WORK-IN-CONK-ASN-001-WORKER-003", "ASN-001", "SKU-001", "LOC-C-01-01", "CONK"
         )).thenReturn(Optional.of(detail));
@@ -451,9 +465,12 @@ class ProcessWorkerTaskServiceTest {
                 "ASN-001", "SKU-001", "LOC-C-01-01", 5, "CONK");
         InspectionPutaway row = new InspectionPutaway("ASN-001", "SKU-001", "CONK");
         row.assignLocation("LOC-C-01-01");
+        Asn asn = createAsn("REGISTERED");
 
         when(workAssignmentRepository.findAllByIdWorkIdAndIdTenantId("WORK-IN-CONK-ASN-001-WORKER-003", "CONK"))
                 .thenReturn(List.of(assignment));
+        when(asnRepository.findByAsnId("ASN-001")).thenReturn(Optional.of(asn));
+        when(asnRepository.save(any(Asn.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(workDetailRepository.findByIdWorkIdAndAsnIdAndIdSkuIdAndIdLocationIdAndTenantId(
                 "WORK-IN-CONK-ASN-001-WORKER-003", "ASN-001", "SKU-001", "LOC-C-01-01", "CONK"
         )).thenReturn(Optional.of(detail));
@@ -490,9 +507,11 @@ class ProcessWorkerTaskServiceTest {
         InspectionPutaway row = new InspectionPutaway("ASN-001", "SKU-001", "CONK");
         row.assignLocation("LOC-C-01-01");
         row.saveProgress("LOC-C-01-01", 4, 1, "INSP::정상::", 0);
+        Asn asn = createAsn("INSPECTING_PUTAWAY");
 
         when(workAssignmentRepository.findAllByIdWorkIdAndIdTenantId("WORK-IN-CONK-ASN-001-WORKER-003", "CONK"))
                 .thenReturn(List.of(assignment));
+        when(asnRepository.findByAsnId("ASN-001")).thenReturn(Optional.of(asn));
         when(workDetailRepository.findByIdWorkIdAndAsnIdAndIdSkuIdAndIdLocationIdAndTenantId(
                 "WORK-IN-CONK-ASN-001-WORKER-003", "ASN-001", "SKU-001", "LOC-C-01-01", "CONK"
         )).thenReturn(Optional.of(detail));
@@ -517,6 +536,23 @@ class ProcessWorkerTaskServiceTest {
         );
 
         assertEquals(ErrorCode.ASN_WORK_QUANTITY_EXCEEDED, exception.getErrorCode());
+    }
+
+    private Asn createAsn(String status) {
+        LocalDateTime now = LocalDateTime.of(2026, 4, 20, 10, 0);
+        return new Asn(
+                "ASN-001",
+                "WH-001",
+                "SELLER-001",
+                LocalDate.of(2026, 4, 20),
+                status,
+                "메모",
+                1,
+                now,
+                now,
+                "SELLER-001",
+                "CONK"
+        );
     }
 }
 

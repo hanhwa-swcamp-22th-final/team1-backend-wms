@@ -9,6 +9,7 @@ import com.conk.wms.command.domain.aggregate.PickingPacking;
 import com.conk.wms.command.domain.aggregate.Work;
 import com.conk.wms.command.domain.aggregate.WorkAssignment;
 import com.conk.wms.command.domain.aggregate.WorkDetail;
+import com.conk.wms.command.domain.repository.AsnRepository;
 import com.conk.wms.command.domain.repository.InspectionPutawayRepository;
 import com.conk.wms.command.domain.repository.LocationRepository;
 import com.conk.wms.command.domain.repository.PickingPackingRepository;
@@ -45,6 +46,7 @@ public class ProcessWorkerTaskService {
     private final WorkDetailRepository workDetailRepository;
     private final PickingPackingRepository pickingPackingRepository;
     private final PickingPackingNoteSupport pickingPackingNoteSupport;
+    private final AsnRepository asnRepository;
     private final InspectionPutawayRepository inspectionPutawayRepository;
     private final InspectionPutawayNoteSupport inspectionPutawayNoteSupport;
     private final LocationRepository locationRepository;
@@ -58,6 +60,7 @@ public class ProcessWorkerTaskService {
                                     WorkDetailRepository workDetailRepository,
                                     PickingPackingRepository pickingPackingRepository,
                                     PickingPackingNoteSupport pickingPackingNoteSupport,
+                                    AsnRepository asnRepository,
                                     InspectionPutawayRepository inspectionPutawayRepository,
                                     InspectionPutawayNoteSupport inspectionPutawayNoteSupport,
                                     LocationRepository locationRepository,
@@ -70,6 +73,7 @@ public class ProcessWorkerTaskService {
         this.workDetailRepository = workDetailRepository;
         this.pickingPackingRepository = pickingPackingRepository;
         this.pickingPackingNoteSupport = pickingPackingNoteSupport;
+        this.asnRepository = asnRepository;
         this.inspectionPutawayRepository = inspectionPutawayRepository;
         this.inspectionPutawayNoteSupport = inspectionPutawayNoteSupport;
         this.locationRepository = locationRepository;
@@ -209,6 +213,17 @@ public class ProcessWorkerTaskService {
         if (asnId == null || asnId.isBlank()) {
             throw new BusinessException(ErrorCode.ASN_ID_REQUIRED);
         }
+
+        asnRepository.findByAsnId(asnId).ifPresent(asn -> {
+            if ("REGISTERED".equals(asn.getStatus())) {
+                asn.confirmArrival(now, workerAccountId);
+                asn.beginInspectionPutaway(workerAccountId);
+                asnRepository.save(asn);
+            } else if ("ARRIVED".equals(asn.getStatus())) {
+                asn.beginInspectionPutaway(workerAccountId);
+                asnRepository.save(asn);
+            }
+        });
 
         WorkDetail detail = workDetailRepository
                 .findByIdWorkIdAndAsnIdAndIdSkuIdAndIdLocationIdAndTenantId(workId, asnId, skuId, locationId, tenantCode)
