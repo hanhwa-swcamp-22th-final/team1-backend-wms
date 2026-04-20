@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import static com.conk.wms.common.auth.AuthContextSupport.resolveSellerId;
+import static com.conk.wms.common.auth.AuthContextSupport.resolveTenantId;
 
 /**
  * 셀러 재고 목록 조회 API를 처리하는 query 컨트롤러다.
@@ -32,10 +33,12 @@ public class SellerInventoryQueryController {
             @ModelAttribute GetSellerInventoriesRequest request
     ) {
         String sellerId = resolveSellerId(authContext);
+        String tenantId = resolveTenantId(authContext);
         return ResponseEntity.ok(ApiResponse.success(
                 "ok",
                 getSellerInventoryListService.getSellerInventories(
                         sellerId,
+                        tenantId,
                         request.getPage(),
                         request.getSize(),
                         request.getStockStatus(),

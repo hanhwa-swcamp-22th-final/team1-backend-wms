@@ -42,7 +42,7 @@ class SellerProductQueryControllerTest {
     @Test
     @DisplayName("셀러 상품 목록 조회 API 호출 시 200과 목록을 반환한다")
     void getSellerProducts_success() throws Exception {
-        when(getSellerProductsService.getSellerProducts("SELLER-001")).thenReturn(List.of(
+        when(getSellerProductsService.getSellerProducts("SELLER-001", "CONK")).thenReturn(List.of(
                 SellerProductListItemResponse.builder()
                         .id("SKU-001")
                         .sku("SKU-001")
@@ -67,7 +67,8 @@ class SellerProductQueryControllerTest {
         ));
 
         mockMvc.perform(get("/wms/products/seller/list")
-                        .header("X-Tenant-Code", "SELLER-001"))
+                        .header("X-Tenant-Code", "CONK")
+                        .header("X-Seller-Id", "SELLER-001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value("ok"))
@@ -90,11 +91,12 @@ class SellerProductQueryControllerTest {
     @Test
     @DisplayName("서비스에서 상품 미존재 예외가 발생하면 404를 반환한다")
     void getSellerProduct_whenServiceThrows_thenReturn404() throws Exception {
-        when(getSellerProductsService.getSellerProduct("SELLER-001", "SKU-404"))
+        when(getSellerProductsService.getSellerProduct("SELLER-001", "CONK", "SKU-404"))
                 .thenThrow(new BusinessException(ErrorCode.PRODUCT_NOT_FOUND, "상품을 찾을 수 없습니다: SKU-404"));
 
         mockMvc.perform(get("/wms/products/seller/SKU-404")
-                        .header("X-Tenant-Code", "SELLER-001"))
+                        .header("X-Tenant-Code", "CONK")
+                        .header("X-Seller-Id", "SELLER-001"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.code").value("PRODUCT-008"))
@@ -104,10 +106,11 @@ class SellerProductQueryControllerTest {
     @Test
     @DisplayName("셀러 상품 상세 조회 API 호출 시 200과 상세를 반환한다")
     void getSellerProduct_success() throws Exception {
-        when(getSellerProductsService.getSellerProduct("SELLER-001", "SKU-001")).thenReturn(sampleResponse());
+        when(getSellerProductsService.getSellerProduct("SELLER-001", "CONK", "SKU-001")).thenReturn(sampleResponse());
 
         mockMvc.perform(get("/wms/products/seller/SKU-001")
-                        .header("X-Tenant-Code", "SELLER-001"))
+                        .header("X-Tenant-Code", "CONK")
+                        .header("X-Seller-Id", "SELLER-001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value("ok"))
@@ -125,7 +128,8 @@ class SellerProductQueryControllerTest {
                         .build());
 
         mockMvc.perform(get("/wms/products/seller/options")
-                        .header("X-Tenant-Code", "SELLER-001"))
+                        .header("X-Tenant-Code", "CONK")
+                        .header("X-Seller-Id", "SELLER-001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value("ok"));

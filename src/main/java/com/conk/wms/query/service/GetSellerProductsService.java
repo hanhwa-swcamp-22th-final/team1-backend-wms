@@ -62,35 +62,35 @@ public class GetSellerProductsService {
         this.warehouseRepository = warehouseRepository;
     }
 
-    public List<SellerProductListItemResponse> getSellerProducts(String sellerId) {
+    public List<SellerProductListItemResponse> getSellerProducts(String sellerId, String tenantId) {
         List<Product> products = productRepository.findAllBySellerIdOrderByCreatedAtDesc(sellerId);
         if (products.isEmpty()) {
             return List.of();
         }
 
-        ProductQueryContext context = buildContext(sellerId, products);
+        ProductQueryContext context = buildContext(sellerId, tenantId, products);
         return products.stream()
                 .map(product -> toListResponse(product, context))
                 .toList();
     }
 
-    public SellerProductResponse getSellerProduct(String sellerId, String productId) {
+    public SellerProductResponse getSellerProduct(String sellerId, String tenantId, String productId) {
         Product product = productRepository.findBySkuIdAndSellerId(productId, sellerId)
                 .orElseThrow(() -> new BusinessException(
                         ErrorCode.PRODUCT_NOT_FOUND,
                         ErrorCode.PRODUCT_NOT_FOUND.getMessage() + ": " + productId
                 ));
 
-        ProductQueryContext context = buildContext(sellerId, List.of(product));
+        ProductQueryContext context = buildContext(sellerId, tenantId, List.of(product));
         return toDetailResponse(product, context);
     }
 
-    private ProductQueryContext buildContext(String sellerId, List<Product> products) {
+    private ProductQueryContext buildContext(String sellerId, String tenantId, List<Product> products) {
         Set<String> targetSkus = products.stream()
                 .map(Product::getSkuId)
                 .collect(Collectors.toCollection(LinkedHashSet::new));
 
-        Map<String, List<Inventory>> inventoriesBySku = inventoryRepository.findAllByIdTenantId(sellerId).stream()
+        Map<String, List<Inventory>> inventoriesBySku = inventoryRepository.findAllByIdTenantId(tenantId).stream()
                 .filter(inventory -> targetSkus.contains(inventory.getSku()))
                 .collect(Collectors.groupingBy(Inventory::getSku, LinkedHashMap::new, Collectors.toList()));
 
@@ -104,7 +104,7 @@ public class GetSellerProductsService {
                 : locationRepository.findAllByLocationIdIn(targetLocationIds)).stream()
                 .collect(Collectors.toMap(Location::getLocationId, location -> location, (left, right) -> left, LinkedHashMap::new));
 
-        Map<String, String> warehouseNameById = warehouseRepository.findAllByTenantIdOrderByWarehouseIdAsc(sellerId).stream()
+        Map<String, String> warehouseNameById = warehouseRepository.findAllByTenantIdOrderByWarehouseIdAsc(tenantId).stream()
                 .collect(Collectors.toMap(Warehouse::getWarehouseId, Warehouse::getName, (left, right) -> left, LinkedHashMap::new));
 
         Map<String, List<ProductAttachment>> attachmentsBySku = productAttachmentRepository.findAllBySkuIdIn(targetSkus).stream()

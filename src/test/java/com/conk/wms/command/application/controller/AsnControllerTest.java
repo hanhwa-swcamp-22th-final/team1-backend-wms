@@ -132,7 +132,7 @@ class AsnControllerTest {
     @Test
     @DisplayName("Seller ASN 옵션 조회 API 호출 시 200과 옵션 응답을 반환한다")
     void getSellerAsnOptions_success() throws Exception {
-        when(getSellerAsnOptionsService.getOptions("SELLER-001"))
+        when(getSellerAsnOptionsService.getOptions("SELLER-001", "CONK"))
                 .thenReturn(SellerAsnOptionsResponse.builder()
                         .nextAsnNo("ASN-20260413-001")
                         .warehouses(List.of())
@@ -140,7 +140,8 @@ class AsnControllerTest {
                         .build());
 
         mockMvc.perform(get("/wms/seller/asns/options")
-                        .header("X-Tenant-Code", "SELLER-001"))
+                        .header("X-Tenant-Code", "CONK")
+                        .header("X-Seller-Id", "SELLER-001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.nextAsnNo").value("ASN-20260413-001"));

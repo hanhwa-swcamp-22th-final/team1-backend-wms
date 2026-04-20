@@ -58,11 +58,11 @@ class GetSellerInventoryListServiceTest {
 
         when(productRepository.findAllBySellerIdOrderByCreatedAtDesc("SELLER-001"))
                 .thenReturn(List.of(normalProduct, lowProduct, outProduct));
-        when(inventoryRepository.findAllByIdTenantId("SELLER-001"))
+        when(inventoryRepository.findAllByIdTenantId("CONK"))
                 .thenReturn(List.of(
-                        Inventory.createAvailable("LOC-001", "SKU-NORMAL", "SELLER-001", 12, LocalDateTime.of(2026, 4, 7, 10, 0)),
-                        new Inventory("LOC-001", "SKU-NORMAL", "SELLER-001", 3, "ALLOCATED", LocalDateTime.of(2026, 4, 7, 10, 0), LocalDateTime.of(2026, 4, 7, 10, 0)),
-                        Inventory.createAvailable("LOC-002", "SKU-LOW", "SELLER-001", 2, LocalDateTime.of(2026, 4, 6, 10, 0))
+                        Inventory.createAvailable("LOC-001", "SKU-NORMAL", "CONK", 12, LocalDateTime.of(2026, 4, 7, 10, 0)),
+                        new Inventory("LOC-001", "SKU-NORMAL", "CONK", 3, "ALLOCATED", LocalDateTime.of(2026, 4, 7, 10, 0), LocalDateTime.of(2026, 4, 7, 10, 0)),
+                        Inventory.createAvailable("LOC-002", "SKU-LOW", "CONK", 2, LocalDateTime.of(2026, 4, 6, 10, 0))
                 ));
         when(locationRepository.findAllByLocationIdIn(anyCollection()))
                 .thenReturn(List.of(
@@ -79,7 +79,7 @@ class GetSellerInventoryListServiceTest {
                         new AsnItem("ASN-001", "SKU-OUT", 7, "크림", 1)
                 ));
 
-        List<SellerInventoryListItemResponse> responses = getSellerInventoryListService.getSellerInventories("SELLER-001");
+        List<SellerInventoryListItemResponse> responses = getSellerInventoryListService.getSellerInventories("SELLER-001", "CONK");
 
         assertThat(responses).hasSize(3);
 
@@ -119,7 +119,7 @@ class GetSellerInventoryListServiceTest {
     void getSellerInventories_whenNoProducts_thenReturnEmpty() {
         when(productRepository.findAllBySellerIdOrderByCreatedAtDesc("SELLER-001")).thenReturn(List.of());
 
-        List<SellerInventoryListItemResponse> responses = getSellerInventoryListService.getSellerInventories("SELLER-001");
+        List<SellerInventoryListItemResponse> responses = getSellerInventoryListService.getSellerInventories("SELLER-001", "CONK");
 
         assertThat(responses).isEmpty();
     }
@@ -133,10 +133,10 @@ class GetSellerInventoryListServiceTest {
 
         when(productRepository.findAllBySellerIdOrderByCreatedAtDesc("SELLER-001"))
                 .thenReturn(List.of(normalProduct, lowProduct, outProduct));
-        when(inventoryRepository.findAllByIdTenantId("SELLER-001"))
+        when(inventoryRepository.findAllByIdTenantId("CONK"))
                 .thenReturn(List.of(
-                        Inventory.createAvailable("LOC-001", "SKU-NORMAL", "SELLER-001", 12, LocalDateTime.of(2026, 4, 7, 10, 0)),
-                        Inventory.createAvailable("LOC-002", "SKU-LOW", "SELLER-001", 2, LocalDateTime.of(2026, 4, 6, 10, 0))
+                        Inventory.createAvailable("LOC-001", "SKU-NORMAL", "CONK", 12, LocalDateTime.of(2026, 4, 7, 10, 0)),
+                        Inventory.createAvailable("LOC-002", "SKU-LOW", "CONK", 2, LocalDateTime.of(2026, 4, 6, 10, 0))
                 ));
         when(locationRepository.findAllByLocationIdIn(anyCollection()))
                 .thenReturn(List.of(
@@ -147,6 +147,7 @@ class GetSellerInventoryListServiceTest {
 
         SellerInventoryListResponse response = getSellerInventoryListService.getSellerInventories(
                 "SELLER-001",
+                "CONK",
                 0,
                 1,
                 "LOW",

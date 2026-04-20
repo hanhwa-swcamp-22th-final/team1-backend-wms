@@ -34,7 +34,7 @@ class SellerInventoryQueryControllerTest {
     @Test
     @DisplayName("셀러 재고 목록 조회 성공 시 ApiResponse를 반환한다")
     void getSellerInventories_success() throws Exception {
-        when(getSellerInventoryListService.getSellerInventories("SELLER-001", 0, 20, "NORMAL", "WH-001", "앰플"))
+        when(getSellerInventoryListService.getSellerInventories("SELLER-001", "CONK", 0, 20, "NORMAL", "WH-001", "앰플"))
                 .thenReturn(SellerInventoryListResponse.builder()
                         .items(List.of(
                                 SellerInventoryListItemResponse.builder()
@@ -66,7 +66,8 @@ class SellerInventoryQueryControllerTest {
                         .queryParam("stockStatus", "NORMAL")
                         .queryParam("warehouseId", "WH-001")
                         .queryParam("search", "앰플")
-                        .header("X-Tenant-Code", "SELLER-001"))
+                        .header("X-Tenant-Code", "CONK")
+                        .header("X-Seller-Id", "SELLER-001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value("ok"))

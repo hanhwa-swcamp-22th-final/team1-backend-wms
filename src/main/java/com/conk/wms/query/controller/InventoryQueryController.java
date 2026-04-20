@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 import static com.conk.wms.common.auth.AuthContextSupport.resolveSellerId;
+import static com.conk.wms.common.auth.AuthContextSupport.resolveTenantId;
 
 /**
  * 셀러 화면에서 쓰는 범용 재고 경로를 맞춰주는 query 컨트롤러다.
@@ -35,9 +36,10 @@ public class InventoryQueryController {
     @GetMapping
     public ResponseEntity<ApiResponse<List<SellerInventoryListItemResponse>>> getInventories(AuthContext authContext) {
         String sellerId = resolveSellerId(authContext);
+        String tenantId = resolveTenantId(authContext);
         return ResponseEntity.ok(ApiResponse.success(
                 "ok",
-                getSellerInventoryListService.getSellerInventories(sellerId)
+                getSellerInventoryListService.getSellerInventories(sellerId, tenantId)
         ));
     }
 
@@ -47,9 +49,10 @@ public class InventoryQueryController {
             AuthContext authContext
     ) {
         String sellerId = resolveSellerId(authContext);
+        String tenantId = resolveTenantId(authContext);
         return ResponseEntity.ok(ApiResponse.success(
                 "ok",
-                getSellerInventoryDetailService.getSellerInventoryDetail(sellerId, inventoryId)
+                getSellerInventoryDetailService.getSellerInventoryDetail(sellerId, tenantId, inventoryId)
         ));
     }
 }

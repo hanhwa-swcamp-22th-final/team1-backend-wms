@@ -61,13 +61,13 @@ class GetSellerAsnOptionsServiceTest {
                 .thenReturn(List.of(
                         new Product("SKU-001", "앰플", "뷰티", 10000, 8000, BigDecimal.ONE, BigDecimal.ONE, BigDecimal.ONE, BigDecimal.ONE, 10, "ACTIVE", "SELLER-001", "SYSTEM")
                 ));
-        when(inventoryRepository.findAllByIdTenantId("SELLER-001"))
+        when(inventoryRepository.findAllByIdTenantId("CONK"))
                 .thenReturn(List.of(
-                        new Inventory("LOC-01", "SKU-001", "SELLER-001", 7, "AVAILABLE")
+                        new Inventory("LOC-01", "SKU-001", "CONK", 7, "AVAILABLE")
                 ));
         when(asnIdGenerator.previewNext()).thenReturn("ASN-2026-0417-001");
 
-        SellerAsnOptionsResponse response = getSellerAsnOptionsService.getOptions("SELLER-001");
+        SellerAsnOptionsResponse response = getSellerAsnOptionsService.getOptions("SELLER-001", "CONK");
 
         assertThat(response.getWarehouses())
                 .extracting(SellerAsnOptionsResponse.WarehouseOptionResponse::getId)

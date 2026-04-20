@@ -36,7 +36,7 @@ class InventoryQueryControllerTest {
     @Test
     @DisplayName("범용 재고 목록 조회 성공 시 ApiResponse를 반환한다")
     void getInventories_success() throws Exception {
-        when(getSellerInventoryListService.getSellerInventories("SELLER-001"))
+        when(getSellerInventoryListService.getSellerInventories("SELLER-001", "CONK"))
                 .thenReturn(List.of(SellerInventoryListItemResponse.builder()
                         .id("SKU-001@WH-001")
                         .sku("SKU-001")
@@ -52,7 +52,8 @@ class InventoryQueryControllerTest {
                         .build()));
 
         mockMvc.perform(get("/wms/inventories")
-                        .header("X-Tenant-Code", "SELLER-001"))
+                        .header("X-Tenant-Code", "CONK")
+                        .header("X-Seller-Id", "SELLER-001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data[0].id").value("SKU-001@WH-001"));
@@ -61,7 +62,7 @@ class InventoryQueryControllerTest {
     @Test
     @DisplayName("범용 재고 상세 조회 성공 시 ApiResponse를 반환한다")
     void getInventory_success() throws Exception {
-        when(getSellerInventoryDetailService.getSellerInventoryDetail("SELLER-001", "SKU-001@WH-001"))
+        when(getSellerInventoryDetailService.getSellerInventoryDetail("SELLER-001", "CONK", "SKU-001@WH-001"))
                 .thenReturn(SellerInventoryDetailResponse.builder()
                         .locationCode("WH-001 / A-01-01")
                         .safetyStockDays(5)
@@ -71,7 +72,8 @@ class InventoryQueryControllerTest {
                         .build());
 
         mockMvc.perform(get("/wms/inventories/SKU-001@WH-001")
-                        .header("X-Tenant-Code", "SELLER-001"))
+                        .header("X-Tenant-Code", "CONK")
+                        .header("X-Seller-Id", "SELLER-001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.locationCode").value("WH-001 / A-01-01"))

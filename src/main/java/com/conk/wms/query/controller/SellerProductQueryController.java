@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 import static com.conk.wms.common.auth.AuthContextSupport.resolveSellerId;
+import static com.conk.wms.common.auth.AuthContextSupport.resolveTenantId;
 
 /**
  * 셀러 상품 조회 API를 담당하는 query 컨트롤러다.
@@ -38,7 +39,8 @@ public class SellerProductQueryController {
             AuthContext authContext
     ) {
         String sellerId = resolveSellerId(authContext);
-        return ResponseEntity.ok(ApiResponse.success("ok", getSellerProductsService.getSellerProducts(sellerId)));
+        String tenantId = resolveTenantId(authContext);
+        return ResponseEntity.ok(ApiResponse.success("ok", getSellerProductsService.getSellerProducts(sellerId, tenantId)));
     }
 
     @GetMapping("/{productId}")
@@ -47,7 +49,8 @@ public class SellerProductQueryController {
             AuthContext authContext
     ) {
         String sellerId = resolveSellerId(authContext);
-        return ResponseEntity.ok(ApiResponse.success("ok", getSellerProductsService.getSellerProduct(sellerId, productId)));
+        String tenantId = resolveTenantId(authContext);
+        return ResponseEntity.ok(ApiResponse.success("ok", getSellerProductsService.getSellerProduct(sellerId, tenantId, productId)));
     }
 
     @GetMapping("/options")

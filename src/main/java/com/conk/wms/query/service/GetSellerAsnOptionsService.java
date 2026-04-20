@@ -43,7 +43,7 @@ public class GetSellerAsnOptionsService {
         this.asnIdGenerator = asnIdGenerator;
     }
 
-    public SellerAsnOptionsResponse getOptions(String sellerId) {
+    public SellerAsnOptionsResponse getOptions(String sellerId, String tenantId) {
         List<SellerWarehouse> sellerWarehouses = sellerWarehouseRepository
                 .findAllByIdSellerIdOrderByIsDefaultDescIdWarehouseIdAsc(sellerId);
         Map<String, Warehouse> warehouseById = warehouseRepository.findAllById(
@@ -58,7 +58,7 @@ public class GetSellerAsnOptionsService {
                 .filter(Objects::nonNull)
                 .toList();
         List<Product> products = productRepository.findAllBySellerIdOrderByCreatedAtDesc(sellerId);
-        Map<String, Integer> availableStockBySku = inventoryRepository.findAllByIdTenantId(sellerId).stream()
+        Map<String, Integer> availableStockBySku = inventoryRepository.findAllByIdTenantId(tenantId).stream()
                 .filter(inventory -> "AVAILABLE".equals(inventory.getId().getInventoryType()))
                 .collect(Collectors.groupingBy(Inventory::getSku, Collectors.summingInt(Inventory::getQuantity)));
 

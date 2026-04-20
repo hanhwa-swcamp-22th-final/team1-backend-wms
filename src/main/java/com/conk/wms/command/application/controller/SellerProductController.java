@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import static com.conk.wms.common.auth.AuthContextSupport.resolveSellerId;
+import static com.conk.wms.common.auth.AuthContextSupport.resolveTenantId;
 
 /**
  * 셀러 상품 등록/조회/수정 API를 처리하는 컨트롤러다.
@@ -39,8 +40,9 @@ public class SellerProductController {
             AuthContext authContext
     ) {
         String sellerId = resolveSellerId(authContext);
+        String tenantId = resolveTenantId(authContext);
         String productId = productCommandService.register(sellerId, request);
-        SellerProductResponse response = getSellerProductsService.getSellerProduct(sellerId, productId);
+        SellerProductResponse response = getSellerProductsService.getSellerProduct(sellerId, tenantId, productId);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("created", response));
     }
@@ -52,8 +54,9 @@ public class SellerProductController {
             AuthContext authContext
     ) {
         String sellerId = resolveSellerId(authContext);
+        String tenantId = resolveTenantId(authContext);
         String updatedProductId = productCommandService.update(sellerId, productId, request);
-        SellerProductResponse response = getSellerProductsService.getSellerProduct(sellerId, updatedProductId);
+        SellerProductResponse response = getSellerProductsService.getSellerProduct(sellerId, tenantId, updatedProductId);
         return ResponseEntity.ok(ApiResponse.success("ok", response));
     }
 }

@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 import static com.conk.wms.common.auth.AuthContextSupport.resolveSellerId;
+import static com.conk.wms.common.auth.AuthContextSupport.resolveTenantId;
 
 /**
  * 셀러가 ASN을 등록할 때 사용하는 command API 컨트롤러다.
@@ -64,7 +65,8 @@ public class AsnController {
             AuthContext authContext
     ) {
         String sellerId = resolveSellerId(authContext);
-        return ResponseEntity.ok(ApiResponse.success("ok", getSellerAsnOptionsService.getOptions(sellerId)));
+        String tenantId = resolveTenantId(authContext);
+        return ResponseEntity.ok(ApiResponse.success("ok", getSellerAsnOptionsService.getOptions(sellerId, tenantId)));
     }
 
     // 프론트 create 화면 payload를 command 모델로 변환하는 경계.

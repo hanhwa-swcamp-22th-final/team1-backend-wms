@@ -57,18 +57,19 @@ public class GetSellerInventoryListService {
         this.asnItemRepository = asnItemRepository;
     }
 
-    public List<SellerInventoryListItemResponse> getSellerInventories(String sellerId) {
-        return buildSellerInventories(sellerId);
+    public List<SellerInventoryListItemResponse> getSellerInventories(String sellerId, String tenantId) {
+        return buildSellerInventories(sellerId, tenantId);
     }
 
     public SellerInventoryListResponse getSellerInventories(String sellerId,
+                                                            String tenantId,
                                                             int page,
                                                             int size,
                                                             String stockStatus,
                                                             String warehouseId,
                                                             String search) {
         List<SellerInventoryListItemResponse> filteredRows = applyFilters(
-                buildSellerInventories(sellerId),
+                buildSellerInventories(sellerId, tenantId),
                 stockStatus,
                 warehouseId,
                 search
@@ -87,7 +88,7 @@ public class GetSellerInventoryListService {
                 .build();
     }
 
-    private List<SellerInventoryListItemResponse> buildSellerInventories(String sellerId) {
+    private List<SellerInventoryListItemResponse> buildSellerInventories(String sellerId, String tenantId) {
         List<Product> products = productRepository.findAllBySellerIdOrderByCreatedAtDesc(sellerId);
         if (products.isEmpty()) {
             return List.of();
@@ -97,7 +98,7 @@ public class GetSellerInventoryListService {
                 .collect(Collectors.toMap(Product::getSkuId, Function.identity(), (left, right) -> left, LinkedHashMap::new));
         Set<String> skuIds = productBySku.keySet();
 
-        List<Inventory> sellerInventories = inventoryRepository.findAllByIdTenantId(sellerId).stream()
+        List<Inventory> sellerInventories = inventoryRepository.findAllByIdTenantId(tenantId).stream()
                 .filter(inventory -> skuIds.contains(inventory.getSku()))
                 .toList();
         Map<String, Location> locationById = loadLocations(sellerInventories);

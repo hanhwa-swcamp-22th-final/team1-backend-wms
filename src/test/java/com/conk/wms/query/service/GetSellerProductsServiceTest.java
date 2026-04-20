@@ -87,7 +87,7 @@ class GetSellerProductsServiceTest {
         when(productAttachmentRepository.findAllBySkuIdIn(java.util.Set.of("SKU-001", "SKU-002"))).thenReturn(List.of(
                 new ProductAttachment("SKU-001", "IMAGE", true, "ampoule-front.png", LocalDateTime.now())
         ));
-        when(inventoryRepository.findAllByIdTenantId("SELLER-001")).thenReturn(List.of(
+        when(inventoryRepository.findAllByIdTenantId("CONK")).thenReturn(List.of(
                 Inventory.createAvailable("LOC-001", "SKU-001", "CONK", 8, LocalDateTime.now()),
                 new Inventory("LOC-001", "SKU-001", "CONK", 3, "ALLOCATED"),
                 Inventory.createAvailable("LOC-002", "SKU-002", "CONK", 5, LocalDateTime.now())
@@ -96,12 +96,12 @@ class GetSellerProductsServiceTest {
                 new Location("LOC-001", "A-1-1", "WH-001", "A", "1", 100, true),
                 new Location("LOC-002", "B-1-1", "WH-002", "B", "1", 100, true)
         ));
-        when(warehouseRepository.findAllByTenantIdOrderByWarehouseIdAsc("SELLER-001")).thenReturn(List.of(
-                new Warehouse("WH-001", "ICN-A", "SELLER-001"),
-                new Warehouse("WH-002", "PUS-B", "SELLER-001")
+        when(warehouseRepository.findAllByTenantIdOrderByWarehouseIdAsc("CONK")).thenReturn(List.of(
+                new Warehouse("WH-001", "ICN-A", "CONK"),
+                new Warehouse("WH-002", "PUS-B", "CONK")
         ));
 
-        List<SellerProductListItemResponse> responses = getSellerProductsService.getSellerProducts("SELLER-001");
+        List<SellerProductListItemResponse> responses = getSellerProductsService.getSellerProducts("SELLER-001", "CONK");
 
         assertThat(responses).hasSize(2);
         assertThat(responses.get(0).getSku()).isEqualTo("SKU-001");
@@ -141,17 +141,17 @@ class GetSellerProductsServiceTest {
         when(productAttachmentRepository.findAllBySkuIdIn(java.util.Set.of("SKU-001"))).thenReturn(List.of(
                 new ProductAttachment("SKU-001", "IMAGE", true, "ampoule-front.png", LocalDateTime.now())
         ));
-        when(inventoryRepository.findAllByIdTenantId("SELLER-001")).thenReturn(List.of(
+        when(inventoryRepository.findAllByIdTenantId("CONK")).thenReturn(List.of(
                 Inventory.createAvailable("LOC-001", "SKU-001", "CONK", 20, LocalDateTime.now())
         ));
         when(locationRepository.findAllByLocationIdIn(java.util.Set.of("LOC-001"))).thenReturn(List.of(
                 new Location("LOC-001", "A-1-1", "WH-001", "A", "1", 100, true)
         ));
-        when(warehouseRepository.findAllByTenantIdOrderByWarehouseIdAsc("SELLER-001")).thenReturn(List.of(
-                new Warehouse("WH-001", "ICN-A", "SELLER-001")
+        when(warehouseRepository.findAllByTenantIdOrderByWarehouseIdAsc("CONK")).thenReturn(List.of(
+                new Warehouse("WH-001", "ICN-A", "CONK")
         ));
 
-        SellerProductResponse response = getSellerProductsService.getSellerProduct("SELLER-001", "SKU-001");
+        SellerProductResponse response = getSellerProductsService.getSellerProduct("SELLER-001", "CONK", "SKU-001");
 
         assertThat(response.getId()).isEqualTo("SKU-001");
         assertThat(response.getWarehouseName()).isEqualTo("ICN-A");

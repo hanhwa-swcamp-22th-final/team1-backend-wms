@@ -20,8 +20,8 @@ public class GetSellerInventoryDetailService {
         this.getSellerInventoryListService = getSellerInventoryListService;
     }
 
-    public SellerInventoryDetailResponse getSellerInventoryDetail(String sellerId, String inventoryId) {
-        return getSellerInventoryListService.getSellerInventories(sellerId).stream()
+    public SellerInventoryDetailResponse getSellerInventoryDetail(String sellerId, String tenantId, String inventoryId) {
+        return getSellerInventoryListService.getSellerInventories(sellerId, tenantId).stream()
                 .filter(item -> inventoryId.equals(item.getId()))
                 .map(SellerInventoryListItemResponse::getDetail)
                 .findFirst()

@@ -51,10 +51,11 @@ class SellerProductControllerTest {
     @DisplayName("셀러 상품 등록 API 호출 시 201과 상세 응답을 반환한다")
     void register_success() throws Exception {
         when(productCommandService.register(eq("SELLER-001"), any())).thenReturn("SKU-001");
-        when(getSellerProductsService.getSellerProduct("SELLER-001", "SKU-001")).thenReturn(sampleResponse());
+        when(getSellerProductsService.getSellerProduct("SELLER-001", "CONK", "SKU-001")).thenReturn(sampleResponse());
 
         mockMvc.perform(post("/wms/products/seller/register")
-                        .header("X-Tenant-Code", "SELLER-001")
+                        .header("X-Tenant-Code", "CONK")
+                        .header("X-Seller-Id", "SELLER-001")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(sampleRequestBody())))
                 .andExpect(status().isCreated())
@@ -67,10 +68,11 @@ class SellerProductControllerTest {
     @DisplayName("셀러 상품 수정 API 호출 시 200과 상세 응답을 반환한다")
     void update_success() throws Exception {
         when(productCommandService.update(eq("SELLER-001"), eq("SKU-001"), any())).thenReturn("SKU-001");
-        when(getSellerProductsService.getSellerProduct("SELLER-001", "SKU-001")).thenReturn(sampleResponse());
+        when(getSellerProductsService.getSellerProduct("SELLER-001", "CONK", "SKU-001")).thenReturn(sampleResponse());
 
         mockMvc.perform(put("/wms/products/seller/SKU-001")
-                        .header("X-Tenant-Code", "SELLER-001")
+                        .header("X-Tenant-Code", "CONK")
+                        .header("X-Seller-Id", "SELLER-001")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(sampleRequestBody())))
                 .andExpect(status().isOk())
