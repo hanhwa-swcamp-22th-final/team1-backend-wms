@@ -1,5 +1,7 @@
 package com.conk.wms.command.application.service;
 
+import com.conk.wms.command.application.dto.CompleteAsnInspectionCommand;
+import com.conk.wms.command.application.dto.ConfirmAsnInventoryCommand;
 import com.conk.wms.command.application.dto.response.ProcessWorkerTaskResponse;
 import com.conk.wms.command.domain.aggregate.InspectionPutaway;
 import com.conk.wms.command.domain.aggregate.Location;
@@ -49,6 +51,8 @@ public class ProcessWorkerTaskService {
     private final WorkRepository workRepository;
     private final AutoAssignTaskService autoAssignTaskService;
     private final OrderServiceClient orderServiceClient;
+    private final CompleteAsnInspectionService completeAsnInspectionService;
+    private final ConfirmAsnInventoryService confirmAsnInventoryService;
 
     public ProcessWorkerTaskService(WorkAssignmentRepository workAssignmentRepository,
                                     WorkDetailRepository workDetailRepository,
@@ -59,7 +63,9 @@ public class ProcessWorkerTaskService {
                                     LocationRepository locationRepository,
                                     WorkRepository workRepository,
                                     AutoAssignTaskService autoAssignTaskService,
-                                    OrderServiceClient orderServiceClient) {
+                                    OrderServiceClient orderServiceClient,
+                                    CompleteAsnInspectionService completeAsnInspectionService,
+                                    ConfirmAsnInventoryService confirmAsnInventoryService) {
         this.workAssignmentRepository = workAssignmentRepository;
         this.workDetailRepository = workDetailRepository;
         this.pickingPackingRepository = pickingPackingRepository;
@@ -70,6 +76,8 @@ public class ProcessWorkerTaskService {
         this.workRepository = workRepository;
         this.autoAssignTaskService = autoAssignTaskService;
         this.orderServiceClient = orderServiceClient;
+        this.completeAsnInspectionService = completeAsnInspectionService;
+        this.confirmAsnInventoryService = confirmAsnInventoryService;
     }
 
     @Transactional
@@ -158,6 +166,16 @@ public class ProcessWorkerTaskService {
                 work.complete();
                 workRepository.save(work);
             });
+            if (isInboundStage(stage) && asnId != null && !asnId.isBlank()) {
+                completeAsnInspectionService.complete(new CompleteAsnInspectionCommand(
+                        asnId,
+                        workerAccountId
+                ));
+                confirmAsnInventoryService.confirm(new ConfirmAsnInventoryCommand(
+                        asnId,
+                        workerAccountId
+                ));
+            }
         }
         if (!isInboundStage(stage) && STAGE_PICKING.equals(stage) && detail.isPickingOnlyWork()) {
             autoAssignTaskService.assignPackingIfReady(orderId, tenantCode, workerAccountId);

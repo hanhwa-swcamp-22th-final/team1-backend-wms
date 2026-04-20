@@ -16,6 +16,7 @@ import com.conk.wms.common.exception.BusinessException;
 import com.conk.wms.common.exception.ErrorCode;
 import com.conk.wms.common.support.InspectionPutawayNoteSupport;
 import com.conk.wms.common.support.PickingPackingNoteSupport;
+import com.conk.wms.query.client.OrderServiceClient;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -65,6 +66,15 @@ class ProcessWorkerTaskServiceTest {
 
     @Mock
     private AutoAssignTaskService autoAssignTaskService;
+
+    @Mock
+    private OrderServiceClient orderServiceClient;
+
+    @Mock
+    private CompleteAsnInspectionService completeAsnInspectionService;
+
+    @Mock
+    private ConfirmAsnInventoryService confirmAsnInventoryService;
 
     @InjectMocks
     private ProcessWorkerTaskService processWorkerTaskService;
@@ -426,6 +436,8 @@ class ProcessWorkerTaskServiceTest {
         verify(inspectionPutawayRepository).save(row);
         verify(workDetailRepository).save(detail);
         verify(workAssignmentRepository).save(assignment);
+        verify(completeAsnInspectionService).complete(any());
+        verify(confirmAsnInventoryService).confirm(any());
         assertEquals("PUTAWAY_COMPLETED", response.getDetailStatus());
         assertTrue(response.isWorkCompleted());
         assertEquals(5, row.getPutawayQuantity());
