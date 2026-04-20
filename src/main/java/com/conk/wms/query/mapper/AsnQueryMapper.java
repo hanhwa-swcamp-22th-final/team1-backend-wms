@@ -181,7 +181,7 @@ public class AsnQueryMapper {
                                                                      List<AsnItem> items,
                                                                      List<InspectionPutaway> inspectionRows,
                                                                      Map<String, Product> productBySku,
-                                                                     Set<String> knownSkuIds) {
+                                                                     Set<String> manualAssignSkuIds) {
         int plannedQuantity = items.stream()
                 .mapToInt(AsnItem::getQuantity)
                 .sum();
@@ -194,7 +194,7 @@ public class AsnQueryMapper {
                 .toList();
 
         List<WhManagerInboundAsnResponse.NewSkuResponse> newSkus = skuIds.stream()
-                .filter(skuId -> !knownSkuIds.contains(skuId))
+                .filter(manualAssignSkuIds::contains)
                 .map(skuId -> WhManagerInboundAsnResponse.NewSkuResponse.builder()
                         .code(skuId)
                         .name(resolveProductName(items, productBySku, skuId))

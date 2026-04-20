@@ -10,6 +10,7 @@ import com.conk.wms.command.domain.repository.AsnRepository;
 import com.conk.wms.command.domain.repository.InspectionPutawayRepository;
 import com.conk.wms.command.domain.repository.ProductRepository;
 import com.conk.wms.command.domain.repository.WarehouseRepository;
+import com.conk.wms.common.support.PutawayLocationSupport;
 import com.conk.wms.query.controller.dto.response.WhManagerInboundAsnResponse;
 import com.conk.wms.query.mapper.AsnQueryMapper;
 import org.springframework.stereotype.Service;
@@ -35,6 +36,7 @@ public class GetWhInboundAsnsService {
     private final AsnItemRepository asnItemRepository;
     private final InspectionPutawayRepository inspectionPutawayRepository;
     private final ProductRepository productRepository;
+    private final PutawayLocationSupport putawayLocationSupport;
     private final AsnQueryMapper asnQueryMapper;
 
     public GetWhInboundAsnsService(WarehouseRepository warehouseRepository,
@@ -42,12 +44,14 @@ public class GetWhInboundAsnsService {
                                    AsnItemRepository asnItemRepository,
                                    InspectionPutawayRepository inspectionPutawayRepository,
                                    ProductRepository productRepository,
+                                   PutawayLocationSupport putawayLocationSupport,
                                    AsnQueryMapper asnQueryMapper) {
         this.warehouseRepository = warehouseRepository;
         this.asnRepository = asnRepository;
         this.asnItemRepository = asnItemRepository;
         this.inspectionPutawayRepository = inspectionPutawayRepository;
         this.productRepository = productRepository;
+        this.putawayLocationSupport = putawayLocationSupport;
         this.asnQueryMapper = asnQueryMapper;
     }
 
@@ -82,22 +86,46 @@ public class GetWhInboundAsnsService {
                 ? Map.of()
                 : productRepository.findAllBySkuIdIn(skuIds).stream()
                 .collect(Collectors.toMap(Product::getSkuId, Function.identity(), (left, right) -> left));
-        Set<String> knownSkuIds = skuIds.isEmpty()
-                ? Set.of()
-                : inspectionPutawayRepository
-                .findAllBySkuIdInAndTenantIdAndCompletedTrueAndLocationIdIsNotNullOrderByCompletedAtDescUpdatedAtDesc(skuIds, tenantCode)
-                .stream()
-                .map(InspectionPutaway::getSkuId)
-                .collect(Collectors.toSet());
-
         return asns.stream()
-                .map(asn -> asnQueryMapper.toWhManagerInboundAsnResponse(
-                        asn,
-                        itemsByAsnId.getOrDefault(asn.getAsnId(), List.of()),
-                        inspectionRowsByAsnId.getOrDefault(asn.getAsnId(), List.of()),
-                        productBySku,
-                        knownSkuIds
-                ))
+                .map(asn -> {
+                    List<AsnItem> asnItems = itemsByAsnId.getOrDefault(asn.getAsnId(), List.of());
+                    List<InspectionPutaway> inspectionRows = inspectionRowsByAsnId.getOrDefault(asn.getAsnId(), List.of());
+                    Set<String> manualAssignSkuIds = resolveManualAssignSkuIds(asn, asnItems, inspectionRows, tenantCode);
+                    return asnQueryMapper.toWhManagerInboundAsnResponse(
+                            asn,
+                            asnItems,
+                            inspectionRows,
+                            productBySku,
+                            manualAssignSkuIds
+                    );
+                })
                 .toList();
+    }
+
+    private Set<String> resolveManualAssignSkuIds(Asn asn,
+                                                  List<AsnItem> asnItems,
+                                                  List<InspectionPutaway> inspectionRows,
+                                                  String tenantCode) {
+        Map<String, InspectionPutaway> rowBySkuId = inspectionRows.stream()
+                .collect(Collectors.toMap(InspectionPutaway::getSkuId, Function.identity(), (left, right) -> left));
+
+        return asnItems.stream()
+                .filter(item -> {
+                    InspectionPutaway existingRow = rowBySkuId.get(item.getSkuId());
+                    if (existingRow != null && existingRow.getLocationId() != null && !existingRow.getLocationId().isBlank()) {
+                        return false;
+                    }
+
+                    return putawayLocationSupport.findAutoMatchedLocation(
+                                    asn.getWarehouseId(),
+                                    tenantCode,
+                                    item.getSkuId(),
+                                    item.getQuantity()
+                            )
+                            .map(PutawayLocationSupport.MatchedLocation::isRequiresManualAssign)
+                            .orElse(true);
+                })
+                .map(AsnItem::getSkuId)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 }

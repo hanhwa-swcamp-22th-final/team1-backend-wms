@@ -10,6 +10,7 @@ import com.conk.wms.command.domain.repository.AsnRepository;
 import com.conk.wms.command.domain.repository.InspectionPutawayRepository;
 import com.conk.wms.command.domain.repository.ProductRepository;
 import com.conk.wms.command.domain.repository.WarehouseRepository;
+import com.conk.wms.common.support.PutawayLocationSupport;
 import com.conk.wms.query.controller.dto.response.WhManagerInboundAsnResponse;
 import com.conk.wms.query.mapper.AsnQueryMapper;
 import org.junit.jupiter.api.DisplayName;
@@ -34,12 +35,14 @@ class GetWhInboundAsnsServiceTest {
     private final AsnItemRepository asnItemRepository = mock(AsnItemRepository.class);
     private final InspectionPutawayRepository inspectionPutawayRepository = mock(InspectionPutawayRepository.class);
     private final ProductRepository productRepository = mock(ProductRepository.class);
+    private final PutawayLocationSupport putawayLocationSupport = mock(PutawayLocationSupport.class);
     private final GetWhInboundAsnsService service = new GetWhInboundAsnsService(
             warehouseRepository,
             asnRepository,
             asnItemRepository,
             inspectionPutawayRepository,
             productRepository,
+            putawayLocationSupport,
             new AsnQueryMapper()
     );
 
@@ -69,10 +72,10 @@ class GetWhInboundAsnsServiceTest {
                         createProduct("SKU-NEW", "신규 상품"),
                         createProduct("SKU-OLD", "기존 상품")
                 ));
-        when(inspectionPutawayRepository
-                .findAllBySkuIdInAndTenantIdAndCompletedTrueAndLocationIdIsNotNullOrderByCompletedAtDescUpdatedAtDesc(
-                        anyCollection(), eq("CONK")))
-                .thenReturn(List.of(inspection));
+        when(putawayLocationSupport.findAutoMatchedLocation("WH-001", "CONK", "SKU-NEW", 20))
+                .thenReturn(java.util.Optional.of(new PutawayLocationSupport.MatchedLocation(null, "NEW", true)));
+        when(putawayLocationSupport.findAutoMatchedLocation("WH-001", "CONK", "SKU-OLD", 30))
+                .thenReturn(java.util.Optional.of(new PutawayLocationSupport.MatchedLocation(inspectionCompletedLocation(), "AUTO", false)));
 
         List<WhManagerInboundAsnResponse> result = service.getInboundAsns("CONK");
 
@@ -120,6 +123,18 @@ class GetWhInboundAsnsServiceTest {
                 "ACTIVE",
                 "SELLER-001",
                 "SELLER-001"
+        );
+    }
+
+    private com.conk.wms.command.domain.aggregate.Location inspectionCompletedLocation() {
+        return new com.conk.wms.command.domain.aggregate.Location(
+                "LOC-A-01-01",
+                "BIN-A-01",
+                "WH-001",
+                "A",
+                "01",
+                100,
+                true
         );
     }
 }
