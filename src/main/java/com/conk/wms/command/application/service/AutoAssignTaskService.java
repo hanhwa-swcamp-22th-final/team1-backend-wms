@@ -2,6 +2,7 @@ package com.conk.wms.command.application.service;
 
 import com.conk.wms.command.domain.aggregate.AllocatedInventory;
 import com.conk.wms.command.domain.aggregate.AsnItem;
+import com.conk.wms.command.domain.aggregate.Inventory;
 import com.conk.wms.command.domain.aggregate.InspectionPutaway;
 import com.conk.wms.command.domain.aggregate.Location;
 import com.conk.wms.command.domain.aggregate.Work;
@@ -9,6 +10,7 @@ import com.conk.wms.command.domain.aggregate.WorkAssignment;
 import com.conk.wms.command.domain.aggregate.WorkDetail;
 import com.conk.wms.command.domain.repository.AllocatedInventoryRepository;
 import com.conk.wms.command.domain.repository.AsnItemRepository;
+import com.conk.wms.command.domain.repository.InventoryRepository;
 import com.conk.wms.command.domain.repository.InspectionPutawayRepository;
 import com.conk.wms.command.domain.repository.LocationRepository;
 import com.conk.wms.command.domain.repository.WorkAssignmentRepository;
@@ -39,6 +41,7 @@ public class AutoAssignTaskService {
 
     private final AllocatedInventoryRepository allocatedInventoryRepository;
     private final AsnItemRepository asnItemRepository;
+    private final InventoryRepository inventoryRepository;
     private final InspectionPutawayRepository inspectionPutawayRepository;
     private final LocationRepository locationRepository;
     private final WorkAssignmentRepository workAssignmentRepository;
@@ -47,6 +50,7 @@ public class AutoAssignTaskService {
 
     public AutoAssignTaskService(AllocatedInventoryRepository allocatedInventoryRepository,
                                  AsnItemRepository asnItemRepository,
+                                 InventoryRepository inventoryRepository,
                                  InspectionPutawayRepository inspectionPutawayRepository,
                                  LocationRepository locationRepository,
                                  WorkAssignmentRepository workAssignmentRepository,
@@ -54,6 +58,7 @@ public class AutoAssignTaskService {
                                  WorkRepository workRepository) {
         this.allocatedInventoryRepository = allocatedInventoryRepository;
         this.asnItemRepository = asnItemRepository;
+        this.inventoryRepository = inventoryRepository;
         this.inspectionPutawayRepository = inspectionPutawayRepository;
         this.locationRepository = locationRepository;
         this.workAssignmentRepository = workAssignmentRepository;
@@ -125,6 +130,27 @@ public class AutoAssignTaskService {
         }
 
         return new AutoAssignResult(assignmentCount, detailCount, unassignedRowCount);
+    }
+
+    /**
+     * 주문의 skuId로 inventory → location → worker_account_id 순서로 조회해 담당 작업자를 찾고 작업을 배정한다.
+     * inventory에서 해당 sku를 보유한 첫 번째 location의 담당 작업자에게 배정한다.
+     * 담당 작업자를 찾지 못하면 location 고정 작업자 기반 자동 배정으로 fallback한다.
+     */
+    @Transactional
+    public AutoAssignResult assignBySkuWorker(String orderId, String tenantCode, String skuId, String actorId) {
+        String workerId = inventoryRepository.findAllByIdSkuAndIdTenantId(skuId, tenantCode)
+                .stream()
+                .map(inv -> locationRepository.findById(inv.getId().getLocationId()).orElse(null))
+                .filter(loc -> loc != null && loc.getWorkerAccountId() != null && !loc.getWorkerAccountId().isBlank())
+                .map(Location::getWorkerAccountId)
+                .findFirst()
+                .orElse(null);
+
+        if (workerId == null) {
+            return assign(orderId, tenantCode, actorId);
+        }
+        return assignWithWorker(orderId, tenantCode, workerId, actorId);
     }
 
     /**

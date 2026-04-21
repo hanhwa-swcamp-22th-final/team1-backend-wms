@@ -116,11 +116,13 @@ public class OutboundManagementController {
                 .build();
         // 송장발행
         integrationServiceClient.getLabel(request);
-        // 업무 배정
-        String workerId = requestbody.getWorkerId();
-        if (workerId != null && !workerId.isBlank()) {
-            autoAssignTaskService.assignWithWorker(
-                    orderId, authContext.getTenantId(), workerId, authContext.getUserId());
+        // 업무 배정: 주문 첫 번째 SKU → inventory → location → worker_account_id 순으로 담당 작업자 조회
+        String skuId = order.getItems() != null && !order.getItems().isEmpty()
+                ? order.getItems().getFirst().getSkuId()
+                : null;
+        if (skuId != null && !skuId.isBlank()) {
+            autoAssignTaskService.assignBySkuWorker(
+                    orderId, authContext.getTenantId(), skuId, authContext.getUserId());
         } else {
             autoAssignTaskService.assign(orderId, authContext.getTenantId(), authContext.getUserId());
         }
