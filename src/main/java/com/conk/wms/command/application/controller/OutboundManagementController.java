@@ -117,13 +117,20 @@ public class OutboundManagementController {
         // 송장발행
         integrationServiceClient.getLabel(request);
         // 업무 배정
-        autoAssignTaskService.assign(orderId, authContext.getTenantId(), authContext.getUserId());
+        String workerId = requestbody.getWorkerId();
+        if (workerId != null && !workerId.isBlank()) {
+            autoAssignTaskService.assignWithWorker(
+                    orderId, authContext.getTenantId(), workerId, authContext.getUserId());
+        } else {
+            autoAssignTaskService.assign(orderId, authContext.getTenantId(), authContext.getUserId());
+        }
 
         orderServiceClient.updateOrderStatus(orderId, Map.of(
                 "status", "ALLOCATED",
                 "warehouseId", warehouse.getId()
         ));
         orderServiceClient.updateOrderStatus(orderId, Map.of("status", "OUTBOUND_INSTRUCTED"));
+
         return ResponseEntity.ok(ApiResponse.success("dispatch requested",
                 DispatchPendingOrderResponse.builder()
                         .orderId(orderId)

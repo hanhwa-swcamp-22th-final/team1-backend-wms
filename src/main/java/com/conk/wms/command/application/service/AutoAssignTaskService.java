@@ -128,6 +128,42 @@ public class AutoAssignTaskService {
     }
 
     /**
+     * 출고 지시 시 요청에 명시된 작업자에게 직접 출고 작업을 배정한다.
+     * location 고정 작업자 조회 없이 전달된 workerId를 그대로 사용한다.
+     */
+    @Transactional
+    public AutoAssignResult assignWithWorker(String orderId, String tenantCode,
+                                             String workerId, String actorId) {
+        List<AllocatedInventory> allocatedRows =
+                allocatedInventoryRepository.findAllByIdOrderIdAndIdTenantId(orderId, tenantCode);
+        if (allocatedRows.isEmpty()) {
+            return new AutoAssignResult(0, 0, 0);
+        }
+
+        clearExistingAssignments(orderId, tenantCode);
+
+        String actor = actorId == null || actorId.isBlank() ? "SYSTEM" : actorId;
+        String workId = buildOutboundWorkId(orderId, tenantCode, workerId);
+        createOrReplaceWork(workId, tenantCode, WORK_TYPE_OUTBOUND, workerId);
+        workAssignmentRepository.save(new WorkAssignment(workId, tenantCode, workerId, actor));
+
+        int detailCount = 0;
+        for (AllocatedInventory allocated : allocatedRows) {
+            workDetailRepository.save(new WorkDetail(
+                    workId,
+                    orderId,
+                    allocated.getId().getSkuId(),
+                    allocated.getId().getLocationId(),
+                    allocated.getQuantity(),
+                    actor
+            ));
+            detailCount++;
+        }
+
+        return new AutoAssignResult(1, detailCount, 0);
+    }
+
+    /**
      * 분산 피킹 주문의 모든 picking 작업이 끝난 뒤 마지막 피킹 완료 작업자에게 packing 작업을 배정한다.
      */
     @Transactional
