@@ -55,8 +55,7 @@ public class OutboundManagementController {
     public ResponseEntity<ApiResponse<DispatchPendingOrderResponse>> dispatchSingle(
             @PathVariable String orderId,
             AuthContext authContext,
-            @RequestParam String workerId,
-            @RequestParam String status
+            @RequestBody DispatchPendingOrderRequest requestbody
     ) {
         //order -> request채우기
         OrderSummaryDto order = orderServiceClient.getPendingOrder(authContext.getTenantId(), orderId)

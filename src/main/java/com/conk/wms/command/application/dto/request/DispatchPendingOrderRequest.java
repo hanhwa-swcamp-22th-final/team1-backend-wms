@@ -16,8 +16,5 @@ public class DispatchPendingOrderRequest {
 
     private String workerId;
     private String status;
-    private String carrier;
-    private String service;
-    private String labelFormat;
 }
 
