@@ -9,6 +9,7 @@ import com.conk.wms.command.domain.aggregate.Work;
 import com.conk.wms.command.domain.aggregate.WorkAssignment;
 import com.conk.wms.command.domain.aggregate.WorkDetail;
 import com.conk.wms.command.domain.repository.AllocatedInventoryRepository;
+import com.conk.wms.query.client.dto.OrderItemDto;
 import com.conk.wms.command.domain.repository.AsnItemRepository;
 import com.conk.wms.command.domain.repository.InventoryRepository;
 import com.conk.wms.command.domain.repository.InspectionPutawayRepository;
@@ -137,39 +138,66 @@ public class AutoAssignTaskService {
     }
 
     /**
-     * 주문의 skuId로 inventory → location → worker_account_id 순서로 조회해 담당 작업자를 찾고 작업을 배정한다.
-     * inventory에서 해당 sku를 보유한 첫 번째 location의 담당 작업자에게 배정한다.
+     * 주문 아이템 목록으로 allocated_inventory를 삽입하고,
+     * 첫 번째 SKU의 inventory → location → worker_account_id 순으로 담당 작업자를 찾아 작업을 배정한다.
      * 담당 작업자를 찾지 못하면 location 고정 작업자 기반 자동 배정으로 fallback한다.
      */
     @Transactional
-    public AutoAssignResult assignBySkuWorker(String orderId, String tenantCode, String skuId, String actorId) {
-        log.info("[assignBySkuWorker] 시작 orderId={} tenantCode={} skuId={}", orderId, tenantCode, skuId);
+    public AutoAssignResult assignBySkuWorker(String orderId, String tenantCode,
+                                              List<OrderItemDto> items, String actorId) {
+        log.info("[assignBySkuWorker] 시작 orderId={} tenantCode={} itemCount={}",
+                orderId, tenantCode, items == null ? 0 : items.size());
 
-        List<Inventory> inventoryRows = inventoryRepository.findAllByIdSkuAndIdTenantId(skuId, tenantCode);
-        log.info("[assignBySkuWorker] inventory 조회 결과 {}건 (sku={})", inventoryRows.size(), skuId);
-
-        String workerId = null;
-        for (Inventory inv : inventoryRows) {
-            String locationId = inv.getId().getLocationId();
-            Location loc = locationRepository.findById(locationId).orElse(null);
-            if (loc == null) {
-                log.warn("[assignBySkuWorker] location 없음 locationId={}", locationId);
-                continue;
-            }
-            if (loc.getWorkerAccountId() == null || loc.getWorkerAccountId().isBlank()) {
-                log.warn("[assignBySkuWorker] worker 미배정 locationId={}", locationId);
-                continue;
-            }
-            workerId = loc.getWorkerAccountId();
-            log.info("[assignBySkuWorker] 담당 작업자 발견 locationId={} workerId={}", locationId, workerId);
-            break;
+        if (items == null || items.isEmpty()) {
+            log.warn("[assignBySkuWorker] items 없음 → location 고정 자동배정 fallback orderId={}", orderId);
+            return assign(orderId, tenantCode, actorId);
         }
 
-        if (workerId == null) {
+        String actor = actorId == null || actorId.isBlank() ? "SYSTEM" : actorId;
+
+        // 기존 allocated_inventory 정리
+        List<AllocatedInventory> existing =
+                allocatedInventoryRepository.findAllByIdOrderIdAndIdTenantId(orderId, tenantCode);
+        if (!existing.isEmpty()) {
+            allocatedInventoryRepository.deleteAll(existing);
+            log.info("[assignBySkuWorker] 기존 allocated_inventory {}건 삭제 orderId={}", existing.size(), orderId);
+        }
+
+        // 각 아이템별로 inventory 첫 번째 행의 locationId를 사용해 allocated_inventory 삽입
+        String firstWorkerId = null;
+        for (OrderItemDto item : items) {
+            List<Inventory> invRows =
+                    inventoryRepository.findAllByIdSkuAndIdTenantId(item.getSkuId(), tenantCode);
+            log.info("[assignBySkuWorker] inventory 조회 skuId={} 결과 {}건", item.getSkuId(), invRows.size());
+
+            if (invRows.isEmpty()) {
+                log.warn("[assignBySkuWorker] inventory 없음 skuId={}", item.getSkuId());
+                continue;
+            }
+
+            String locationId = invRows.getFirst().getId().getLocationId();
+            allocatedInventoryRepository.save(
+                    new AllocatedInventory(orderId, item.getSkuId(), locationId, tenantCode, item.getQuantity(), actor));
+            log.info("[assignBySkuWorker] allocated_inventory 삽입 skuId={} locationId={} qty={}",
+                    item.getSkuId(), locationId, item.getQuantity());
+
+            // 첫 번째 아이템의 location에서 담당 작업자 결정
+            if (firstWorkerId == null) {
+                Location loc = locationRepository.findById(locationId).orElse(null);
+                if (loc != null && loc.getWorkerAccountId() != null && !loc.getWorkerAccountId().isBlank()) {
+                    firstWorkerId = loc.getWorkerAccountId();
+                    log.info("[assignBySkuWorker] 담당 작업자 발견 locationId={} workerId={}", locationId, firstWorkerId);
+                } else {
+                    log.warn("[assignBySkuWorker] 담당 작업자 미배정 locationId={}", locationId);
+                }
+            }
+        }
+
+        if (firstWorkerId == null) {
             log.warn("[assignBySkuWorker] 담당 작업자를 찾지 못함 → location 고정 자동배정 fallback orderId={}", orderId);
             return assign(orderId, tenantCode, actorId);
         }
-        return assignWithWorker(orderId, tenantCode, workerId, actorId);
+        return assignWithWorker(orderId, tenantCode, firstWorkerId, actorId);
     }
 
     /**
