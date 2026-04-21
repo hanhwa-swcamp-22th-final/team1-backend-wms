@@ -9,6 +9,11 @@ spring:
     openfeign:
       okhttp:
         enabled: true
+      client:
+        config:
+          integrationServiceFeignClient:
+            connect-timeout: 5000
+            read-timeout: 35000
 
   datasource:
     # Docker: SPRING_DATASOURCE_URL 환경변수로 주입 (wms-db:3306)
