@@ -68,11 +68,13 @@ public class OutboundManagementController {
         EasyPostCreateShipmentRequest.AddressBody toAddress = EasyPostCreateShipmentRequest.AddressBody.builder()
                 .name(order.getRecipientName())
                 .street1(order.getStreet1())
+                .street2(order.getStreet2())
                 .city(order.getCityName())
                 .state(order.getState())
                 .zip(order.getZip())
                 .country(order.getCountry())
                 .phone(order.getPhone())
+                .email(order.getEmail())
                 .build();
 
         WarehouseResponse warehouse = getWarehousesService.getWarehouse(authContext.getTenantId(), order.getWarehouseId());
@@ -80,8 +82,10 @@ public class OutboundManagementController {
                 .name(order.getSellerName())
                 .street1(warehouse.getAddress())
                 .city(warehouse.getCity())
+                .state(warehouse.getState())
                 .zip(warehouse.getZipCode())
                 .country("US")
+                .phone(warehouse.getPhoneNo())
                 .build();
 
 // 2. 소포 정보 생성
