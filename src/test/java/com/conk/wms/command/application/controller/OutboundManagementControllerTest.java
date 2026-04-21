@@ -63,6 +63,29 @@ class OutboundManagementControllerTest {
     }
 
     @Test
+    @DisplayName("레거시 출고 지시 경로도 200과 처리 결과를 반환한다")
+    void dispatchSingle_legacyAliasSuccess() throws Exception {
+        when(dispatchPendingOrderService.dispatch(any(), any(), any(), any(), any(), any()))
+                .thenReturn(new DispatchPendingOrderService.DispatchResult(1, 1));
+
+        mockMvc.perform(patch("/wh_pending_orders/ORD-001")
+                        .header("X-Tenant-Code", "CONK")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "workerId", "WORKER-001",
+                                "status", "OUTBOUND_INSTRUCTED",
+                                "carrier", "UPS",
+                                "service", "Ground",
+                                "labelFormat", "4x6 PDF"
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("dispatch requested"))
+                .andExpect(jsonPath("$.data.orderId").value("ORD-001"))
+                .andExpect(jsonPath("$.data.allocatedRowCount").value(1));
+    }
+
+    @Test
     @DisplayName("개별 출고 지시 시 tenant 헤더가 없으면 400을 반환한다")
     void dispatchSingle_whenTenantHeaderMissing_thenReturn400() throws Exception {
         mockMvc.perform(patch("/wms/manager/pending-orders/ORD-001")

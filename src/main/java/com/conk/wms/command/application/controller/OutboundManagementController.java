@@ -22,7 +22,7 @@ import static com.conk.wms.common.auth.AuthContextSupport.resolveTenantId;
  * 주문을 출고 대상으로 확정하고 재고를 할당하는 흐름의 진입점이다.
  */
 @RestController
-@RequestMapping("/wms/manager/pending-orders")
+@RequestMapping({"/wms/manager/pending-orders", "/wh_pending_orders"})
 public class OutboundManagementController {
 
     private final DispatchPendingOrderService dispatchPendingOrderService;
