@@ -4,6 +4,7 @@ import com.conk.wms.command.application.dto.request.BulkDispatchPendingOrdersReq
 import com.conk.wms.command.application.dto.request.DispatchPendingOrderRequest;
 import com.conk.wms.command.application.dto.response.BulkDispatchPendingOrdersResponse;
 import com.conk.wms.command.application.dto.response.DispatchPendingOrderResponse;
+import com.conk.wms.command.application.service.AutoAssignTaskService;
 import com.conk.wms.command.application.service.DispatchPendingOrderService;
 import com.conk.wms.common.auth.AuthContext;
 import com.conk.wms.common.controller.ApiResponse;
@@ -23,6 +24,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 import static com.conk.wms.common.auth.AuthContextSupport.resolveTenantId;
 
 /**
@@ -38,17 +41,20 @@ public class OutboundManagementController {
     private final OrderServiceClient orderServiceClient;
     private final GetWarehousesService getWarehousesService;
     private final GetSellerProductsService getSellerProductsService;
+    private final AutoAssignTaskService autoAssignTaskService;
 
     public OutboundManagementController(DispatchPendingOrderService dispatchPendingOrderService
             , IntegrationServiceClient integrationServiceClient
             , OrderServiceClient orderServiceClient
             , GetWarehousesService getWarehousesService
-            , GetSellerProductsService getSellerProductsService) {
+            , GetSellerProductsService getSellerProductsService
+            , AutoAssignTaskService autoAssignTaskService) {
         this.dispatchPendingOrderService = dispatchPendingOrderService;
         this.integrationServiceClient = integrationServiceClient;
         this.orderServiceClient = orderServiceClient;
         this.getWarehousesService = getWarehousesService;
         this.getSellerProductsService = getSellerProductsService;
+        this.autoAssignTaskService = autoAssignTaskService;
     }
 
     @PatchMapping("/{orderId}")
@@ -63,7 +69,6 @@ public class OutboundManagementController {
                         ErrorCode.OUTBOUND_ORDER_NOT_FOUND,
                         ErrorCode.OUTBOUND_ORDER_NOT_FOUND.getMessage() + ": " + orderId
                 ));
-
         // 1. 수신자 및 발신자 주소 생성
         EasyPostCreateShipmentRequest.AddressBody toAddress = EasyPostCreateShipmentRequest.AddressBody.builder()
                 .name(order.getRecipientName())
@@ -109,7 +114,16 @@ public class OutboundManagementController {
         EasyPostCreateShipmentRequest request = EasyPostCreateShipmentRequest.builder()
                 .shipment(shipmentBody)
                 .build();
+        // 송장발행
         integrationServiceClient.getLabel(request);
+        // 업무 배정
+        autoAssignTaskService.assign(orderId, authContext.getTenantId(), requestbody.getWorkerId());
+
+        orderServiceClient.updateOrderStatus(orderId, Map.of(
+                "status", "ALLOCATED",
+                "warehouseId", warehouse.getId()
+        ));
+        orderServiceClient.updateOrderStatus(orderId, Map.of("status", "OUTBOUND_INSTRUCTED"));
         return ResponseEntity.ok(ApiResponse.success("dispatch requested",
                 DispatchPendingOrderResponse.builder()
                         .orderId(orderId)
