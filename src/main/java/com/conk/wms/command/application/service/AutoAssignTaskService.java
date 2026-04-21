@@ -16,6 +16,8 @@ import com.conk.wms.command.domain.repository.LocationRepository;
 import com.conk.wms.command.domain.repository.WorkAssignmentRepository;
 import com.conk.wms.command.domain.repository.WorkDetailRepository;
 import com.conk.wms.command.domain.repository.WorkRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +33,8 @@ import java.util.stream.Collectors;
  */
 @Service
 public class AutoAssignTaskService {
+
+    private static final Logger log = LoggerFactory.getLogger(AutoAssignTaskService.class);
 
     private static final String OUTBOUND_WORK_ID_PREFIX = "WORK-OUT-";
     private static final String INBOUND_WORK_ID_PREFIX = "WORK-IN-";
@@ -139,15 +143,30 @@ public class AutoAssignTaskService {
      */
     @Transactional
     public AutoAssignResult assignBySkuWorker(String orderId, String tenantCode, String skuId, String actorId) {
-        String workerId = inventoryRepository.findAllByIdSkuAndIdTenantId(skuId, tenantCode)
-                .stream()
-                .map(inv -> locationRepository.findById(inv.getId().getLocationId()).orElse(null))
-                .filter(loc -> loc != null && loc.getWorkerAccountId() != null && !loc.getWorkerAccountId().isBlank())
-                .map(Location::getWorkerAccountId)
-                .findFirst()
-                .orElse(null);
+        log.info("[assignBySkuWorker] 시작 orderId={} tenantCode={} skuId={}", orderId, tenantCode, skuId);
+
+        List<Inventory> inventoryRows = inventoryRepository.findAllByIdSkuAndIdTenantId(skuId, tenantCode);
+        log.info("[assignBySkuWorker] inventory 조회 결과 {}건 (sku={})", inventoryRows.size(), skuId);
+
+        String workerId = null;
+        for (Inventory inv : inventoryRows) {
+            String locationId = inv.getId().getLocationId();
+            Location loc = locationRepository.findById(locationId).orElse(null);
+            if (loc == null) {
+                log.warn("[assignBySkuWorker] location 없음 locationId={}", locationId);
+                continue;
+            }
+            if (loc.getWorkerAccountId() == null || loc.getWorkerAccountId().isBlank()) {
+                log.warn("[assignBySkuWorker] worker 미배정 locationId={}", locationId);
+                continue;
+            }
+            workerId = loc.getWorkerAccountId();
+            log.info("[assignBySkuWorker] 담당 작업자 발견 locationId={} workerId={}", locationId, workerId);
+            break;
+        }
 
         if (workerId == null) {
+            log.warn("[assignBySkuWorker] 담당 작업자를 찾지 못함 → location 고정 자동배정 fallback orderId={}", orderId);
             return assign(orderId, tenantCode, actorId);
         }
         return assignWithWorker(orderId, tenantCode, workerId, actorId);
@@ -160,9 +179,14 @@ public class AutoAssignTaskService {
     @Transactional
     public AutoAssignResult assignWithWorker(String orderId, String tenantCode,
                                              String workerId, String actorId) {
+        log.info("[assignWithWorker] 시작 orderId={} tenantCode={} workerId={}", orderId, tenantCode, workerId);
+
         List<AllocatedInventory> allocatedRows =
                 allocatedInventoryRepository.findAllByIdOrderIdAndIdTenantId(orderId, tenantCode);
+        log.info("[assignWithWorker] allocated_inventory 조회 결과 {}건 orderId={}", allocatedRows.size(), orderId);
+
         if (allocatedRows.isEmpty()) {
+            log.warn("[assignWithWorker] allocated_inventory 없음 → 배정 중단 orderId={}", orderId);
             return new AutoAssignResult(0, 0, 0);
         }
 
@@ -170,8 +194,11 @@ public class AutoAssignTaskService {
 
         String actor = actorId == null || actorId.isBlank() ? "SYSTEM" : actorId;
         String workId = buildOutboundWorkId(orderId, tenantCode, workerId);
+        log.info("[assignWithWorker] workId 생성 workId={}", workId);
+
         createOrReplaceWork(workId, tenantCode, WORK_TYPE_OUTBOUND, workerId);
         workAssignmentRepository.save(new WorkAssignment(workId, tenantCode, workerId, actor));
+        log.info("[assignWithWorker] work_assignment 저장 완료 workId={} workerId={}", workId, workerId);
 
         int detailCount = 0;
         for (AllocatedInventory allocated : allocatedRows) {
@@ -184,8 +211,11 @@ public class AutoAssignTaskService {
                     actor
             ));
             detailCount++;
+            log.debug("[assignWithWorker] work_detail 저장 skuId={} locationId={} qty={}",
+                    allocated.getId().getSkuId(), allocated.getId().getLocationId(), allocated.getQuantity());
         }
 
+        log.info("[assignWithWorker] 완료 workId={} detailCount={}", workId, detailCount);
         return new AutoAssignResult(1, detailCount, 0);
     }
 
