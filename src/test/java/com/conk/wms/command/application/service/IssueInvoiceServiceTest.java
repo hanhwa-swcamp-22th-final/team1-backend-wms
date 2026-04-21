@@ -66,7 +66,7 @@ class IssueInvoiceServiceTest {
         when(workDetailRepository.findAllByIdOrderIdAndTenantIdOrderByIdLocationIdAscIdSkuIdAsc("ORD-001", "CONK"))
                 .thenReturn(List.of(issueInvoiceServiceTestSupportPackedDetail()));
         IssueLabelRequestDto request = IssueLabelRequestDto.builder().orderId("ORD-001").carrier("UPS").service("Ground").labelFormat("4x6 PDF").build();
-        when(shipmentPayloadResolver.build("CONK", "ORD-001", "UPS", "Ground", "4x6 PDF"))
+        when(shipmentPayloadResolver.build("CONK", "ORD-001", null, "UPS", "Ground", "4x6 PDF"))
                 .thenReturn(request);
         when(outboundPendingRepository.markInvoiceIssued("ORD-001", "CONK", "MANAGER-001",
                 LocalDateTime.of(2026, 4, 6, 11, 0)))
@@ -112,7 +112,7 @@ class IssueInvoiceServiceTest {
         when(outboundPendingRepository.findAllByIdOrderIdAndIdTenantId("ORD-001", "CONK"))
                 .thenReturn(List.of(pending));
         IssueLabelRequestDto request = IssueLabelRequestDto.builder().orderId("ORD-001").carrier("UPS").service("Ground").labelFormat("4x6 PDF").build();
-        when(shipmentPayloadResolver.build("CONK", "ORD-001", "UPS", "Ground", "4x6 PDF"))
+        when(shipmentPayloadResolver.build("CONK", "ORD-001", "WH-001", "UPS", "Ground", "4x6 PDF"))
                 .thenReturn(request);
         when(outboundPendingRepository.markInvoiceIssued("ORD-001", "CONK", "MANAGER-001",
                 LocalDateTime.of(2026, 4, 6, 11, 0)))
@@ -132,6 +132,7 @@ class IssueInvoiceServiceTest {
         IssueInvoiceService.IssueResult result = issueInvoiceService.issueOnDispatch(
                 "ORD-001",
                 "CONK",
+                "WH-001",
                 "UPS",
                 "Ground",
                 "4x6 PDF",
@@ -158,6 +159,7 @@ class IssueInvoiceServiceTest {
         assertThatThrownBy(() -> issueInvoiceService.issueOnDispatch(
                 "ORD-001",
                 "CONK",
+                "WH-001",
                 "UPS",
                 "Ground",
                 "4x6 PDF",

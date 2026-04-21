@@ -125,7 +125,7 @@ class DispatchPendingOrderServiceTest {
         verify(inventoryRepository, times(2)).save(inventoryCaptor.capture());
         verify(outboundPendingRepository).save(any(OutboundPending.class));
         verify(allocatedInventoryRepository).save(any(AllocatedInventory.class));
-        verify(issueInvoiceService).issueOnDispatch("ORD-001", "CONK", "UPS", "Ground", "4x6 PDF", "WORKER-001");
+        verify(issueInvoiceService).issueOnDispatch("ORD-001", "CONK", "WH-001", "UPS", "Ground", "4x6 PDF", "WORKER-001");
         verify(outboundInvoiceJobRepository, never()).save(any(OutboundInvoiceJob.class));
         verify(autoAssignTaskService).assign("ORD-001", "CONK", "WORKER-001");
         verify(orderServiceClient).updateOrderStatus("ORD-001", Map.of(
@@ -180,8 +180,8 @@ class DispatchPendingOrderServiceTest {
 
         assertEquals(2, result.getDispatchedOrderCount());
         assertEquals(2, result.getAllocatedRowCount());
-        verify(issueInvoiceService).issueOnDispatch("ORD-001", "CONK", "UPS", "Ground", "4x6 PDF", null);
-        verify(issueInvoiceService).issueOnDispatch("ORD-002", "CONK", "UPS", "Ground", "4x6 PDF", null);
+        verify(issueInvoiceService).issueOnDispatch("ORD-001", "CONK", "WH-001", "UPS", "Ground", "4x6 PDF", null);
+        verify(issueInvoiceService).issueOnDispatch("ORD-002", "CONK", "WH-001", "UPS", "Ground", "4x6 PDF", null);
         verify(outboundInvoiceJobRepository, never()).save(any(OutboundInvoiceJob.class));
     }
 
@@ -221,9 +221,9 @@ class DispatchPendingOrderServiceTest {
                 "https://label.example/ORD-001.pdf",
                 LocalDateTime.of(2026, 4, 6, 11, 0)
         )).when(issueInvoiceService)
-                .issueOnDispatch("ORD-001", "CONK", "UPS", "Ground", "4x6 PDF", null);
+                .issueOnDispatch("ORD-001", "CONK", "WH-001", "UPS", "Ground", "4x6 PDF", null);
         doThrow(new BusinessException(ErrorCode.OUTBOUND_STOCK_INSUFFICIENT)).when(issueInvoiceService)
-                .issueOnDispatch("ORD-002", "CONK", "UPS", "Ground", "4x6 PDF", null);
+                .issueOnDispatch("ORD-002", "CONK", "WH-001", "UPS", "Ground", "4x6 PDF", null);
 
         DispatchPendingOrderService.DispatchResult result = dispatchPendingOrderService.dispatchBulk(
                 List.of("ORD-001", "ORD-002"),
@@ -277,7 +277,7 @@ class DispatchPendingOrderServiceTest {
         when(locationRepository.findAllByLocationIdIn(List.of("LOC-A-01-01")))
                 .thenReturn(List.of(location("LOC-A-01-01", "WH-001")));
         doThrow(new IllegalStateException("easypost timeout")).when(issueInvoiceService)
-                .issueOnDispatch("ORD-001", "CONK", "UPS", "Ground", "4x6 PDF", "WORKER-001");
+                .issueOnDispatch("ORD-001", "CONK", "WH-001", "UPS", "Ground", "4x6 PDF", "WORKER-001");
 
         IllegalStateException exception = assertThrows(IllegalStateException.class, () ->
                 dispatchPendingOrderService.dispatch("ORD-001", "CONK", "WORKER-001", "UPS", "Ground", "4x6 PDF")

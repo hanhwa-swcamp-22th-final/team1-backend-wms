@@ -137,7 +137,7 @@ public class DispatchPendingOrderService {
 
         if (issueInvoiceSynchronously) {
             try {
-                issueInvoiceService.issueOnDispatch(orderId, tenantCode, carrier, service, labelFormat, actorId);
+                issueInvoiceService.issueOnDispatch(orderId, tenantCode, warehouseId, carrier, service, labelFormat, actorId);
             } catch (RuntimeException e) {
                 rollbackDispatch(orderId, tenantCode);
                 throw e;

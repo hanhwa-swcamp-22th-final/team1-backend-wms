@@ -44,6 +44,15 @@ public class ShipmentPayloadResolver {
                                       String carrier,
                                       String service,
                                       String labelFormat) {
+        return build(tenantCode, orderId, null, carrier, service, labelFormat);
+    }
+
+    public IssueLabelRequestDto build(String tenantCode,
+                                      String orderId,
+                                      String warehouseId,
+                                      String carrier,
+                                      String service,
+                                      String labelFormat) {
         OrderSummaryDto order = orderServiceClient.getPendingOrder(tenantCode, orderId)
                 .orElseThrow(() -> new BusinessException(
                         ErrorCode.OUTBOUND_ORDER_NOT_FOUND,
@@ -54,10 +63,11 @@ public class ShipmentPayloadResolver {
                         ErrorCode.OUTBOUND_ORDER_NOT_FOUND,
                         ErrorCode.OUTBOUND_ORDER_NOT_FOUND.getMessage() + ": " + orderId
                 ));
-        Warehouse warehouse = warehouseRepository.findByWarehouseIdAndTenantId(shipment.getWarehouseId(), tenantCode)
+        String resolvedWarehouseId = hasText(warehouseId) ? warehouseId : shipment.getWarehouseId();
+        Warehouse warehouse = warehouseRepository.findByWarehouseIdAndTenantId(resolvedWarehouseId, tenantCode)
                 .orElseThrow(() -> new BusinessException(
                         ErrorCode.WAREHOUSE_NOT_FOUND,
-                        ErrorCode.WAREHOUSE_NOT_FOUND.getMessage() + ": " + shipment.getWarehouseId()
+                        ErrorCode.WAREHOUSE_NOT_FOUND.getMessage() + ": " + resolvedWarehouseId
                 ));
 
         return IssueLabelRequestDto.builder()

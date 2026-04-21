@@ -52,7 +52,7 @@ public class IssueInvoiceService {
                              String service,
                              String labelFormat,
                              String actorId) {
-        return issueInternal(orderId, tenantCode, carrier, service, labelFormat, actorId, true);
+        return issueInternal(orderId, tenantCode, null, carrier, service, labelFormat, actorId, true);
     }
 
     /**
@@ -64,11 +64,25 @@ public class IssueInvoiceService {
                                        String service,
                                        String labelFormat,
                                        String actorId) {
-        return issueInternal(orderId, tenantCode, carrier, service, labelFormat, actorId, false);
+        return issueOnDispatch(orderId, tenantCode, null, carrier, service, labelFormat, actorId);
+    }
+
+    /**
+     * 출고 지시 시점에 계산한 창고 ID를 송장 payload에 직접 사용한다.
+     */
+    public IssueResult issueOnDispatch(String orderId,
+                                       String tenantCode,
+                                       String warehouseId,
+                                       String carrier,
+                                       String service,
+                                       String labelFormat,
+                                       String actorId) {
+        return issueInternal(orderId, tenantCode, warehouseId, carrier, service, labelFormat, actorId, false);
     }
 
     private IssueResult issueInternal(String orderId,
                                       String tenantCode,
+                                      String warehouseId,
                                       String carrier,
                                       String service,
                                       String labelFormat,
@@ -92,6 +106,7 @@ public class IssueInvoiceService {
         IssueLabelRequestDto request = shipmentPayloadResolver.build(
                 tenantCode,
                 orderId,
+                warehouseId,
                 carrier,
                 service,
                 labelFormat
