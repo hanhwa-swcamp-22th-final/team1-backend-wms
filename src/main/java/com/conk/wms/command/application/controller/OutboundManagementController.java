@@ -117,7 +117,7 @@ public class OutboundManagementController {
         // 송장발행
         integrationServiceClient.getLabel(request);
         // 업무 배정
-        autoAssignTaskService.assign(orderId, authContext.getTenantId(), requestbody.getWorkerId());
+        autoAssignTaskService.assign(orderId, authContext.getTenantId(), authContext.getUserId());
 
         orderServiceClient.updateOrderStatus(orderId, Map.of(
                 "status", "ALLOCATED",
