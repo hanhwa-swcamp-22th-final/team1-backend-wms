@@ -81,7 +81,7 @@ public class OutboundManagementController {
                 .street1(warehouse.getAddress())
                 .city(warehouse.getCity())
                 .zip(warehouse.getZipCode())
-                .country("USA")
+                .country("US")
                 .build();
 
 // 2. 소포 정보 생성
