@@ -1,5 +1,6 @@
 package com.conk.wms.query.client;
 
+import com.conk.wms.query.client.dto.EasyPostCreateShipmentRequest;
 import com.conk.wms.query.client.dto.IssueLabelRequestDto;
 import com.conk.wms.query.client.dto.ShipmentInvoiceDto;
 import com.conk.wms.query.client.dto.ShipmentRecommendationDto;
@@ -17,4 +18,7 @@ public interface IntegrationServiceClient {
     ShipmentInvoiceDto issueLabel(String tenantCode, IssueLabelRequestDto request);
 
     Map<String, ShipmentInvoiceDto> getShipmentInvoices(String tenantCode, List<String> orderIds);
+
+    ShipmentRecommendationDto getLabel(EasyPostCreateShipmentRequest request);
+
 }

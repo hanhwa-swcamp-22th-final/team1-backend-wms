@@ -144,6 +144,10 @@ public class GetSellerProductsService {
                 .allocatedStock(metrics.allocatedStock())
                 .status(metrics.displayStatus())
                 .detail(buildDetail(product, context.attachmentsBySku().getOrDefault(product.getSku(), List.of())))
+                .weight(product.getWeightOz().doubleValue())
+                .length(product.getDepthIn().doubleValue())
+                .width(product.getWidthIn().doubleValue())
+                .height(product.getHeightIn().doubleValue())
                 .build();
     }
 

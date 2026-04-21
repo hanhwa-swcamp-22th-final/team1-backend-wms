@@ -22,4 +22,8 @@ public class SellerProductResponse {
     private int allocatedStock;
     private String status;
     private SellerProductDetailInfoResponse detail;
+    private Double weight;  // oz
+    private Double length;  // inches
+    private Double width;
+    private Double height;
 }

@@ -1,10 +1,7 @@
 package com.conk.wms.query.client.feign;
 
 import com.conk.wms.common.config.FeignConfig;
-import com.conk.wms.query.client.dto.IssueLabelRequestDto;
-import com.conk.wms.query.client.dto.OrderIdsRequestDto;
-import com.conk.wms.query.client.dto.ShipmentInvoiceDto;
-import com.conk.wms.query.client.dto.ShipmentRecommendationDto;
+import com.conk.wms.query.client.dto.*;
 import com.conk.wms.query.client.support.ServiceApiResponse;
 import java.util.Map;
 import org.springframework.cloud.openfeign.FeignClient;
@@ -38,5 +35,10 @@ public interface IntegrationServiceFeignClient {
     ServiceApiResponse<Map<String, ShipmentInvoiceDto>> getLabels(
             @RequestHeader(value = "X-Tenant-Id", required = false) String tenantId,
             @RequestBody OrderIdsRequestDto request
+    );
+
+    @PostMapping("/integrations/seller/orders/invoice")
+    ServiceApiResponse<ShipmentRecommendationDto> getLabel(
+            @RequestBody EasyPostCreateShipmentRequest request
     );
 }

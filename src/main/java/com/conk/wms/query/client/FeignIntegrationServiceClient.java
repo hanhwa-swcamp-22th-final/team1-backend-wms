@@ -1,9 +1,6 @@
 package com.conk.wms.query.client;
 
-import com.conk.wms.query.client.dto.IssueLabelRequestDto;
-import com.conk.wms.query.client.dto.OrderIdsRequestDto;
-import com.conk.wms.query.client.dto.ShipmentInvoiceDto;
-import com.conk.wms.query.client.dto.ShipmentRecommendationDto;
+import com.conk.wms.query.client.dto.*;
 import com.conk.wms.query.client.feign.IntegrationServiceFeignClient;
 import java.util.List;
 import java.util.Map;
@@ -33,7 +30,12 @@ public class FeignIntegrationServiceClient implements IntegrationServiceClient {
 
     @Override
     public ShipmentInvoiceDto issueLabel(String tenantCode, IssueLabelRequestDto request) {
-        return Optional.ofNullable(integrationServiceFeignClient.issueLabel(tenantCode, request))
+        return null;
+    }
+
+    @Override
+    public ShipmentRecommendationDto getLabel(EasyPostCreateShipmentRequest request) {
+        return Optional.ofNullable(integrationServiceFeignClient.getLabel(request))
                 .map(response -> response.getData())
                 .orElse(null);
     }

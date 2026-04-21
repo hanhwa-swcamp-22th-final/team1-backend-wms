@@ -1,5 +1,6 @@
 package com.conk.wms.query.client;
 
+import com.conk.wms.query.client.dto.EasyPostCreateShipmentRequest;
 import com.conk.wms.query.client.dto.IssueLabelRequestDto;
 import com.conk.wms.query.client.dto.ShipmentInvoiceDto;
 import com.conk.wms.query.client.dto.ShipmentRecommendationDto;
@@ -74,6 +75,11 @@ public class StubIntegrationServiceClient implements IntegrationServiceClient {
                 .filter(orderId -> issuedInvoices.containsKey(key(tenantCode, orderId)))
                 .map(orderId -> Map.entry(orderId, issuedInvoices.get(key(tenantCode, orderId))))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    }
+
+    @Override
+    public ShipmentRecommendationDto getLabel(EasyPostCreateShipmentRequest request) {
+        return null;
     }
 
     public void clearIssuedInvoices() {

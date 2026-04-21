@@ -7,13 +7,21 @@ import com.conk.wms.command.application.dto.response.DispatchPendingOrderRespons
 import com.conk.wms.command.application.service.DispatchPendingOrderService;
 import com.conk.wms.common.auth.AuthContext;
 import com.conk.wms.common.controller.ApiResponse;
+import com.conk.wms.common.exception.BusinessException;
+import com.conk.wms.common.exception.ErrorCode;
+import com.conk.wms.query.client.IntegrationServiceClient;
+import com.conk.wms.query.client.OrderServiceClient;
+import com.conk.wms.query.client.dto.EasyPostCreateShipmentRequest;
+import com.conk.wms.query.client.dto.OrderSummaryDto;
+import com.conk.wms.query.client.feign.IntegrationServiceFeignClient;
+import com.conk.wms.query.controller.dto.response.SellerProductResponse;
+import com.conk.wms.query.controller.dto.response.WarehouseResponse;
+import com.conk.wms.query.service.GetSellerProductsService;
+import com.conk.wms.query.service.GetWarehousesService;
+import org.springframework.context.annotation.Bean;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.*;
 
 import static com.conk.wms.common.auth.AuthContextSupport.resolveTenantId;
 
@@ -26,32 +34,85 @@ import static com.conk.wms.common.auth.AuthContextSupport.resolveTenantId;
 public class OutboundManagementController {
 
     private final DispatchPendingOrderService dispatchPendingOrderService;
+    private final IntegrationServiceClient integrationServiceClient;
+    private final OrderServiceClient orderServiceClient;
+    private final GetWarehousesService getWarehousesService;
+    private final GetSellerProductsService getSellerProductsService;
 
-    public OutboundManagementController(DispatchPendingOrderService dispatchPendingOrderService) {
+    public OutboundManagementController(DispatchPendingOrderService dispatchPendingOrderService
+            , IntegrationServiceClient integrationServiceClient
+            , OrderServiceClient orderServiceClient
+            , GetWarehousesService getWarehousesService
+            , GetSellerProductsService getSellerProductsService) {
         this.dispatchPendingOrderService = dispatchPendingOrderService;
+        this.integrationServiceClient = integrationServiceClient;
+        this.orderServiceClient = orderServiceClient;
+        this.getWarehousesService = getWarehousesService;
+        this.getSellerProductsService = getSellerProductsService;
     }
 
     @PatchMapping("/{orderId}")
     public ResponseEntity<ApiResponse<DispatchPendingOrderResponse>> dispatchSingle(
             @PathVariable String orderId,
             AuthContext authContext,
-            @RequestBody DispatchPendingOrderRequest request
+            @RequestParam String workerId,
+            @RequestParam String status
     ) {
-        String tenantId = resolveTenantId(authContext);
-        DispatchPendingOrderService.DispatchResult result = dispatchPendingOrderService.dispatch(
-                orderId,
-                tenantId,
-                request.getWorkerId(),
-                request.getCarrier(),
-                request.getService(),
-                request.getLabelFormat()
-        );
+        //order -> request채우기
+        OrderSummaryDto order = orderServiceClient.getPendingOrder(authContext.getTenantId(), orderId)
+                .orElseThrow(() -> new BusinessException(
+                        ErrorCode.OUTBOUND_ORDER_NOT_FOUND,
+                        ErrorCode.OUTBOUND_ORDER_NOT_FOUND.getMessage() + ": " + orderId
+                ));
+
+        // 1. 수신자 및 발신자 주소 생성
+        EasyPostCreateShipmentRequest.AddressBody toAddress = EasyPostCreateShipmentRequest.AddressBody.builder()
+                .name(order.getRecipientName())
+                .street1(order.getStreet1())
+                .city(order.getCityName())
+                .state(order.getState())
+                .zip(order.getZip())
+                .country(order.getCountry())
+                .phone(order.getPhone())
+                .build();
+
+        WarehouseResponse warehouse = getWarehousesService.getWarehouse(authContext.getTenantId(), order.getWarehouseId());
+        EasyPostCreateShipmentRequest.AddressBody fromAddress = EasyPostCreateShipmentRequest.AddressBody.builder()
+                .name(order.getSellerName())
+                .street1(warehouse.getAddress())
+                .city(warehouse.getCity())
+                .zip(warehouse.getZipCode())
+                .country("USA")
+                .build();
+
+// 2. 소포 정보 생성
+        SellerProductResponse sellerProduct =
+                getSellerProductsService.getSellerProduct(order.getSellerId(), authContext.getTenantId(), order.getItems().getFirst().getSkuId());
+        EasyPostCreateShipmentRequest.ParcelBody parcel = EasyPostCreateShipmentRequest.ParcelBody.builder()
+                .weight(sellerProduct.getWeight())
+                .length(sellerProduct.getLength())
+                .width(sellerProduct.getWidth())
+                .height(sellerProduct.getHeight())
+                .build();
+
+// 3. 중간 객체(ShipmentBody) 조립
+        EasyPostCreateShipmentRequest.ShipmentBody shipmentBody = EasyPostCreateShipmentRequest.ShipmentBody.builder()
+                .toAddress(toAddress)
+                .fromAddress(fromAddress)
+                .parcel(parcel)
+                .build();
+
+// 4. 최종 요청 객체 생성
+        EasyPostCreateShipmentRequest request = EasyPostCreateShipmentRequest.builder()
+                .shipment(shipmentBody)
+                .build();
+        integrationServiceClient.getLabel(request);
         return ResponseEntity.ok(ApiResponse.success("dispatch requested",
                 DispatchPendingOrderResponse.builder()
                         .orderId(orderId)
-                        .allocatedRowCount(result.getAllocatedRowCount())
                         .build()));
     }
+
 
     @PostMapping("/bulk")
     public ResponseEntity<ApiResponse<BulkDispatchPendingOrdersResponse>> dispatchBulk(
